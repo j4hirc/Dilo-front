@@ -1,1 +1,54 @@
-<p>facturas works!</p>
+<div class="page-header">
+    <div class="header-titles">
+        <h2>Historial de Facturas</h2>
+        <p>Visualiza y descarga los comprobantes de tus ventas.</p>
+    </div>
+</div>
+
+<div class="card full-height-card">
+    <div class="card-body">
+        
+        <!-- 🔥 NUEVO SPINNER DE CARGA -->
+        <div *ngIf="isLoading" class="loading-container">
+            <div class="spinner"></div>
+            <p>Conectando con el servidor para cargar las facturas...</p>
+        </div>
+        
+        <div class="table-responsive" *ngIf="!isLoading">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Número</th>
+                        <th>Cliente</th>
+                        <th>Tipo de Pago</th>
+                        <th>Monto</th>
+                        <th>Estado</th>
+                        <th style="text-align: center;">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngIf="facturas.length === 0">
+                        <td colspan="6" style="text-align: center; padding: 40px; color: #64748b;">
+                            No hay facturas registradas en el sistema.
+                        </td>
+                    </tr>
+                    <tr *ngFor="let fac of facturas">
+                        <td style="font-weight: 600; color: #0f172a;">{{ fac.numero }}</td>
+                        <td>{{ fac.cliente }}</td>
+                        <td><span class="tag tag-gray">{{ fac.tipo }}</span></td>
+                        <td style="font-weight: 600;">${{ fac.monto | number:'1.2-2' }}</td>
+                        <td>
+                            <span class="status" [ngClass]="{'status-green': fac.estado === 'AUTORIZADO' || fac.estado === 'Emitida', 'status-yellow': fac.estado === 'CREADA', 'status-red': fac.estado === 'ANULADA', 'status-red': fac.estado === 'ERROR_SRI'}">
+                                {{ fac.estado }}
+                            </span>
+                        </td>
+                        <td class="action-cells" style="justify-content: center;">
+                            <!-- 🔥 PASAMOS 'fac' COMPLETO, NO SOLO EL NÚMERO -->
+                            <button class="btn-icon" title="Descargar PDF" (click)="descargarPDF(fac)">⬇️</button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

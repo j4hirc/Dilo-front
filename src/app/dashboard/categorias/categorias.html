@@ -1,0 +1,79 @@
+<div class="page-header">
+    <div class="header-titles">
+        <h2>Gestión de Categorías</h2>
+        <p>Agrupa y organiza los productos de tu negocio.</p>
+    </div>
+    <button class="btn-primary" (click)="abrirModalNuevo()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        Nueva Categoría
+    </button>
+</div>
+
+<div class="card full-height-card">
+    <div class="filter-bar" *ngIf="!isLoading">
+        <div class="search-box" style="max-width: 400px;">
+            <span class="search-icon">🔍</span>
+            <input type="text" placeholder="Buscar categoría..." [(ngModel)]="searchTerm" (input)="filtrarCategorias()">
+        </div>
+    </div>
+
+    <div class="card-body">
+        <div *ngIf="isLoading" class="loading-container">
+            <div class="spinner"></div>
+            <p>Cargando categorías...</p>
+        </div>
+        
+        <div class="table-responsive" *ngIf="!isLoading">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th style="width: 80px;">ID</th>
+                        <th>Nombre de Categoría</th>
+                        <th>Descripción</th>
+                        <th style="text-align: center; width: 150px;">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngIf="categoriasFiltradas.length === 0">
+                        <td colspan="4" style="text-align: center; padding: 40px; color: #64748b;">No se encontraron categorías.</td>
+                    </tr>
+                    <tr *ngFor="let cat of categoriasFiltradas">
+                        <td style="font-weight: 600; color: #94a3b8;">#{{ cat.id }}</td>
+                        <td><span class="tag tag-purple" style="font-size: 0.9rem;">{{ cat.nombre }}</span></td>
+                        <td style="color: #475569;">{{ cat.descripcion || 'Sin descripción' }}</td>
+                        <td class="action-cells" style="justify-content: center;">
+                            <button class="btn-icon text-blue" title="Editar" (click)="abrirModalEditar(cat)">✏️</button>
+                            <button class="btn-icon text-red" title="Eliminar" (click)="eliminarCategoria(cat.id)">🗑️</button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" *ngIf="showModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>{{ isEditing ? 'Editar Categoría' : 'Nueva Categoría' }}</h3>
+            <button class="close-btn" (click)="cerrarModal()">✕</button>
+        </div>
+        
+        <div class="modal-body">
+            <div class="form-group">
+                <label>Nombre *</label>
+                <input type="text" [(ngModel)]="categoriaForm.nombre" placeholder="Ej: Lácteos">
+            </div>
+            <div class="form-group">
+                <label>Descripción</label>
+                <textarea [(ngModel)]="categoriaForm.descripcion" rows="3" placeholder="Detalles de lo que incluye esta categoría..."></textarea>
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn-secondary" (click)="cerrarModal()">Cancelar</button>
+            <button class="btn-primary" (click)="guardarCategoria()">Guardar</button>
+        </div>
+    </div>
+</div>
