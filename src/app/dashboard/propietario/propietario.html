@@ -1,1316 +1,231 @@
-<input type="checkbox" id="menu-toggle" class="menu-toggle-check"/>
-
-<aside class="barra-lateral" id="barra-lateral">
-  <div class="barra-cabecera">
-    <div class="logo-sidebar">
-      <span class="marca-texto">Dilo</span><span class="marca-punto">.</span>
-    </div>
-    <span class="rol-badge">Propietario</span>
-  </div>
-
-  <nav class="navegacion-lateral">
-    <p class="nav-seccion-titulo">General</p>
-    <a href="#vista-dashboard" class="nav-enlace" data-vista="dashboard">
-      <i class="fa-solid fa-gauge-high"></i><span>Dashboard</span>
-    </a>
-    <a href="#vista-facturas" class="nav-enlace" data-vista="facturas">
-      <i class="fa-solid fa-file-invoice-dollar"></i><span>Facturas</span>
-    </a>
-    <a href="#vista-clientes" class="nav-enlace" data-vista="clientes">
-      <i class="fa-solid fa-address-book"></i><span>Clientes</span>
-    </a>
-    <a href="#vista-productos" class="nav-enlace" data-vista="productos">
-      <i class="fa-solid fa-box"></i><span>Productos</span>
-    </a>
-
-    <p class="nav-seccion-titulo">Inventario</p>
-    <a href="#vista-inventario" class="nav-enlace" data-vista="inventario">
-      <i class="fa-solid fa-boxes-stacked"></i><span>Inventario</span>
-    </a>
-    <a href="#vista-bodegas" class="nav-enlace" data-vista="bodegas">
-      <i class="fa-solid fa-warehouse"></i><span>Bodegas</span>
-    </a>
-    <a href="#vista-kardex" class="nav-enlace" data-vista="kardex">
-      <i class="fa-solid fa-clipboard-list"></i><span>Kárdex</span>
-    </a>
-
-    <p class="nav-seccion-titulo">Administración</p>
-    <a href="#vista-reportes" class="nav-enlace" data-vista="reportes">
-      <i class="fa-solid fa-chart-bar"></i><span>Reportes</span>
-    </a>
-    <a href="#vista-equipo" class="nav-enlace" data-vista="equipo">
-      <i class="fa-solid fa-user-group"></i><span>Mi equipo</span>
-    </a>
-    <a href="#vista-configuracion" class="nav-enlace" data-vista="configuracion">
-      <i class="fa-solid fa-sliders"></i><span>Configuración</span>
-    </a>
-  </nav>
-
-  <div class="barra-pie">
-    <div class="espacio-selector">
-      <div class="espacio-icono">CP</div>
-      <div class="espacio-info">
-        <p class="espacio-nombre">Comercial Pérez</p>
-        <p class="espacio-id">dilo.app/comercialperez</p>
-      </div>
-    </div>
-    <a href="../login.html" class="boton-cerrar-sesion" title="Cerrar sesión">
-      <i class="fa-solid fa-right-from-bracket"></i>
-    </a>
-  </div>
-</aside>
-
-<label for="menu-toggle" class="overlay-menu"></label>
-
-<!-- ============ CONTENIDO PRINCIPAL ============ -->
-<main class="contenido-principal">
-
-  <!-- Topbar -->
-  <header class="barra-superior">
-    <div class="barra-sup-izq">
-      <label class="boton-menu" for="menu-toggle"><i class="fa-solid fa-bars"></i></label>
-      <div class="migas-pan">
-        <span class="miga-inactiva">Comercial Pérez</span>
-        <i class="fa-solid fa-chevron-right miga-separador"></i>
-        <span class="miga-activa" id="titulo-seccion">Propietario</span>
-      </div>
-    </div>
-    <div class="barra-sup-der">
-      <div class="avatar-top">JP</div>
-    </div>
-  </header>
-
-  <!-- ====== VISTA: DASHBOARD ====== -->
-  <section class="vista-contenido" id="vista-dashboard">
-    <div class="encabezado-seccion">
-      <div>
-        <h2 class="titulo-pagina">Bienvenido, Juan 👋</h2>
-        <p class="subtitulo-pagina">Aquí está el rendimiento de tu negocio hoy</p>
-      </div>
-      <div class="acciones-encabezado">
-        <a href="#vista-facturas" class="boton-primario">
-          <i class="fa-solid fa-file-invoice"></i> Nueva factura
-        </a>
-      </div>
-    </div>
-
-    <!-- Alertas de stock -->
-    <div class="alerta-stock">
-      <div class="alerta-icono"><i class="fa-solid fa-triangle-exclamation"></i></div>
-      <div class="alerta-texto">
-        <strong>2 productos</strong> están por debajo del stock mínimo en la Bodega Central.
-      </div>
-      <a href="#vista-inventario" class="alerta-enlace">Ver inventario <i class="fa-solid fa-arrow-right"></i></a>
-    </div>
-
-    <!-- Métricas -->
-    <div class="grilla-metricas">
-      <div class="tarjeta-metrica">
-        <div class="metrica-icono color-azul"><i class="fa-solid fa-dollar-sign"></i></div>
-        <div class="metrica-datos">
-          <p class="metrica-valor">$12,480</p>
-          <p class="metrica-etiqueta">Ventas del mes</p>
+<div class="dashboard-layout">
+    
+    <!-- SIDEBAR (Barra Lateral Oscura) -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h2 class="logo-text">Dilo<span class="dot">.</span></h2>
+            <span class="role-badge">PROPIETARIO</span>
         </div>
-        <div class="metrica-tendencia positiva"><i class="fa-solid fa-arrow-trend-up"></i> +18%</div>
-      </div>
-      <div class="tarjeta-metrica">
-        <div class="metrica-icono color-naranja"><i class="fa-solid fa-file-invoice"></i></div>
-        <div class="metrica-datos">
-          <p class="metrica-valor">143</p>
-          <p class="metrica-etiqueta">Facturas emitidas</p>
-        </div>
-        <div class="metrica-tendencia positiva"><i class="fa-solid fa-arrow-trend-up"></i> +9%</div>
-      </div>
-      <div class="tarjeta-metrica">
-        <div class="metrica-icono color-verde"><i class="fa-solid fa-users"></i></div>
-        <div class="metrica-datos">
-          <p class="metrica-valor">68</p>
-          <p class="metrica-etiqueta">Clientes activos</p>
-        </div>
-        <div class="metrica-tendencia positiva"><i class="fa-solid fa-arrow-trend-up"></i> +4</div>
-      </div>
-      <div class="tarjeta-metrica">
-        <div class="metrica-icono color-morado"><i class="fa-solid fa-microphone-lines"></i></div>
-        <div class="metrica-datos">
-          <p class="metrica-valor">89</p>
-          <p class="metrica-etiqueta">Pedidos por voz</p>
-        </div>
-        <div class="metrica-tendencia positiva"><i class="fa-solid fa-arrow-trend-up"></i> 62%</div>
-      </div>
-    </div>
 
-    <!-- Dos columnas: Facturas recientes + Top productos -->
-    <div class="grilla-dos-columnas">
+        <div class="sidebar-menu">
+            <p class="menu-label">GENERAL</p>
+            <a routerLink="/dashboard/propietario" class="menu-item active">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                Dashboard
+            </a>
+            <a routerLink="/dashboard/facturas" class="menu-item">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                Facturas
+            </a>
+            <a routerLink="/dashboard/clientes" class="menu-item">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                Clientes
+            </a>
+            <a routerLink="/dashboard/productos" class="menu-item">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>
+                Productos
+            </a>
 
-      <!-- Facturas recientes -->
-      <div class="tarjeta-contenido">
-        <div class="tarjeta-encabezado">
-          <h3 class="tarjeta-titulo">Facturas recientes</h3>
-          <a href="#vista-facturas" class="boton-secundario">Ver todas <i class="fa-solid fa-arrow-right"></i></a>
+            <p class="menu-label mt-4">INVENTARIO</p>
+            <a routerLink="/dashboard/inventario" class="menu-item">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                Inventario
+            </a>
+            <a routerLink="/dashboard/bodegas" class="menu-item">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
+                Bodegas
+            </a>
+            <a routerLink="/dashboard/kardex" class="menu-item">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                Kárdex
+            </a>
+
+            <p class="menu-label mt-4">ADMINISTRACIÓN</p>
+            <a routerLink="/dashboard/reportes" class="menu-item">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path><path d="M22 12A10 10 0 0 0 12 2v10z"></path></svg>
+                Reportes
+            </a>
+            <a routerLink="/dashboard/equipo" class="menu-item">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                Mi equipo
+            </a>
+            <a routerLink="/dashboard/configuracion" class="menu-item">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                Configuración
+            </a>
         </div>
-        <div class="lista-facturas">
-          <div class="fila-factura">
-            <div class="fac-info">
-              <p class="fac-numero">FAC-001-0023</p>
-              <p class="fac-cliente">Comercial López</p>
-            </div>
-            <div class="fac-centro">
-              <span class="fac-metodo voz"><i class="fa-solid fa-microphone"></i> Voz</span>
-            </div>
-            <div class="fac-der">
-              <p class="fac-valor">$340.00</p>
-              <span class="estado-badge activo">Autorizada</span>
-            </div>
-          </div>
-          <div class="fila-factura">
-            <div class="fac-info">
-              <p class="fac-numero">FAC-001-0022</p>
-              <p class="fac-cliente">María Andrade</p>
-            </div>
-            <div class="fac-centro">
-              <span class="fac-metodo manual"><i class="fa-solid fa-keyboard"></i> Manual</span>
-            </div>
-            <div class="fac-der">
-              <p class="fac-valor">$125.50</p>
-              <span class="estado-badge pendiente">Pendiente</span>
-            </div>
-          </div>
-          <div class="fila-factura">
-            <div class="fac-info">
-              <p class="fac-numero">FAC-001-0021</p>
-              <p class="fac-cliente">Distribuidora Norte</p>
-            </div>
-            <div class="fac-centro">
-              <span class="fac-metodo voz"><i class="fa-solid fa-microphone"></i> Voz</span>
-            </div>
-            <div class="fac-der">
-              <p class="fac-valor">$890.00</p>
-              <span class="estado-badge activo">Autorizada</span>
-            </div>
-          </div>
-          <div class="fila-factura">
-            <div class="fac-info">
-              <p class="fac-numero">FAC-001-0020</p>
-              <p class="fac-cliente">Carlos Moreno</p>
-            </div>
-            <div class="fac-centro">
-              <span class="fac-metodo voz"><i class="fa-solid fa-microphone"></i> Voz</span>
-            </div>
-            <div class="fac-der">
-              <p class="fac-valor">$67.20</p>
-              <span class="estado-badge anulado">Anulada</span>
-            </div>
-          </div>
-        </div>
-      </div>
 
-      <!-- Top productos -->
-      <div class="tarjeta-contenido">
-        <div class="tarjeta-encabezado">
-          <h3 class="tarjeta-titulo">Productos más vendidos</h3>
-          <span class="chip-info">Este mes</span>
-        </div>
-        <div class="lista-productos-top">
-          <div class="producto-top-item">
-            <div class="producto-rank">1</div>
-            <div class="producto-top-info">
-              <p class="producto-top-nombre">Impresora Epson L3250</p>
-              <div class="barra-progreso-contenedor">
-                <div class="barra-progreso" style="width: 85%"></div>
-              </div>
-            </div>
-            <div class="producto-top-cant">42 uds.</div>
-          </div>
-          <div class="producto-top-item">
-            <div class="producto-rank">2</div>
-            <div class="producto-top-info">
-              <p class="producto-top-nombre">Resma de papel A4</p>
-              <div class="barra-progreso-contenedor">
-                <div class="barra-progreso" style="width: 68%"></div>
-              </div>
-            </div>
-            <div class="producto-top-cant">120 uds.</div>
-          </div>
-          <div class="producto-top-item">
-            <div class="producto-rank">3</div>
-            <div class="producto-top-info">
-              <p class="producto-top-nombre">Tóner HP 85A</p>
-              <div class="barra-progreso-contenedor">
-                <div class="barra-progreso" style="width: 54%"></div>
-              </div>
-            </div>
-            <div class="producto-top-cant">35 uds.</div>
-          </div>
-          <div class="producto-top-item">
-            <div class="producto-rank">4</div>
-            <div class="producto-top-info">
-              <p class="producto-top-nombre">Cable HDMI 2m</p>
-              <div class="barra-progreso-contenedor">
-                <div class="barra-progreso" style="width: 40%"></div>
-              </div>
-            </div>
-            <div class="producto-top-cant">28 uds.</div>
-          </div>
-        </div>
-      </div>
-
-    </div>
-
-    <!-- Mi equipo rápido -->
-    <div class="tarjeta-contenido">
-      <div class="tarjeta-encabezado">
-        <h3 class="tarjeta-titulo">Mi equipo</h3>
-        <a href="#vista-equipo" class="boton-secundario"><i class="fa-solid fa-user-group"></i> Ver todo el equipo</a>
-      </div>
-      <div class="grilla-equipo">
-        <div class="miembro-tarjeta">
-          <div class="miembro-avatar">VL</div>
-          <div class="miembro-info">
-            <p class="miembro-nombre">Valeria Luna</p>
-            <span class="rol-miembro vendedor">Vendedora</span>
-          </div>
-          <div class="miembro-estado activo-punto"></div>
-        </div>
-        <div class="miembro-tarjeta">
-          <div class="miembro-avatar">RC</div>
-          <div class="miembro-info">
-            <p class="miembro-nombre">Roberto Cárdenas</p>
-            <span class="rol-miembro bodeguero">Bodeguero</span>
-          </div>
-          <div class="miembro-estado activo-punto"></div>
-        </div>
-        <div class="miembro-tarjeta">
-          <div class="miembro-avatar">MP</div>
-          <div class="miembro-info">
-            <p class="miembro-nombre">María Ponce</p>
-            <span class="rol-miembro vendedor">Vendedora</span>
-          </div>
-          <div class="miembro-estado"></div>
-        </div>
-      </div>
-    </div>
-
-  </section>
-
-  <!-- ====== VISTA: FACTURAS ====== -->
-  <section class="vista-contenido" id="vista-facturas">
-    <div class="encabezado-seccion">
-      <div>
-        <h2 class="titulo-pagina">Facturas</h2>
-        <p class="subtitulo-pagina">Emisión y gestión de facturas electrónicas</p>
-      </div>
-      <div class="acciones-encabezado">
-        <button class="boton-ghost"><i class="fa-solid fa-file-export"></i> Exportar PDF</button>
-        <button class="boton-primario"><i class="fa-solid fa-plus"></i> Nueva factura</button>
-      </div>
-    </div>
-
-    <div class="barra-busqueda-contenedor">
-      <div class="barra-busqueda">
-        <i class="fa-solid fa-magnifying-glass busqueda-icono"></i>
-        <input type="text" class="busqueda-input" placeholder="Buscar por número de factura o cliente..."/>
-      </div>
-      <div class="selector-fecha"><i class="fa-solid fa-calendar-days"></i> Este mes</div>
-    </div>
-
-    <div class="filtro-estado-grupo">
-      <button class="filtro-estado activo">Todas</button>
-      <button class="filtro-estado">Autorizadas</button>
-      <button class="filtro-estado">Pendientes SRI</button>
-      <button class="filtro-estado">Anuladas</button>
-      <button class="filtro-estado">A crédito</button>
-    </div>
-
-    <div class="tarjeta-contenido">
-      <div class="tabla-contenedor">
-        <table class="tabla-datos">
-          <thead>
-            <tr>
-              <th>Número</th>
-              <th>Cliente</th>
-              <th>Fecha</th>
-              <th>Método</th>
-              <th>Forma de pago</th>
-              <th>Total</th>
-              <th>Estado SRI</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><span class="ref-tag">FAC-001-0023</span></td>
-              <td>Comercial López</td>
-              <td class="text-gris">15/07/2026</td>
-              <td><span class="fac-metodo voz"><i class="fa-solid fa-microphone"></i> Voz</span></td>
-              <td>Transferencia</td>
-              <td class="linea-total">$340.00</td>
-              <td><span class="estado-badge activo">Autorizada</span></td>
-              <td>
-                <div class="acciones-tabla">
-                  <button class="accion-btn" title="Ver"><i class="fa-solid fa-eye"></i></button>
-                  <button class="accion-btn" title="Descargar PDF"><i class="fa-solid fa-download"></i></button>
-                  <button class="accion-btn" title="Reenviar por correo"><i class="fa-solid fa-envelope"></i></button>
+        <div class="sidebar-footer">
+            <div class="user-info">
+                <div class="user-avatar-small orange-bg">
+                    {{ usuarioLogueado?.nombre ? usuarioLogueado.nombre.substring(0, 2).toUpperCase() : 'NA' }}
                 </div>
-              </td>
-            </tr>
-            <tr>
-              <td><span class="ref-tag">FAC-001-0022</span></td>
-              <td>María Andrade</td>
-              <td class="text-gris">15/07/2026</td>
-              <td><span class="fac-metodo manual"><i class="fa-solid fa-keyboard"></i> Manual</span></td>
-              <td>Crédito 30 días</td>
-              <td class="linea-total">$125.50</td>
-              <td><span class="estado-badge pendiente">Pendiente</span></td>
-              <td>
-                <div class="acciones-tabla">
-                  <button class="accion-btn" title="Ver"><i class="fa-solid fa-eye"></i></button>
-                  <button class="accion-btn" title="Descargar PDF"><i class="fa-solid fa-download"></i></button>
+                <div class="user-details">
+                    <h4>Mi Negocio</h4>
+                    <p>{{ usuarioLogueado?.email }}</p>
                 </div>
-              </td>
-            </tr>
-            <tr>
-              <td><span class="ref-tag">FAC-001-0021</span></td>
-              <td>Distribuidora Norte</td>
-              <td class="text-gris">14/07/2026</td>
-              <td><span class="fac-metodo voz"><i class="fa-solid fa-microphone"></i> Voz</span></td>
-              <td>Efectivo</td>
-              <td class="linea-total">$890.00</td>
-              <td><span class="estado-badge activo">Autorizada</span></td>
-              <td>
-                <div class="acciones-tabla">
-                  <button class="accion-btn" title="Ver"><i class="fa-solid fa-eye"></i></button>
-                  <button class="accion-btn" title="Descargar PDF"><i class="fa-solid fa-download"></i></button>
-                </div>
-              </td>
-            </tr>
-            <tr>
-              <td><span class="ref-tag">FAC-001-0020</span></td>
-              <td>Carlos Moreno</td>
-              <td class="text-gris">14/07/2026</td>
-              <td><span class="fac-metodo voz"><i class="fa-solid fa-microphone"></i> Voz</span></td>
-              <td>Tarjeta de crédito</td>
-              <td class="linea-total">$67.20</td>
-              <td><span class="estado-badge anulado">Anulada</span></td>
-              <td>
-                <div class="acciones-tabla">
-                  <button class="accion-btn" title="Ver"><i class="fa-solid fa-eye"></i></button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      <div class="paginacion">
-        <span class="pag-info">Mostrando 1–4 de 143 facturas</span>
-        <div class="pag-controles">
-          <button class="pag-btn" disabled><i class="fa-solid fa-chevron-left"></i></button>
-          <button class="pag-btn activo">1</button>
-          <button class="pag-btn">2</button>
-          <button class="pag-btn">3</button>
-          <span class="pag-puntos">…</span>
-          <button class="pag-btn">36</button>
-          <button class="pag-btn"><i class="fa-solid fa-chevron-right"></i></button>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ====== VISTA: CLIENTES ====== -->
-  <section class="vista-contenido" id="vista-clientes">
-    <div class="encabezado-seccion">
-      <div>
-        <h2 class="titulo-pagina">Clientes</h2>
-        <p class="subtitulo-pagina">Gestión y registro de clientes del negocio</p>
-      </div>
-      <div class="acciones-encabezado">
-        <button class="boton-primario"><i class="fa-solid fa-user-plus"></i> Nuevo cliente</button>
-      </div>
-    </div>
-
-    <div class="barra-busqueda-contenedor">
-      <div class="barra-busqueda">
-        <i class="fa-solid fa-magnifying-glass busqueda-icono"></i>
-        <input type="text" class="busqueda-input" placeholder="Buscar por nombre, cédula o correo..."/>
-      </div>
-    </div>
-
-    <div class="tarjeta-contenido">
-      <div class="tabla-contenedor">
-        <table class="tabla-datos">
-          <thead>
-            <tr>
-              <th>Cliente</th>
-              <th>DNI</th>
-              <th>Correo</th>
-              <th>Teléfono</th>
-              <th>Facturas emitidas</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><div class="celda-nombre"><div class="avatar-producto">CL</div> Comercial López</div></td>
-              <td class="text-gris">0102030405</td>
-              <td>contacto@comerciallopez.com</td>
-              <td>+593 99 123 4567</td>
-              <td>18</td>
-              <td>
-                <div class="acciones-tabla">
-                  <button class="accion-btn" title="Ver detalle"><i class="fa-solid fa-eye"></i></button>
-                  <button class="accion-btn" title="Editar"><i class="fa-solid fa-pen"></i></button>
-                </div>
-              </td>
-            </tr>
-            <tr>
-              <td><div class="celda-nombre"><div class="avatar-producto">MA</div> María Andrade</div></td>
-              <td class="text-gris">0203040506</td>
-              <td>maria.andrade@gmail.com</td>
-              <td>+593 98 234 5678</td>
-              <td>7</td>
-              <td>
-                <div class="acciones-tabla">
-                  <button class="accion-btn" title="Ver detalle"><i class="fa-solid fa-eye"></i></button>
-                  <button class="accion-btn" title="Editar"><i class="fa-solid fa-pen"></i></button>
-                </div>
-              </td>
-            </tr>
-            <tr>
-              <td><div class="celda-nombre"><div class="avatar-producto">DN</div> Distribuidora Norte</div></td>
-              <td class="text-gris">0304050607</td>
-              <td>compras@distnorte.com</td>
-              <td>+593 97 345 6789</td>
-              <td>32</td>
-              <td>
-                <div class="acciones-tabla">
-                  <button class="accion-btn" title="Ver detalle"><i class="fa-solid fa-eye"></i></button>
-                  <button class="accion-btn" title="Editar"><i class="fa-solid fa-pen"></i></button>
-                </div>
-              </td>
-            </tr>
-            <tr>
-              <td><div class="celda-nombre"><div class="avatar-producto">CM</div> Carlos Moreno</div></td>
-              <td class="text-gris">0405060708</td>
-              <td>carlos.moreno@hotmail.com</td>
-              <td>+593 96 456 7890</td>
-              <td>4</td>
-              <td>
-                <div class="acciones-tabla">
-                  <button class="accion-btn" title="Ver detalle"><i class="fa-solid fa-eye"></i></button>
-                  <button class="accion-btn" title="Editar"><i class="fa-solid fa-pen"></i></button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      <div class="paginacion">
-        <span class="pag-info">Mostrando 1–4 de 68 clientes</span>
-        <div class="pag-controles">
-          <button class="pag-btn" disabled><i class="fa-solid fa-chevron-left"></i></button>
-          <button class="pag-btn activo">1</button>
-          <button class="pag-btn">2</button>
-          <button class="pag-btn">3</button>
-          <button class="pag-btn"><i class="fa-solid fa-chevron-right"></i></button>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ====== VISTA: PRODUCTOS ====== -->
-  <section class="vista-contenido" id="vista-productos">
-    <div class="encabezado-seccion">
-      <div>
-        <h2 class="titulo-pagina">Productos</h2>
-        <p class="subtitulo-pagina">Catálogo de productos del negocio</p>
-      </div>
-      <div class="acciones-encabezado">
-        <button class="boton-primario"><i class="fa-solid fa-plus"></i> Nuevo producto</button>
-      </div>
-    </div>
-
-    <div class="barra-busqueda-contenedor">
-      <div class="barra-busqueda">
-        <i class="fa-solid fa-magnifying-glass busqueda-icono"></i>
-        <input type="text" class="busqueda-input" placeholder="Buscar producto por nombre o código..."/>
-      </div>
-      <div class="filtros-bodega">
-        <button class="filtro-chip activo">Todas las categorías</button>
-        <button class="filtro-chip">Insumos de oficina</button>
-        <button class="filtro-chip">Tecnología</button>
-        <button class="filtro-chip">Equipos</button>
-      </div>
-    </div>
-
-    <div class="tarjeta-contenido">
-      <div class="tabla-contenedor">
-        <table class="tabla-datos">
-          <thead>
-            <tr>
-              <th>Producto</th>
-              <th>Código</th>
-              <th>Categoría</th>
-              <th>Precio unitario</th>
-              <th>IVA</th>
-              <th>Estado</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><div class="celda-nombre"><div class="avatar-producto">TH</div> Tóner HP 85A</div></td>
-              <td><span class="codigo-prod">PRD-0231</span></td>
-              <td>Insumos de oficina</td>
-              <td class="linea-total">$13.00</td>
-              <td><span class="estado-badge ok">Grava IVA</span></td>
-              <td><span class="estado-badge activo">Activo</span></td>
-              <td>
-                <div class="acciones-tabla">
-                  <button class="accion-btn" title="Ver detalle"><i class="fa-solid fa-eye"></i></button>
-                  <button class="accion-btn" title="Editar"><i class="fa-solid fa-pen"></i></button>
-                </div>
-              </td>
-            </tr>
-            <tr>
-              <td><div class="celda-nombre"><div class="avatar-producto">EL</div> Impresora Epson L3250</div></td>
-              <td><span class="codigo-prod">PRD-0198</span></td>
-              <td>Equipos</td>
-              <td class="linea-total">$289.00</td>
-              <td><span class="estado-badge ok">Grava IVA</span></td>
-              <td><span class="estado-badge activo">Activo</span></td>
-              <td>
-                <div class="acciones-tabla">
-                  <button class="accion-btn" title="Ver detalle"><i class="fa-solid fa-eye"></i></button>
-                  <button class="accion-btn" title="Editar"><i class="fa-solid fa-pen"></i></button>
-                </div>
-              </td>
-            </tr>
-            <tr>
-              <td><div class="celda-nombre"><div class="avatar-producto">RP</div> Resma de papel A4</div></td>
-              <td><span class="codigo-prod">PRD-0045</span></td>
-              <td>Insumos de oficina</td>
-              <td class="linea-total">$3.20</td>
-              <td><span class="estado-badge ok">Grava IVA</span></td>
-              <td><span class="estado-badge activo">Activo</span></td>
-              <td>
-                <div class="acciones-tabla">
-                  <button class="accion-btn" title="Ver detalle"><i class="fa-solid fa-eye"></i></button>
-                  <button class="accion-btn" title="Editar"><i class="fa-solid fa-pen"></i></button>
-                </div>
-              </td>
-            </tr>
-            <tr>
-              <td><div class="celda-nombre"><div class="avatar-producto">CH</div> Cable HDMI 2m</div></td>
-              <td><span class="codigo-prod">PRD-0276</span></td>
-              <td>Tecnología</td>
-              <td class="linea-total">$8.50</td>
-              <td><span class="estado-badge critico">Tarifa 0%</span></td>
-              <td><span class="estado-badge activo">Activo</span></td>
-              <td>
-                <div class="acciones-tabla">
-                  <button class="accion-btn" title="Ver detalle"><i class="fa-solid fa-eye"></i></button>
-                  <button class="accion-btn" title="Editar"><i class="fa-solid fa-pen"></i></button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      <div class="paginacion">
-        <span class="pag-info">Mostrando 1–4 de 48 productos</span>
-        <div class="pag-controles">
-          <button class="pag-btn" disabled><i class="fa-solid fa-chevron-left"></i></button>
-          <button class="pag-btn activo">1</button>
-          <button class="pag-btn">2</button>
-          <button class="pag-btn">3</button>
-          <span class="pag-puntos">…</span>
-          <button class="pag-btn">10</button>
-          <button class="pag-btn"><i class="fa-solid fa-chevron-right"></i></button>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ====== VISTA: INVENTARIO ====== -->
-  <section class="vista-contenido" id="vista-inventario">
-    <div class="encabezado-seccion">
-      <div>
-        <h2 class="titulo-pagina">Inventario</h2>
-        <p class="subtitulo-pagina">Estado del stock por producto y bodega</p>
-      </div>
-      <div class="acciones-encabezado">
-        <button class="boton-ghost"><i class="fa-solid fa-file-export"></i> Exportar</button>
-      </div>
-    </div>
-
-    <div class="barra-busqueda-contenedor">
-      <div class="barra-busqueda">
-        <i class="fa-solid fa-magnifying-glass busqueda-icono"></i>
-        <input type="text" class="busqueda-input" placeholder="Buscar producto por nombre o código..."/>
-      </div>
-      <div class="filtros-bodega">
-        <button class="filtro-chip activo">Todas las bodegas</button>
-        <button class="filtro-chip">Bodega Central</button>
-        <button class="filtro-chip">Sucursal Norte</button>
-      </div>
-    </div>
-
-    <div class="tarjeta-contenido">
-      <div class="tabla-contenedor">
-        <table class="tabla-datos">
-          <thead>
-            <tr>
-              <th>Producto</th>
-              <th>Código</th>
-              <th>Stock actual</th>
-              <th>Mín. / Máx.</th>
-              <th>Bodega</th>
-              <th>Estado</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><div class="celda-nombre"><div class="avatar-producto">TH</div> Tóner HP 85A</div></td>
-              <td><span class="codigo-prod">PRD-0231</span></td>
-              <td>
-                <div class="stock-bar-contenedor">
-                  <div class="stock-bar-wrap"><div class="stock-bar critico" style="width:15%"></div></div>
-                  <span class="stock-cant">3 uds.</span>
-                </div>
-              </td>
-              <td class="min-max">20 / 60</td>
-              <td>Bodega Central</td>
-              <td><span class="estado-badge critico">Crítico</span></td>
-            </tr>
-            <tr>
-              <td><div class="celda-nombre"><div class="avatar-producto">EL</div> Impresora Epson L3250</div></td>
-              <td><span class="codigo-prod">PRD-0198</span></td>
-              <td>
-                <div class="stock-bar-contenedor">
-                  <div class="stock-bar-wrap"><div class="stock-bar ok" style="width:70%"></div></div>
-                  <span class="stock-cant">14 uds.</span>
-                </div>
-              </td>
-              <td class="min-max">5 / 20</td>
-              <td>Bodega Central</td>
-              <td><span class="estado-badge ok">Normal</span></td>
-            </tr>
-            <tr>
-              <td><div class="celda-nombre"><div class="avatar-producto">GR</div> Grapas Novus 24/6</div></td>
-              <td><span class="codigo-prod">PRD-0312</span></td>
-              <td>
-                <div class="stock-bar-contenedor">
-                  <div class="stock-bar-wrap"><div class="stock-bar critico" style="width:10%"></div></div>
-                  <span class="stock-cant">2 uds.</span>
-                </div>
-              </td>
-              <td class="min-max">30 / 100</td>
-              <td>Sucursal Norte</td>
-              <td><span class="estado-badge critico">Crítico</span></td>
-            </tr>
-            <tr>
-              <td><div class="celda-nombre"><div class="avatar-producto">CH</div> Cable HDMI 2m</div></td>
-              <td><span class="codigo-prod">PRD-0276</span></td>
-              <td>
-                <div class="stock-bar-contenedor">
-                  <div class="stock-bar-wrap"><div class="stock-bar alerta" style="width:35%"></div></div>
-                  <span class="stock-cant">18 uds.</span>
-                </div>
-              </td>
-              <td class="min-max">15 / 50</td>
-              <td>Sucursal Norte</td>
-              <td><span class="estado-badge alerta">Bajo</span></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      <div class="paginacion">
-        <span class="pag-info">Mostrando 1–4 de 48 productos</span>
-        <div class="pag-controles">
-          <button class="pag-btn" disabled><i class="fa-solid fa-chevron-left"></i></button>
-          <button class="pag-btn activo">1</button>
-          <button class="pag-btn">2</button>
-          <button class="pag-btn"><i class="fa-solid fa-chevron-right"></i></button>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ====== VISTA: BODEGAS ====== -->
-  <section class="vista-contenido" id="vista-bodegas">
-    <div class="encabezado-seccion">
-      <div>
-        <h2 class="titulo-pagina">Bodegas</h2>
-        <p class="subtitulo-pagina">Administra los almacenes de tu negocio</p>
-      </div>
-    </div>
-
-    <div class="grilla-bodegas">
-      <div class="tarjeta-bodega">
-        <div class="bodega-encabezado">
-          <div class="bodega-icono"><i class="fa-solid fa-warehouse"></i></div>
-          <div>
-            <p class="bodega-nombre">Bodega Central</p>
-            <p class="bodega-direccion">Av. Ordóñez Lasso y Los Pinos, Cuenca</p>
-          </div>
-        </div>
-        <div class="bodega-metricas">
-          <div class="bodega-metrica-item">
-            <p class="bodega-metrica-valor">32</p>
-            <p class="bodega-metrica-etiqueta">Productos</p>
-          </div>
-          <div class="bodega-metrica-item">
-            <p class="bodega-metrica-valor">980</p>
-            <p class="bodega-metrica-etiqueta">Unidades</p>
-          </div>
-          <div class="bodega-metrica-item">
-            <p class="bodega-metrica-valor">1</p>
-            <p class="bodega-metrica-etiqueta">Crítico</p>
-          </div>
-        </div>
-        <div class="bodega-acciones">
-          <a href="#vista-inventario" class="boton-secundario">Ver inventario</a>
-          <a href="#vista-kardex" class="boton-secundario">Ver kárdex</a>
-        </div>
-      </div>
-
-      <div class="tarjeta-bodega">
-        <div class="bodega-encabezado">
-          <div class="bodega-icono"><i class="fa-solid fa-warehouse"></i></div>
-          <div>
-            <p class="bodega-nombre">Sucursal Norte</p>
-            <p class="bodega-direccion">Av. de las Américas, Cuenca</p>
-          </div>
-        </div>
-        <div class="bodega-metricas">
-          <div class="bodega-metrica-item">
-            <p class="bodega-metrica-valor">16</p>
-            <p class="bodega-metrica-etiqueta">Productos</p>
-          </div>
-          <div class="bodega-metrica-item">
-            <p class="bodega-metrica-valor">260</p>
-            <p class="bodega-metrica-etiqueta">Unidades</p>
-          </div>
-          <div class="bodega-metrica-item">
-            <p class="bodega-metrica-valor">2</p>
-            <p class="bodega-metrica-etiqueta">Crítico</p>
-          </div>
-        </div>
-        <div class="bodega-acciones">
-          <a href="#vista-inventario" class="boton-secundario">Ver inventario</a>
-          <a href="#vista-kardex" class="boton-secundario">Ver kárdex</a>
-        </div>
-      </div>
-
-      <div class="tarjeta-bodega nueva">
-        <i class="fa-solid fa-plus"></i>
-        <span>Nueva bodega</span>
-      </div>
-    </div>
-  </section>
-
-  <!-- ====== VISTA: KÁRDEX ====== -->
-  <section class="vista-contenido" id="vista-kardex">
-    <div class="encabezado-seccion">
-      <div>
-        <h2 class="titulo-pagina">Kárdex</h2>
-        <p class="subtitulo-pagina">Registro contable de movimientos de inventario</p>
-      </div>
-      <div class="acciones-encabezado">
-        <button class="boton-ghost"><i class="fa-solid fa-file-export"></i> Exportar PDF</button>
-      </div>
-    </div>
-
-    <div class="tarjeta-contenido">
-      <div class="tarjeta-encabezado">
-        <h3 class="tarjeta-titulo">Selecciona el producto y el rango</h3>
-      </div>
-      <div class="selector-producto-cuerpo">
-        <div class="form-grupo">
-          <label class="form-label">Producto</label>
-          <div class="form-select-wrap">
-            <select class="form-select">
-              <option>Tóner HP 85A</option>
-            </select>
-            <i class="fa-solid fa-chevron-down select-icono"></i>
-          </div>
-        </div>
-        <div class="form-grupo">
-          <label class="form-label">Bodega</label>
-          <div class="form-select-wrap">
-            <select class="form-select">
-              <option>Bodega Central</option>
-              <option>Sucursal Norte</option>
-            </select>
-            <i class="fa-solid fa-chevron-down select-icono"></i>
-          </div>
-        </div>
-        <div class="form-grupo">
-          <label class="form-label">Rango de fechas</label>
-          <div class="selector-fecha"><i class="fa-solid fa-calendar-days"></i> 01/07/2026 – 15/07/2026</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="tarjeta-contenido">
-      <div class="tarjeta-encabezado">
-        <div class="kardex-titulo-grupo">
-          <h3 class="tarjeta-titulo">Tóner HP 85A</h3>
-          <span class="codigo-prod-badge">PRD-0231</span>
-        </div>
-        <span class="chip-info">Bodega Central</span>
-      </div>
-      <div class="tabla-contenedor">
-        <table class="tabla-datos tabla-kardex">
-          <thead>
-            <tr>
-              <th rowspan="2">Fecha</th>
-              <th rowspan="2">Documento</th>
-              <th rowspan="2">Detalle</th>
-              <th class="th-grupo" colspan="2">Entrada</th>
-              <th class="th-grupo" colspan="2">Salida</th>
-              <th class="th-saldo" colspan="2">Saldo</th>
-            </tr>
-            <tr>
-              <th class="th-grupo">Cant.</th>
-              <th class="th-grupo">Costo</th>
-              <th class="th-grupo">Cant.</th>
-              <th class="th-grupo">Costo</th>
-              <th class="th-saldo">Cant.</th>
-              <th class="th-saldo">Costo</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr class="fila-saldo-inicial">
-              <td class="text-gris">01/07/2026</td>
-              <td class="text-gris">—</td>
-              <td>Saldo inicial</td>
-              <td>—</td><td>—</td><td>—</td><td>—</td>
-              <td>6 uds.</td><td>$78.00</td>
-            </tr>
-            <tr>
-              <td class="text-gris">05/07/2026</td>
-              <td><span class="ref-tag">OC-2024-0035</span></td>
-              <td>Compra a proveedor</td>
-              <td class="celda-entrada">+10</td><td class="celda-entrada">$130.00</td>
-              <td>—</td><td>—</td>
-              <td>16 uds.</td><td>$208.00</td>
-            </tr>
-            <tr>
-              <td class="text-gris">09/07/2026</td>
-              <td><span class="ref-tag">FAC-001-0018</span></td>
-              <td>Venta a cliente</td>
-              <td>—</td><td>—</td>
-              <td class="celda-salida">-8</td><td class="celda-salida">$104.00</td>
-              <td>8 uds.</td><td>$104.00</td>
-            </tr>
-            <tr>
-              <td class="text-gris">15/07/2026</td>
-              <td><span class="ref-tag">FAC-001-0023</span></td>
-              <td>Venta a cliente</td>
-              <td>—</td><td>—</td>
-              <td class="celda-salida">-3</td><td class="celda-salida">$39.00</td>
-              <td>5 uds.</td><td>$65.00</td>
-            </tr>
-            <tr class="fila-total">
-              <td colspan="3">Totales del período</td>
-              <td>+10</td><td>$130.00</td>
-              <td>-11</td><td>$143.00</td>
-              <td>5 uds.</td><td>$65.00</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </section>
-
-  <!-- ====== VISTA: REPORTES ====== -->
-  <section class="vista-contenido" id="vista-reportes">
-    <div class="encabezado-seccion">
-      <div>
-        <h2 class="titulo-pagina">Reportes</h2>
-        <p class="subtitulo-pagina">Dashboard de rendimiento comercial</p>
-      </div>
-      <div class="acciones-encabezado">
-        <div class="selector-fecha"><i class="fa-solid fa-calendar-days"></i> Últimos 7 días</div>
-        <button class="boton-primario"><i class="fa-solid fa-file-export"></i> Exportar PDF</button>
-      </div>
-    </div>
-
-    <!-- Métricas rápidas -->
-    <div class="grilla-metricas">
-      <div class="tarjeta-metrica">
-        <div class="metrica-icono color-naranja"><i class="fa-solid fa-fire"></i></div>
-        <div class="metrica-datos">
-          <p class="metrica-valor">12 días</p>
-          <p class="metrica-etiqueta">Racha de ventas activa</p>
-        </div>
-        <div class="metrica-tendencia positiva">Récord: 19 días</div>
-      </div>
-      <div class="tarjeta-metrica">
-        <div class="metrica-icono color-morado"><i class="fa-solid fa-map-location-dot"></i></div>
-        <div class="metrica-datos">
-          <p class="metrica-valor">Centro Histórico</p>
-          <p class="metrica-etiqueta">Zona de mayor demanda</p>
-        </div>
-        <div class="metrica-tendencia positiva">38% de las ventas</div>
-      </div>
-      <div class="tarjeta-metrica">
-        <div class="metrica-icono color-verde"><i class="fa-solid fa-scale-balanced"></i></div>
-        <div class="metrica-datos">
-          <p class="metrica-valor">+18%</p>
-          <p class="metrica-etiqueta">Vs. semana anterior</p>
-        </div>
-        <div class="metrica-tendencia positiva"><i class="fa-solid fa-arrow-trend-up"></i> Positivo</div>
-      </div>
-      <div class="tarjeta-metrica">
-        <div class="metrica-icono color-azul"><i class="fa-solid fa-ticket"></i></div>
-        <div class="metrica-datos">
-          <p class="metrica-valor">$87.30</p>
-          <p class="metrica-etiqueta">Ticket promedio</p>
-        </div>
-        <div class="metrica-tendencia positiva"><i class="fa-solid fa-arrow-trend-up"></i> +5%</div>
-      </div>
-    </div>
-
-    <div class="grilla-dos-columnas">
-      <!-- Comparativa de ventas -->
-      <div class="tarjeta-contenido">
-        <div class="tarjeta-encabezado">
-          <h3 class="tarjeta-titulo">Ventas de los últimos 7 días</h3>
-          <span class="chip-info">Comparativa</span>
-        </div>
-        <div class="grafico-barras">
-          <div class="barra-grupo">
-            <div class="barra-visual-wrap"><div class="barra-visual" style="height:55%"></div></div>
-            <span class="barra-grupo-valor">$1,420</span>
-            <span class="barra-grupo-etiqueta">Lun</span>
-          </div>
-          <div class="barra-grupo">
-            <div class="barra-visual-wrap"><div class="barra-visual" style="height:68%"></div></div>
-            <span class="barra-grupo-valor">$1,760</span>
-            <span class="barra-grupo-etiqueta">Mar</span>
-          </div>
-          <div class="barra-grupo">
-            <div class="barra-visual-wrap"><div class="barra-visual" style="height:40%"></div></div>
-            <span class="barra-grupo-valor">$1,050</span>
-            <span class="barra-grupo-etiqueta">Mié</span>
-          </div>
-          <div class="barra-grupo">
-            <div class="barra-visual-wrap"><div class="barra-visual" style="height:80%"></div></div>
-            <span class="barra-grupo-valor">$2,080</span>
-            <span class="barra-grupo-etiqueta">Jue</span>
-          </div>
-          <div class="barra-grupo">
-            <div class="barra-visual-wrap"><div class="barra-visual" style="height:95%"></div></div>
-            <span class="barra-grupo-valor">$2,430</span>
-            <span class="barra-grupo-etiqueta">Vie</span>
-          </div>
-          <div class="barra-grupo">
-            <div class="barra-visual-wrap"><div class="barra-visual" style="height:100%"></div></div>
-            <span class="barra-grupo-valor">$2,560</span>
-            <span class="barra-grupo-etiqueta">Sáb</span>
-          </div>
-          <div class="barra-grupo">
-            <div class="barra-visual-wrap"><div class="barra-visual" style="height:30%"></div></div>
-            <span class="barra-grupo-valor">$780</span>
-            <span class="barra-grupo-etiqueta">Dom</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Zonas de calor -->
-      <div class="tarjeta-contenido">
-        <div class="tarjeta-encabezado">
-          <h3 class="tarjeta-titulo">Zonas de mayor demanda</h3>
-          <span class="chip-info">Este mes</span>
-        </div>
-        <div class="lista-zonas">
-          <div class="zona-item">
-            <span class="zona-nombre">Centro Histórico</span>
-            <div class="zona-barra-wrap"><div class="zona-barra" style="width:90%"></div></div>
-            <span class="zona-valor">38%</span>
-          </div>
-          <div class="zona-item">
-            <span class="zona-nombre">El Vergel</span>
-            <div class="zona-barra-wrap"><div class="zona-barra" style="width:62%"></div></div>
-            <span class="zona-valor">26%</span>
-          </div>
-          <div class="zona-item">
-            <span class="zona-nombre">Mercado 10 de Agosto</span>
-            <div class="zona-barra-wrap"><div class="zona-barra" style="width:45%"></div></div>
-            <span class="zona-valor">19%</span>
-          </div>
-          <div class="zona-item">
-            <span class="zona-nombre">Totoracocha</span>
-            <div class="zona-barra-wrap"><div class="zona-barra" style="width:28%"></div></div>
-            <span class="zona-valor">11%</span>
-          </div>
-          <div class="zona-item">
-            <span class="zona-nombre">Otras zonas</span>
-            <div class="zona-barra-wrap"><div class="zona-barra" style="width:14%"></div></div>
-            <span class="zona-valor">6%</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Reportes exportables -->
-    <div class="tarjeta-contenido">
-      <div class="tarjeta-encabezado">
-        <h3 class="tarjeta-titulo">Reportes exportables</h3>
-      </div>
-      <div class="tabla-contenedor">
-        <table class="tabla-datos">
-          <thead>
-            <tr>
-              <th>Reporte</th>
-              <th>Período</th>
-              <th>Formato</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>Ventas por período</td>
-              <td class="text-gris">01/07/2026 – 15/07/2026</td>
-              <td><span class="chip-info">PDF</span></td>
-              <td>
-                <div class="acciones-tabla">
-                  <button class="accion-btn" title="Descargar"><i class="fa-solid fa-download"></i></button>
-                </div>
-              </td>
-            </tr>
-            <tr>
-              <td>Facturación electrónica (SRI)</td>
-              <td class="text-gris">Junio 2026</td>
-              <td><span class="chip-info">PDF</span></td>
-              <td>
-                <div class="acciones-tabla">
-                  <button class="accion-btn" title="Descargar"><i class="fa-solid fa-download"></i></button>
-                </div>
-              </td>
-            </tr>
-            <tr>
-              <td>Cuentas por cobrar</td>
-              <td class="text-gris">Al 15/07/2026</td>
-              <td><span class="chip-info">PDF</span></td>
-              <td>
-                <div class="acciones-tabla">
-                  <button class="accion-btn" title="Descargar"><i class="fa-solid fa-download"></i></button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </section>
-
-  <!-- ====== VISTA: MI EQUIPO ====== -->
-  <section class="vista-contenido" id="vista-equipo">
-    <div class="encabezado-seccion">
-      <div>
-        <h2 class="titulo-pagina">Mi equipo</h2>
-        <p class="subtitulo-pagina">Administra al personal de tu negocio y sus roles</p>
-      </div>
-      <div class="acciones-encabezado">
-        <button class="boton-primario"><i class="fa-solid fa-user-plus"></i> Invitar miembro</button>
-      </div>
-    </div>
-
-    <div class="nota-info">
-      <div class="nota-info-icono"><i class="fa-solid fa-circle-info"></i></div>
-      <div class="nota-info-texto">
-        <strong>Código de invitación:</strong> comparte el código del negocio con la persona para que se una desde la pantalla de registro. Aquí podrás asignarle su rol (Vendedor o Bodeguero) y aprobar su ingreso.
-      </div>
-    </div>
-
-    <div class="tarjeta-contenido">
-      <div class="tabla-contenedor">
-        <table class="tabla-datos">
-          <thead>
-            <tr>
-              <th>Miembro</th>
-              <th>Correo</th>
-              <th>Rol</th>
-              <th>Vinculado desde</th>
-              <th>Estado</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><div class="celda-nombre"><div class="avatar-producto">JP</div> Juan Pérez (tú)</div></td>
-              <td class="text-gris">juan.perez@comercialperez.dilo</td>
-              <td><span class="rol-miembro propietario">Propietario</span></td>
-              <td class="text-gris">01/01/2025</td>
-              <td><span class="estado-badge activo">Activo</span></td>
-              <td class="text-gris">—</td>
-            </tr>
-            <tr>
-              <td><div class="celda-nombre"><div class="avatar-producto">VL</div> Valeria Luna</div></td>
-              <td class="text-gris">v.luna@comercialperez.dilo</td>
-              <td><span class="rol-miembro vendedor">Vendedora</span></td>
-              <td class="text-gris">14/03/2025</td>
-              <td><span class="estado-badge activo">Activo</span></td>
-              <td>
-                <div class="acciones-tabla">
-                  <button class="accion-btn" title="Cambiar rol"><i class="fa-solid fa-user-gear"></i></button>
-                  <button class="accion-btn peligro" title="Remover del negocio"><i class="fa-solid fa-user-slash"></i></button>
-                </div>
-              </td>
-            </tr>
-            <tr>
-              <td><div class="celda-nombre"><div class="avatar-producto">RC</div> Roberto Cárdenas</div></td>
-              <td class="text-gris">r.cardenas@comercialperez.dilo</td>
-              <td><span class="rol-miembro bodeguero">Bodeguero</span></td>
-              <td class="text-gris">02/05/2025</td>
-              <td><span class="estado-badge activo">Activo</span></td>
-              <td>
-                <div class="acciones-tabla">
-                  <button class="accion-btn" title="Cambiar rol"><i class="fa-solid fa-user-gear"></i></button>
-                  <button class="accion-btn peligro" title="Remover del negocio"><i class="fa-solid fa-user-slash"></i></button>
-                </div>
-              </td>
-            </tr>
-            <tr>
-              <td><div class="celda-nombre"><div class="avatar-producto">MP</div> María Ponce</div></td>
-              <td class="text-gris">m.ponce@gmail.com</td>
-              <td><span class="rol-miembro vendedor">Vendedora</span></td>
-              <td class="text-gris">—</td>
-              <td><span class="estado-badge pendiente">Invitación pendiente</span></td>
-              <td>
-                <div class="acciones-tabla">
-                  <button class="accion-btn" title="Aprobar"><i class="fa-solid fa-check"></i></button>
-                  <button class="accion-btn peligro" title="Rechazar"><i class="fa-solid fa-xmark"></i></button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </section>
-
-  <!-- ====== VISTA: CONFIGURACIÓN ====== -->
-  <section class="vista-contenido" id="vista-configuracion">
-    <div class="encabezado-seccion">
-      <div>
-        <h2 class="titulo-pagina">Configuración</h2>
-        <p class="subtitulo-pagina">Datos del negocio, facturación y seguridad</p>
-      </div>
-    </div>
-
-    <!-- Datos del negocio -->
-    <div class="tarjeta-contenido">
-      <div class="tarjeta-encabezado">
-        <h3 class="tarjeta-titulo">Datos del negocio</h3>
-      </div>
-      <div class="form-cuerpo">
-        <div class="form-grilla-2">
-          <div class="form-grupo">
-            <label class="form-label">RUC</label>
-            <div class="form-input-wrap">
-              <i class="fa-solid fa-id-card form-input-icono"></i>
-              <input type="text" class="form-input" placeholder="0190123456001"/>
+                <button class="logout-btn" (click)="cerrarSesion()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                </button>
             </div>
-          </div>
-          <div class="form-grupo">
-            <label class="form-label">Razón social</label>
-            <div class="form-input-wrap">
-              <i class="fa-solid fa-file-signature form-input-icono"></i>
-              <input type="text" class="form-input" placeholder="Comercial Pérez S.A."/>
-            </div>
-          </div>
         </div>
-        <div class="form-grilla-2">
-          <div class="form-grupo">
-            <label class="form-label">Nombre comercial</label>
-            <div class="form-input-wrap">
-              <i class="fa-solid fa-store form-input-icono"></i>
-              <input type="text" class="form-input" placeholder="Comercial Pérez"/>
-            </div>
-          </div>
-          <div class="form-grupo">
-            <label class="form-label">Código de invitación</label>
-            <div class="form-input-wrap">
-              <i class="fa-solid fa-key form-input-icono"></i>
-              <input type="text" class="form-input" placeholder="DILO-8F2K9X" readonly/>
-            </div>
-          </div>
-        </div>
-        <div class="form-toggle-fila">
-          <div class="form-toggle-texto">
-            Obligado a llevar contabilidad
-            <small>Aplica retenciones y tratamiento contable especial según el SRI</small>
-          </div>
-          <div class="toggle-switch activo"></div>
-        </div>
-        <div class="form-acciones">
-          <button class="boton-primario"><i class="fa-solid fa-floppy-disk"></i> Guardar cambios</button>
-        </div>
-      </div>
-    </div>
+    </aside>
 
-    <!-- Firma electrónica -->
-    <div class="tarjeta-contenido">
-      <div class="tarjeta-encabezado">
-        <h3 class="tarjeta-titulo">Firma electrónica</h3>
-        <span class="chip-info"><i class="fa-solid fa-lock"></i> Almacenamiento cifrado</span>
-      </div>
-      <div class="form-cuerpo">
-        <div class="zona-carga-archivo">
-          <div class="zona-carga-icono"><i class="fa-solid fa-file-shield"></i></div>
-          <div class="zona-carga-texto">
-            <strong>firma_comercialperez.p12</strong>
-            Archivo de firma electrónica cargado — vence el 20/03/2027
-          </div>
-          <button class="boton-ghost"><i class="fa-solid fa-arrow-up-from-bracket"></i> Reemplazar</button>
-        </div>
-        <div class="form-grupo">
-          <label class="form-label">Contraseña de la firma</label>
-          <div class="form-input-wrap">
-            <i class="fa-solid fa-lock form-input-icono"></i>
-            <input type="password" class="form-input" placeholder="••••••••"/>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Seguridad -->
-    <div class="tarjeta-contenido">
-      <div class="tarjeta-encabezado">
-        <h3 class="tarjeta-titulo">Seguridad</h3>
-      </div>
-      <div class="form-cuerpo">
-        <div class="form-grilla-2">
-          <div class="form-grupo">
-            <label class="form-label">Contraseña actual</label>
-            <div class="form-input-wrap">
-              <i class="fa-solid fa-lock form-input-icono"></i>
-              <input type="password" class="form-input" placeholder="••••••••"/>
+    <main class="main-content">
+        
+        <header class="top-header">
+            <div class="breadcrumbs">
+                <span>Negocio ID: {{ negocioId }}</span>
+                <span class="separator">></span>
+                <span class="current">Propietario</span>
             </div>
-          </div>
-          <div class="form-grupo">
-            <label class="form-label">Nueva contraseña</label>
-            <div class="form-input-wrap">
-              <i class="fa-solid fa-lock form-input-icono"></i>
-              <input type="password" class="form-input" placeholder="Mínimo 8 caracteres"/>
+            <div class="header-actions">
+                <div class="user-avatar orange-bg">
+                    {{ usuarioLogueado?.nombre ? usuarioLogueado.nombre.substring(0, 2).toUpperCase() : 'EC' }}
+                </div>
             </div>
-          </div>
-        </div>
-        <div class="form-toggle-fila">
-          <div class="form-toggle-texto">
-            Cierre de sesión automático por inactividad
-            <small>Cierra la sesión luego de un período sin actividad, en web y móvil</small>
-          </div>
-          <div class="toggle-switch activo"></div>
-        </div>
-        <div class="form-acciones">
-          <button class="boton-primario"><i class="fa-solid fa-shield-halved"></i> Actualizar seguridad</button>
-        </div>
-      </div>
-    </div>
-  </section>
+        </header>
 
-</main>
+        <section class="welcome-section">
+            <div class="welcome-text">
+                <h1>Bienvenido, {{ usuarioLogueado?.nombre ? (usuarioLogueado.nombre.split(' ')[0]) : 'Juan' }} 👋</h1>
+                <p>Aquí está el rendimiento de tu negocio hoy</p>
+            </div>
+            <button class="btn-primary" routerLink="/dashboard/facturas">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                Nueva factura
+            </button>
+        </section>
+
+        <div class="alert-banner">
+            <div class="alert-content">
+                <div class="alert-icon">⚠️</div>
+                <p><strong>Revisa tus productos</strong> por debajo del stock mínimo en bodega.</p>
+            </div>
+            <a routerLink="/dashboard/inventario" class="alert-link">Ver inventario ➔</a>
+        </div>
+
+        <section class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon-wrapper bg-blue">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                </div>
+                <div class="stat-info">
+                    <h3>${{ ventasMes | number:'1.2-2' }}</h3>
+                    <p>Ventas del mes</p>
+                </div>
+                <span class="badge badge-green">↗ +18%</span>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon-wrapper bg-orange">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ed8936" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                </div>
+                <div class="stat-info">
+                    <h3>{{ facturasEmitidas }}</h3>
+                    <p>Facturas emitidas</p>
+                </div>
+                <span class="badge badge-green">↗ +9%</span>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon-wrapper bg-green">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                </div>
+                <div class="stat-info">
+                    <h3>{{ clientesActivos }}</h3>
+                    <p>Clientes activos</p>
+                </div>
+                <span class="badge badge-green">↗ +4%</span>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon-wrapper bg-purple">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9333ea" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line></svg>
+                </div>
+                <div class="stat-info">
+                    <h3>{{ pedidosVoz }}</h3>
+                    <p>Pedidos por voz</p>
+                </div>
+                <span class="badge badge-green">↗ +62%</span>
+            </div>
+        </section>
+
+        <div class="content-grid">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Facturas recientes</h3>
+                    <a routerLink="/dashboard/facturas" class="link-action">Ver todas ➔</a>
+                </div>
+                <div class="card-body">
+                    <div *ngIf="facturas.length === 0" style="padding: 20px; text-align: center; color: #64748b; font-size: 0.9rem;">
+                        No hay facturas registradas.
+                    </div>
+                    <div class="list-item" *ngFor="let fac of facturas">
+                        <div class="item-info">
+                            <h4>{{ fac.numero }}</h4>
+                            <p>{{ fac.cliente }}</p>
+                        </div>
+                        <div class="item-actions">
+                            <span class="tag tag-gray">{{ fac.tipo }}</span>
+                        </div>
+                        <div class="item-amount">
+                            <h4>${{ fac.monto.toFixed(2) }}</h4>
+                            <span class="status" [ngClass]="{'status-green': fac.estado === 'AUTORIZADO' || fac.estado === 'Emitida', 'status-yellow': fac.estado === 'CREADA', 'status-red': fac.estado === 'ANULADA'}">
+                                {{ fac.estado }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3>Productos más vendidos</h3>
+                    <span class="badge-gray">Este mes</span>
+                </div>
+                <div class="card-body">
+                    <div *ngIf="productos.length === 0" style="padding: 20px; text-align: center; color: #64748b; font-size: 0.9rem;">
+                        No hay productos registrados.
+                    </div>
+                    <div class="product-item" *ngFor="let prod of productos; let i = index">
+                        <div class="product-row">
+                            <div class="product-name">
+                                <span class="number-badge">{{ i + 1 }}</span>
+                                {{ prod.nombre }}
+                            </div>
+                            <div class="product-qty">{{ prod.cantidad }} uds.</div>
+                        </div>
+                        <div class="progress-bg">
+                            <div class="progress-fill" [style.width.%]="prod.porcentaje"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <section class="team-section card mt-4">
+            <div class="card-header">
+                <h3>Mi equipo</h3>
+                <button class="btn-outline" routerLink="/dashboard/equipo">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                    Ver todo el equipo
+                </button>
+            </div>
+            <div class="team-grid">
+                <div *ngIf="equipo.length === 0" style="padding: 20px; text-align: center; color: #64748b; font-size: 0.9rem; grid-column: span 3;">
+                    No hay equipo registrado.
+                </div>
+                <div class="team-card" *ngFor="let user of equipo">
+                    <div class="user-avatar-medium" [style.background-color]="user.color">{{ user.iniciales }}</div>
+                    <div class="team-info">
+                        <h4>{{ user.nombre }}</h4>
+                        <span class="role-tag">{{ user.rol }}</span>
+                    </div>
+                    <div class="status-dot" [ngClass]="{'active-dot': user.activo}"></div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+</div>

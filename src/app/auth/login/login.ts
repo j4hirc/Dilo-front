@@ -3,7 +3,7 @@ import { Router, RouterLink } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AuthService } from '../auth.service';
 import { CommonModule } from '@angular/common';
-import Swal from 'sweetalert2'; // <-- OBLIGATORIO PARA LAS ALERTAS
+import Swal from 'sweetalert2'; 
 
 @Component({
   selector: 'app-login',
@@ -30,7 +30,6 @@ export class Login {
   }
 
   onSubmit() {
-    // Si el formulario no es válido, disparamos el SweetAlert y detenemos todo
     if (this.loginForm.invalid) {
       this.loginForm.markAllAsTouched();
       Swal.fire({
@@ -48,36 +47,42 @@ export class Login {
       next: (response) => {
         this.isLoading = false;
         
-        // Guardamos token y usuario
+        // 1. Guardamos el token
         this.authService.saveToken(response.token);
+        
+        // 2. Unificamos toda la data en un solo objeto limpio
         const usuarioInfo = {
             email: response.email,
             nombre: response.nombreCompleto,
             rol: response.rol,
             roles: response.roles,
-            negocioId: response.selectedBusinessId,
+            // Agregamos ambas opciones de ID por si el backend cambia el nombre
+            negocioId: response.selectedBusinessId || response.negocioId, 
             businesses: response.businesses,
             needsBusinessSelection: response.needsBusinessSelection,
             needsRoleSelection: response.needsRoleSelection
         };
+        
+        // 3. Forzamos el guardado en localStorage y en el servicio
+        localStorage.setItem('usuario', JSON.stringify(usuarioInfo));
         this.authService.saveUser(usuarioInfo);
 
+        // 4. Evaluamos a dónde redirigir al usuario
         const rol = response.rol;
-        const isSuperAdmin = response.superAdmin; // or isSuperAdmin, depends on json serialization
-        const tieneNegocio = response.selectedBusinessId != null;
+        const isSuperAdmin = response.superAdmin || rol === 'SUPER_ADMIN'; 
+        const tieneNegocio = usuarioInfo.negocioId != null;
         const needsRoleSelection = response.needsRoleSelection;
 
-        // Opcional: Una alerta bonita de bienvenida antes de redirigir
+        // 5. Alerta de éxito y redirección
         Swal.fire({
           icon: 'success',
-          title: `¡Hola de nuevo!`,
+          title: '¡Hola de nuevo!',
           text: 'Iniciando sesión...',
           timer: 1500,
           showConfirmButton: false,
           timerProgressBar: true
         }).then(() => {
-            // Rutas
-            if (isSuperAdmin || rol === 'SUPER_ADMIN') {
+            if (isSuperAdmin) {
                 this.router.navigate(['/admin-panel']);
             } else if (!tieneNegocio) {
                 this.router.navigate(['/onboarding-business']);
@@ -97,7 +102,6 @@ export class Login {
         this.isLoading = false;
         console.error(err);
         
-        // Alerta cuando las credenciales están mal
         Swal.fire({
           icon: 'error',
           title: 'Acceso Denegado',

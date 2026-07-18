@@ -1,7 +1,4 @@
 import { Routes } from '@angular/router';
-import { Home } from './home/home';
-import { Login } from './auth/login/login';
-import { Registro } from './auth/registro/registro';
 
 export const routes: Routes = [
   { path: '', loadComponent: () => import('./home/home').then(m => m.Home) },
@@ -12,10 +9,20 @@ export const routes: Routes = [
   { path: 'select-role', loadComponent: () => import('./auth/select-role/select-role').then(m => m.SelectRole) },
   
   // Dashboards
+  { path: 'dashboard', loadComponent: () => import('./dashboard/dashboard-default').then(m => m.DashboardDefault) },
   { path: 'dashboard/propietario', loadComponent: () => import('./dashboard/propietario/propietario').then(m => m.Propietario) },
   { path: 'dashboard/ventas', loadComponent: () => import('./dashboard/ventas').then(m => m.Ventas) },
-  { path: 'dashboard/inventario', loadComponent: () => import('./dashboard/inventario').then(m => m.Inventario) },
-  { path: 'dashboard', loadComponent: () => import('./dashboard/dashboard-default').then(m => m.DashboardDefault) },
+  
+  // Rellenamos las rutas que faltaban en tu sidebar
+  { path: 'dashboard/facturas', loadComponent: () => import('./dashboard/facturas/facturas').then(m => m.Facturas) },
+  { path: 'dashboard/clientes', loadComponent: () => import('./dashboard/clientes/clientes').then(m => m.Clientes) },
+  { path: 'dashboard/productos', loadComponent: () => import('./dashboard/productos/productos').then(m => m.Productos) },
+  { path: 'dashboard/bodegas', loadComponent: () => import('./dashboard/bodegas/bodegas').then(m => m.Bodegas) },
+  { path: 'dashboard/kardex', loadComponent: () => import('./dashboard/kardex/kardex').then(m => m.Kardex) },
+  { path: 'dashboard/reportes', loadComponent: () => import('./dashboard/reportes/reportes').then(m => m.Reportes) },
+  { path: 'dashboard/equipo', loadComponent: () => import('./dashboard/equipo/equipo').then(m => m.Equipo) },
+  { path: 'dashboard/configuracion', loadComponent: () => import('./dashboard/configuracion/configuracion').then(m => m.Configuracion) },
+
   { path: 'admin-panel', loadComponent: () => import('./admin-panel/admin-panel').then(m => m.AdminPanel) },
   
   { path: '**', redirectTo: '' }
