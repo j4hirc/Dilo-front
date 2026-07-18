@@ -1,0 +1,207 @@
+<div class="register-layout">
+    <div class="register-card">
+
+        <!-- HEADER CON TU LOGO -->
+        <div class="header-section">
+            <div class="logo-container">
+                <img src="/images/Dilo-Logo-2-.png" alt="Dilo Logo" class="dilo-logo">
+            </div>
+            <h2>Crea tu cuenta</h2>
+            <p class="subtitle">Ingresa tus datos personales para continuar</p>
+        </div>
+
+        <!-- BANNERS VIEJOS ELIMINADOS. AHORA USAMOS SWEETALERT2 -->
+
+        <form [formGroup]="registerForm" (ngSubmit)="onSubmit()">
+
+            <!-- AVATAR DE FOTO DE PERFIL -->
+            <div class="avatar-upload-container">
+                <input type="file" id="fotoPerfil" (change)="onFileSelected($event)" accept="image/*" class="hidden-file-input">
+                <label for="fotoPerfil" class="avatar-preview-wrapper" [class.has-image]="imagePreview">
+                    <img *ngIf="imagePreview" [src]="imagePreview" alt="Vista previa" class="avatar-image">
+                    <div *ngIf="!imagePreview" class="avatar-placeholder">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                        <span class="upload-text">Subir foto</span>
+                    </div>
+                    <div class="camera-badge">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                    </div>
+                </label>
+            </div>
+
+            <div class="form-group full-width">
+                <label>CÉDULA / DNI</label>
+                <div class="input-with-icon">
+                    <span class="input-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                    </span>
+                    <input type="text" formControlName="dni" placeholder="Ej: 0102030405" autocomplete="off">
+                </div>
+                <span class="error-text" *ngIf="registerForm.get('dni')?.hasError('required') && registerForm.get('dni')?.touched">La cédula es obligatoria.</span>
+                <span class="error-text" *ngIf="registerForm.get('dni')?.hasError('pattern') && registerForm.get('dni')?.touched">Debe contener 10 números exactos.</span>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group half-width">
+                    <label>PRIMER NOMBRE</label>
+                    <div class="input-with-icon">
+                        <span class="input-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                        </span>
+                        <input type="text" formControlName="primerNombre" placeholder="Juan" autocomplete="given-name">
+                    </div>
+                    <span class="error-text" *ngIf="registerForm.get('primerNombre')?.hasError('required') && registerForm.get('primerNombre')?.touched">Obligatorio.</span>
+                    <span class="error-text" *ngIf="registerForm.get('primerNombre')?.hasError('minlength') && registerForm.get('primerNombre')?.touched">Mínimo 3 letras.</span>
+                    <span class="error-text" *ngIf="registerForm.get('primerNombre')?.hasError('pattern') && registerForm.get('primerNombre')?.touched">Solo se permiten letras.</span>
+                </div>
+                <div class="form-group half-width">
+                    <label>SEGUNDO NOMBRE</label>
+                    <div class="input-with-icon">
+                        <span class="input-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                        </span>
+                        <input type="text" formControlName="segundoNombre" placeholder="Opcional" autocomplete="additional-name">
+                    </div>
+                    <span class="error-text" *ngIf="registerForm.get('segundoNombre')?.hasError('pattern') && registerForm.get('segundoNombre')?.touched">Solo se permiten letras.</span>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group half-width">
+                    <label>APELLIDO PATERNO</label>
+                    <div class="input-with-icon">
+                        <span class="input-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                        </span>
+                        <input type="text" formControlName="apellidoPaterno" placeholder="Pérez" autocomplete="family-name">
+                    </div>
+                    <span class="error-text" *ngIf="registerForm.get('apellidoPaterno')?.hasError('required') && registerForm.get('apellidoPaterno')?.touched">Obligatorio.</span>
+                    <span class="error-text" *ngIf="registerForm.get('apellidoPaterno')?.hasError('minlength') && registerForm.get('apellidoPaterno')?.touched">Mínimo 3 letras.</span>
+                    <span class="error-text" *ngIf="registerForm.get('apellidoPaterno')?.hasError('pattern') && registerForm.get('apellidoPaterno')?.touched">Solo se permiten letras.</span>
+                </div>
+                <div class="form-group half-width">
+                    <label>APELLIDO MATERNO</label>
+                    <div class="input-with-icon">
+                        <span class="input-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                        </span>
+                        <input type="text" formControlName="apellidoMaterno" placeholder="Opcional">
+                    </div>
+                    <span class="error-text" *ngIf="registerForm.get('apellidoMaterno')?.hasError('pattern') && registerForm.get('apellidoMaterno')?.touched">Solo se permiten letras.</span>
+                </div>
+            </div>
+
+            <div class="form-group full-width">
+                <label>CORREO ELECTRÓNICO</label>
+                <div class="input-with-icon">
+                    <span class="input-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                    </span>
+                    <input type="email" formControlName="email" placeholder="juan@minegocio.com" autocomplete="username">
+                </div>
+                <span class="error-text" *ngIf="registerForm.get('email')?.hasError('required') && registerForm.get('email')?.touched">El correo es obligatorio.</span>
+                <span class="error-text" *ngIf="registerForm.get('email')?.hasError('email') && registerForm.get('email')?.touched">Ingresa un formato válido.</span>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group half-width">
+                    <label>TELÉFONO</label>
+                    <div class="input-with-icon">
+                        <span class="input-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                        </span>
+                        <input type="tel" formControlName="telefono" placeholder="+593 99 000 0000" autocomplete="tel">
+                    </div>
+                    <span class="error-text" *ngIf="registerForm.get('telefono')?.hasError('required') && registerForm.get('telefono')?.touched">Obligatorio.</span>
+                    <span class="error-text" *ngIf="registerForm.get('telefono')?.hasError('pattern') && registerForm.get('telefono')?.touched">Número inválido (Ej: 0990000000 o +593...).</span>
+                </div>
+                <div class="form-group half-width">
+                    <label>FECHA DE NACIMIENTO</label>
+                    <div class="input-with-icon">
+                        <span class="input-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                        </span>
+                        <!-- El max="fechaMaxima" previene fechas del futuro -->
+                        <input type="date" formControlName="fechaNacimiento" [max]="fechaMaxima">
+                    </div>
+                    <span class="error-text" *ngIf="registerForm.get('fechaNacimiento')?.invalid && registerForm.get('fechaNacimiento')?.touched">Obligatorio.</span>
+                </div>
+            </div>
+
+            <div class="form-group full-width">
+                <label>DIRECCIÓN</label>
+                <div class="input-with-icon">
+                    <span class="input-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                    </span>
+                    <input type="text" formControlName="direccion" placeholder="Av. Ejemplo 123, Cuenca" autocomplete="street-address">
+                </div>
+                <span class="error-text" *ngIf="registerForm.get('direccion')?.hasError('required') && registerForm.get('direccion')?.touched">La dirección es obligatoria.</span>
+                <span class="error-text" *ngIf="registerForm.get('direccion')?.hasError('minlength') && registerForm.get('direccion')?.touched">Sé un poco más específico (min. 5 letras).</span>
+            </div>
+
+            <div class="form-group full-width">
+                <label>PARROQUIA</label>
+                <div class="input-with-icon">
+                    <span class="input-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"></polygon><line x1="9" y1="3" x2="9" y2="21"></line><line x1="15" y1="3" x2="15" y2="21"></line></svg>
+                    </span>
+                    <select formControlName="id_parroquia">
+                        <option value="" disabled selected *ngIf="isLoadingParroquias">⏳ Cargando parroquias...</option>
+                        <option value="" disabled selected *ngIf="!isLoadingParroquias">Selecciona tu parroquia</option>
+                        <option *ngFor="let p of parroquias" [value]="p.id">{{ p.nombre }}</option>
+                    </select>
+                </div>
+                <span class="error-text" *ngIf="registerForm.get('id_parroquia')?.invalid && registerForm.get('id_parroquia')?.touched">Debes seleccionar una parroquia.</span>
+            </div>
+
+            <div class="form-group full-width">
+                <label>CONTRASEÑA</label>
+                <div class="input-with-icon">
+                    <span class="input-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                    </span>
+                    <input [type]="showPassword ? 'text' : 'password'" formControlName="password" placeholder="Mínimo 8 caracteres" autocomplete="new-password">
+                    
+                    <button type="button" class="eye-btn" (click)="togglePasswordVisibility()" tabindex="-1">
+                        <svg *ngIf="!showPassword" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                        <svg *ngIf="showPassword" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                    </button>
+                </div>
+                <span class="error-text" *ngIf="registerForm.get('password')?.hasError('minlength') && registerForm.get('password')?.touched">La contraseña debe tener al menos 8 caracteres.</span>
+            </div>
+
+            <div class="form-group full-width">
+                <label>CONFIRMAR CONTRASEÑA</label>
+                <div class="input-with-icon">
+                    <span class="input-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                    </span>
+                    <input [type]="showConfirmPassword ? 'text' : 'password'" formControlName="confirmPassword" placeholder="Repite la contraseña" autocomplete="new-password">
+                    
+                    <button type="button" class="eye-btn" (click)="toggleConfirmPasswordVisibility()" tabindex="-1">
+                        <svg *ngIf="!showConfirmPassword" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                        <svg *ngIf="showConfirmPassword" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                    </button>
+                </div>
+                <span class="error-text" *ngIf="registerForm.hasError('mismatch') && registerForm.get('confirmPassword')?.touched">Las contraseñas no coinciden.</span>
+            </div>
+
+            <div class="checkbox-group">
+                <input type="checkbox" id="terminos" formControlName="terminos">
+                <label for="terminos">Acepto los <span>términos y condiciones</span> de Dilo</label>
+            </div>
+            <span class="error-text" style="margin-top: -15px; margin-bottom: 20px; display: block;" *ngIf="registerForm.get('terminos')?.invalid && registerForm.get('terminos')?.touched">Debes aceptar los términos para continuar.</span>
+
+            <button type="submit" class="btn-primary" [disabled]="isLoading">
+                <span *ngIf="!isLoading">Crear cuenta</span>
+                <span *ngIf="isLoading" class="loader"></span>
+            </button>
+
+            <div class="footer-link">
+                ¿Ya tienes cuenta? <a routerLink="/login">Inicia sesión</a>
+            </div>
+
+        </form>
+    </div>
+</div>

@@ -1,13 +1,11 @@
 import { Routes } from '@angular/router';
-// Importamos tu componente Home (asegúrate de que el nombre de la clase sea el correcto)
-import { Home } from './home/home'; 
+import { Home } from './home/home';
+import { Login } from './auth/login/login';
+import { Registro } from './auth/registro/registro';
 
 export const routes: Routes = [
-  { path: '', component: Home }, // Esta es la ruta raíz (tu Landing Page)
-  
-  // Estas las descomentaremos cuando crees los componentes
-  // { path: 'login', component: LoginComponent }, 
-  // { path: 'registro', component: RegistroComponent },
-  
-  { path: '**', redirectTo: '' } // Si alguien pone una URL rara, lo regresa al inicio
+  { path: '', component: Home }, 
+  { path: 'login', component: Login },
+  { path: 'registro', component: Registro }, // ¡Aquí conectamos el botón!
+  { path: '**', redirectTo: '' } 
 ];

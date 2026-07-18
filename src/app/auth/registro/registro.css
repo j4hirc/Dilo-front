@@ -1,0 +1,428 @@
+/* ANIMACIÓN DE ENTRADA */
+@keyframes slideUpFade {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.register-layout {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: #f4f7f9; /* Fondo más limpio y grisáceo */
+  padding: 40px 15px;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+.register-card {
+  background: #ffffff;
+  padding: 45px 50px;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 600px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.06); /* Sombra un poco más presente */
+  border: 1px solid #f1f5f9;
+  animation: slideUpFade 0.5s ease-out forwards; /* Aplicamos la animación */
+}
+
+/* HEADER Y LOGO PROTAGONISTA */
+.header-section {
+  text-align: center;
+  margin-bottom: 35px;
+}
+
+.logo-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px; /* Más aire abajo del logo */
+}
+
+.dilo-logo {
+  width: 130px; /* Logo más grande para que impacte de primeras */
+  height: auto;
+  object-fit: contain;
+  transition: transform 0.3s ease;
+}
+
+.dilo-logo:hover {
+  transform: scale(1.05); /* Pequeño efecto al pasar el mouse */
+}
+
+.header-section h2 {
+  color: #0f172a;
+  font-size: 1.7rem;
+  font-weight: 800;
+  margin: 0 0 6px 0;
+  letter-spacing: -0.5px;
+}
+
+.subtitle {
+  color: #64748b;
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+/* FORMULARIO Y GRIDS */
+.form-row {
+  display: flex;
+  gap: 20px;
+}
+
+.full-width { width: 100%; }
+.half-width { flex: 1; }
+
+.form-group {
+  margin-bottom: 22px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #475569;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.input-with-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-icon {
+  position: absolute;
+  left: 14px;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+}
+
+/* INPUTS ESTÁNDAR */
+.input-with-icon input, 
+.input-with-icon select {
+  width: 100%;
+  padding: 12px 15px 12px 42px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  background-color: #ffffff;
+  color: #334155;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.input-with-icon select {
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%2394a3b8%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+  background-repeat: no-repeat;
+  background-position: right 15px top 50%;
+  background-size: 10px auto;
+}
+
+.input-with-icon input:focus, 
+.input-with-icon select:focus {
+  outline: none;
+  border-color: #ed8936;
+  box-shadow: 0 0 0 3px rgba(237, 137, 54, 0.15);
+}
+
+/* VALIDACIÓN VISUAL DIRECTA */
+.input-with-icon input.ng-invalid.ng-touched,
+.input-with-icon select.ng-invalid.ng-touched {
+  border-color: #ef4444;
+  background-color: #fef2f2;
+}
+
+.input-with-icon input.ng-invalid.ng-touched:focus,
+.input-with-icon select.ng-invalid.ng-touched:focus {
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+}
+
+/* SUBIDA DE FOTO INTUITIVA */
+.hidden-file-input {
+  display: none;
+}
+
+.custom-file-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 15px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  background-color: #f8fafc;
+  color: #64748b;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.custom-file-btn:hover {
+  background-color: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+.custom-file-btn.file-selected {
+  background-color: #fffaf0;
+  border-color: #ed8936;
+  border-style: solid;
+  color: #dd6b20;
+}
+
+.custom-file-btn.file-selected svg {
+  stroke: #ed8936;
+}
+
+/* CHECKBOX */
+.checkbox-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.checkbox-group label {
+  font-size: 0.9rem;
+  color: #475569;
+}
+
+.checkbox-group span {
+  color: #ed8936;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+/* BOTÓN PRINCIPAL */
+.btn-primary {
+  width: 100%;
+  background-color: #ed8936;
+  color: white;
+  border: none;
+  padding: 14px;
+  border-radius: 8px;
+  font-size: 1.05rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.btn-primary:hover:not([disabled]) {
+  background-color: #dd6b20;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(221, 107, 32, 0.2);
+}
+
+.btn-primary[disabled] {
+  background-color: #fbd38d;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+/* ENLACES Y TEXTOS DE ERROR */
+.footer-link {
+  text-align: center;
+  margin-top: 25px;
+  font-size: 0.95rem;
+  color: #64748b;
+}
+
+.footer-link a {
+  color: #ed8936;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.error-text {
+  color: #ef4444;
+  font-size: 0.75rem;
+  margin-top: 6px;
+  display: block;
+}
+
+.error-banner {
+  background-color: #fef2f2;
+  color: #b91c1c;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 25px;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid #fca5a5;
+  font-weight: 500;
+}
+
+.loader {
+  border: 2px solid rgba(255,255,255,0.3);
+  border-radius: 50%;
+  border-top: 2px solid white;
+  width: 20px;
+  height: 20px;
+  display: inline-block;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+/* RESPONSIVE MEJORADO */
+@media (max-width: 640px) {
+  .register-layout {
+    padding: 20px 10px;
+  }
+  
+  .register-card {
+    padding: 30px 20px;
+    border-radius: 12px;
+  }
+
+  .form-row {
+    flex-direction: column;
+    gap: 0;
+  }
+  
+  .header-section h2 {
+    font-size: 1.4rem;
+  }
+  
+  .dilo-logo {
+    width: 100px; /* Un poco más pequeño en móviles para que no sature */
+  }
+}
+
+/* =========================================
+   DISEÑO DEL AVATAR (FOTO DE PERFIL) 
+   ========================================= */
+.avatar-upload-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 35px;
+  margin-top: -10px; /* Lo acerca un poco al header */
+}
+
+.avatar-preview-wrapper {
+  position: relative;
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  border: 2px dashed #cbd5e1;
+  background-color: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.avatar-preview-wrapper:hover {
+  border-color: #ed8936;
+  background-color: #fffaf0;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(237, 137, 54, 0.15);
+}
+
+.avatar-preview-wrapper.has-image {
+  border-style: solid;
+  border-color: #ed8936;
+  padding: 4px; /* Crea el efecto de un anillo naranja alrededor de la foto */
+}
+
+.avatar-image {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.avatar-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: #94a3b8;
+}
+
+.upload-text {
+  font-size: 0.65rem;
+  font-weight: 700;
+  margin-top: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.camera-badge {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  background-color: #ed8936;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border: 3px solid #ffffff;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  transition: transform 0.2s ease;
+}
+
+.avatar-preview-wrapper:hover .camera-badge {
+  transform: scale(1.1);
+  background-color: #dd6b20;
+}
+
+
+.eye-btn {
+  position: absolute;
+  right: 14px;
+  background: none;
+  border: none;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.2s ease;
+}
+
+.eye-btn:hover {
+  color: #ed8936;
+}
+
+/* Evitar que el texto de la contraseña pase por debajo del ojito */
+.input-with-icon input[type="password"],
+.input-with-icon input[type="text"] {
+  padding-right: 40px; 
+}
+
+
+.success-banner {
+  background-color: #f0fdf4;
+  color: #15803d;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 25px;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid #bbf7d0;
+  font-weight: 500;
+  animation: slideUpFade 0.3s ease-out forwards;
+}
