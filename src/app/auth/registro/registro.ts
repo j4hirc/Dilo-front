@@ -5,6 +5,7 @@ import { CommonModule } from '@angular/common';
 import { AuthService } from '../auth.service';
 import { HttpClient } from '@angular/common/http';
 import Swal from 'sweetalert2'; // <-- IMPORTAMOS SWEETALERT2
+import { ParroquiaService } from '../../shared/parroquia.service';
 
 @Component({
   selector: 'app-registro',
@@ -18,6 +19,7 @@ export class Registro implements OnInit {
   private authService = inject(AuthService);
   private router = inject(Router);
   private http = inject(HttpClient);
+  private parroquiaService = inject(ParroquiaService);
   
   imagePreview: string | ArrayBuffer | null = null;
   showPassword = false;
@@ -59,18 +61,15 @@ export class Registro implements OnInit {
   }
 
   cargarParroquias() {
-    this.isLoadingParroquias = true;
-    this.http.get<any[]>('https://dilo-backend-mxlu.onrender.com/api/v1/parroquias')
-      .subscribe({
-        next: (data) => {
-          this.parroquias = data;
-          this.isLoadingParroquias = false; 
-        },
-        error: (err) => {
-          console.error('Error al cargar parroquias:', err);
-          this.isLoadingParroquias = false; 
-        }
-      });
+  this.isLoadingParroquias = true;
+  this.parroquiaService.getParroquias().subscribe({
+    next: data => { this.parroquias = data; this.isLoadingParroquias = false; },
+    error: () => this.isLoadingParroquias = false
+  });
+}
+
+trackById(_: number, p: any) {
+    return p.id;
   }
 
   onFileSelected(event: any) {

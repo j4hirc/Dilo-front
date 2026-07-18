@@ -149,7 +149,7 @@
                     <select formControlName="id_parroquia">
                         <option value="" disabled selected *ngIf="isLoadingParroquias">⏳ Cargando parroquias...</option>
                         <option value="" disabled selected *ngIf="!isLoadingParroquias">Selecciona tu parroquia</option>
-                        <option *ngFor="let p of parroquias" [value]="p.id">{{ p.nombre }}</option>
+                        <option *ngFor="let p of parroquias; trackBy: trackById" [value]="p.id">{{ p.nombre }}</option>
                     </select>
                 </div>
                 <span class="error-text" *ngIf="registerForm.get('id_parroquia')?.invalid && registerForm.get('id_parroquia')?.touched">Debes seleccionar una parroquia.</span>
