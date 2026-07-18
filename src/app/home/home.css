@@ -1,0 +1,431 @@
+/* Variables de color */
+:host {
+  --primary-blue: #172a46;
+  --accent-orange: #ed8936;
+  --accent-hover: #dd6b20;
+  --bg-light: #ffffff;
+  --bg-cream: #F8F5F0; /* CREMA CÁLIDO Y ELEGANTE */
+  --text-dark: #1a202c;
+  --text-gray: #718096;
+}
+
+/* --- NAVBAR --- */
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 5%; /* Padding reducido para compensar el logo gigante */
+  background-color: white;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.logo-img {
+  height: 120px; /* LOGO MUCHO MÁS GRANDE */
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.logo-img:hover {
+  transform: scale(1.03);
+}
+
+.nav-links {
+  display: flex;
+  gap: 20px; /* Más espacio entre botones */
+  align-items: center;
+}
+
+/* BOTONES DEL NAVBAR MÁS GRANDES */
+.nav-links a, .btn-primary {
+  text-decoration: none;
+  padding: 14px 30px; /* Aumentado */
+  border-radius: 10px; /* Bordes un poco más suaves */
+  font-weight: 700; /* Letra más gordita */
+  font-size: 1.05rem; /* Letra más grande */
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.btn-outline {
+  color: var(--primary-blue);
+  border: 2px solid #e2e8f0;
+  background: white;
+}
+
+.btn-outline:hover {
+  border-color: var(--primary-blue);
+  background-color: #f7fafc;
+}
+
+.btn-primary {
+  background-color: var(--accent-orange);
+  color: white;
+  border: 2px solid var(--accent-orange);
+  box-shadow: 0 4px 14px rgba(237, 137, 54, 0.3);
+}
+
+.btn-primary:hover {
+  background-color: var(--accent-hover);
+  border-color: var(--accent-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(237, 137, 54, 0.4);
+}
+
+/* --- HERO SECTION --- */
+.hero-section {
+  position: relative; /* CRUCIAL para que la onda se quede pegada abajo */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 80px 5% 150px; /* Padding inferior grande para que haya espacio antes de la onda */
+  background: linear-gradient(180deg, var(--primary-blue) 0%, #112036 100%); /* Gradiente recto para que coincida perfecto */
+  color: white;
+  min-height: 75vh;
+}
+
+.hero-content {
+  flex: 1;
+  max-width: 550px;
+  position: relative;
+  z-index: 2; /* Para que el texto quede sobre la onda si se superponen */
+}
+
+.hero-content h1 {
+  font-size: 3.4rem; /* Un pelo más grande */
+  font-weight: 800;
+  line-height: 1.15;
+  margin-bottom: 15px;
+  letter-spacing: -1px;
+}
+
+.slogan {
+  color: var(--accent-orange);
+  font-size: 1.5rem;
+  font-weight: 500;
+  margin-bottom: 25px;
+}
+
+.hero-content p {
+  font-size: 1.1rem;
+  line-height: 1.7;
+  color: #a0aec0;
+  margin-bottom: 40px;
+}
+
+/* EL BOTÓN GIGANTE DEL HERO */
+.btn-primary.large {
+  padding: 18px 40px;
+  font-size: 1.2rem;
+}
+
+/* --- ONDA INTEGRADA (NUEVO DISEÑO) --- */
+.custom-shape-divider-bottom {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  overflow: hidden;
+  line-height: 0;
+}
+
+.custom-shape-divider-bottom svg {
+  position: relative;
+  display: block;
+  width: calc(100% + 1.3px);
+  height: 90px; /* Altura de la ola */
+}
+
+.custom-shape-divider-bottom .shape-fill {
+  fill: var(--bg-cream); /* IMPORTANTE: La ola es del color crema de la siguiente sección */
+}
+
+
+/* --- HERO IMAGE & MOCKUP --- */
+.hero-image {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  z-index: 2;
+}
+
+.voice-card-container {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 30px;
+  border-radius: 24px;
+  max-width: 420px;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.voice-indicator {
+  position: relative;
+  width: 60px;
+  height: 60px;
+  background: var(--accent-orange);
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 1.5rem;
+}
+
+.pulse-ring {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: rgba(237, 137, 54, 0.4);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(1.8); opacity: 0; }
+}
+
+.voice-text p {
+  font-size: 1.2rem;
+  font-weight: 500;
+  color: white;
+  text-align: center;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* --- HOW IT WORKS (CON FONDO CREMA) --- */
+.how-it-works {
+  padding: 60px 5% 100px;
+  background-color: var(--bg-cream); /* El fondo engancha perfecto con la ola */
+}
+
+.steps-container {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  max-width: 1000px;
+  margin: 0 auto;
+  gap: 20px;
+}
+
+.step-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 20px;
+}
+
+.step-number {
+  width: 60px;
+  height: 60px;
+  background-color: var(--primary-blue);
+  color: white;
+  font-size: 1.8rem;
+  font-weight: 800;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 25px;
+  box-shadow: 0 10px 20px rgba(23, 42, 70, 0.2);
+}
+
+.step-card h4 {
+  font-size: 1.3rem;
+  color: var(--primary-blue);
+  margin-bottom: 15px;
+}
+
+.step-card p {
+  color: var(--text-gray);
+  line-height: 1.6;
+}
+
+.step-line {
+  width: 80px;
+  height: 2px;
+  background-color: #cbd5e0;
+  margin-top: 50px;
+}
+
+/* --- ABOUT SECTION --- */
+.about-section {
+  padding: 100px 5%;
+  background-color: var(--bg-light); /* Volvemos al blanco limpio */
+}
+
+.section-title {
+  text-align: center;
+  margin-bottom: 70px;
+}
+
+.section-title h2 {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: var(--primary-blue);
+  margin-bottom: 15px;
+}
+
+.section-title p {
+  color: var(--text-gray);
+  font-size: 1.15rem;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 40px;
+}
+
+.feature-card {
+  background: white; /* Tarjetas blancas sobre fondo blanco para que resalte la sombra */
+  padding: 40px;
+  border-radius: 20px;
+  border: 1px solid #edf2f7;
+  transition: all 0.3s ease;
+}
+
+.feature-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 30px rgba(0,0,0,0.06);
+}
+
+.icon-wrapper {
+  font-size: 2.5rem;
+  background: var(--bg-cream); /* Detalle en crema para conectar la paleta */
+  width: 70px;
+  height: 70px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+  margin-bottom: 25px;
+}
+
+.feature-card h3 {
+  color: var(--primary-blue);
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-bottom: 15px;
+}
+
+.feature-card p {
+  color: var(--text-gray);
+  line-height: 1.6;
+  font-size: 1rem;
+}
+
+/* --- FOOTER --- */
+.footer {
+  background-color: var(--primary-blue);
+  color: white;
+  padding: 80px 5% 30px;
+}
+
+.footer-content {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 50px;
+  margin-bottom: 60px;
+}
+
+.footer-logo {
+  height: 80px; /* Un poco más grande aquí también */
+  margin-bottom: 15px;
+}
+
+.footer-slogan {
+  color: var(--accent-orange);
+  font-style: italic;
+  font-weight: bold;
+  margin-bottom: 15px;
+}
+
+.footer-desc {
+  color: #a0aec0;
+  line-height: 1.6;
+  max-width: 300px;
+}
+
+.footer-links h4, .footer-contact h4 {
+  font-size: 1.2rem;
+  margin-bottom: 25px;
+  color: white;
+}
+
+.footer-links a {
+  display: block;
+  color: #a0aec0;
+  text-decoration: none;
+  margin-bottom: 12px;
+  transition: color 0.3s;
+}
+
+.footer-links a:hover {
+  color: var(--accent-orange);
+}
+
+.footer-contact p {
+  color: #a0aec0;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.footer-bottom {
+  text-align: center;
+  padding-top: 30px;
+  border-top: 1px solid rgba(255,255,255,0.1);
+  color: #a0aec0;
+  font-size: 0.9rem;
+}
+
+/* Responsividad */
+@media (max-width: 960px) {
+  .hero-section {
+    flex-direction: column;
+    text-align: center;
+    padding: 60px 5% 100px; /* Ajuste para móviles */
+  }
+  
+  .hero-content {
+    margin-bottom: 50px;
+  }
+
+  .steps-container {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .step-line {
+    width: 2px;
+    height: 40px;
+    margin: 0;
+  }
+
+  .footer-content {
+    grid-template-columns: 1fr;
+    gap: 40px;
+    text-align: center;
+  }
+
+  .footer-desc {
+    margin: 0 auto;
+  }
+}
