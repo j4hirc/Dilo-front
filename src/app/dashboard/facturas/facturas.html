@@ -7,13 +7,13 @@
 
 <div class="card full-height-card">
     <div class="card-body">
-        
+
         <!-- 🔥 NUEVO SPINNER DE CARGA -->
         <div *ngIf="isLoading" class="loading-container">
             <div class="spinner"></div>
             <p>Conectando con el servidor para cargar las facturas...</p>
         </div>
-        
+
         <div class="table-responsive" *ngIf="!isLoading">
             <table class="data-table">
                 <thead>
@@ -38,7 +38,10 @@
                         <td><span class="tag tag-gray">{{ fac.tipo }}</span></td>
                         <td style="font-weight: 600;">${{ fac.monto | number:'1.2-2' }}</td>
                         <td>
-                            <span class="status" [ngClass]="{'status-green': fac.estado === 'AUTORIZADO' || fac.estado === 'Emitida', 'status-yellow': fac.estado === 'CREADA', 'status-red': fac.estado === 'ANULADA', 'status-red': fac.estado === 'ERROR_SRI'}">
+                            <span class="status" [ngClass]="{
+  'status-yellow': fac.estado === 'PENDIENTE',
+  'status-red': fac.estado === 'ANULADA' || fac.estado === 'ERROR_SRI' 
+}">
                                 {{ fac.estado }}
                             </span>
                         </td>

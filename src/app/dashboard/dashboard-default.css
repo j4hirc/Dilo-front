@@ -18,6 +18,8 @@
   background-color: var(--bg-light);
 }
 
+
+
 /* =========================================
    SIDEBAR (Barra Lateral)
    ========================================= */
@@ -30,6 +32,12 @@
   position: fixed;
   height: 100vh;
   z-index: 100;
+}
+
+.sidebar-logo {
+  max-width: 120px; /* Ajusta este valor si lo quieres más grande o pequeño */
+  height: auto;
+  object-fit: contain;
 }
 
 .sidebar-header {
@@ -156,7 +164,8 @@
   flex: 1;
   margin-left: 260px;
   padding: 25px 40px;
-  max-width: 1200px;
+  width: 90%; /* ✅ Ocupa todo el espacio disponible */
+  box-sizing: border-box; /* ✅ Previene el scroll horizontal */
 }
 
 .top-header {
