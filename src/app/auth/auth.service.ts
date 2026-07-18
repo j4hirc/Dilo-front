@@ -26,6 +26,11 @@ export class AuthService {
   }
 
   registrar(formData: FormData): Observable<any> {
-  return this.http.post(`${this.apiUrl}/registro`, formData);
-}
+    return this.http.post(`${this.apiUrl}/registro`, formData);
+  }
+
+  // New method to select a business after login when multiple businesses exist
+  selectBusiness(businessId: number): Observable<any> {
+    return this.http.post(`${this.apiUrl}/select-business`, { businessId });
+  }
 }

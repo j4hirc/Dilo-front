@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dilo — Onboarding Negocio</title>
+  <link rel="stylesheet" href="./onboarding-business.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
+</head>
+
+<body>
+  <div class="fondo-completo">
+    <div class="panel-lateral">
+      <div class="panel-contenido">
+        <div class="logo-marca">
+          <img src="/images/Dilo-Logo-1.png" alt="Logo Dilo" class="img-logo" />
+        </div>
+        <h2 class="panel-titulo">¡Bienvenido a Dilo!<br />Gestiona tu negocio con IA.</h2>
+        <p class="panel-subtitulo">
+          Un negocio, una cuenta. Crea tu negocio o únete con un código para comenzar a facturar en segundos.
+        </p>
+        <div class="caracteristicas-lista">
+          <div class="caracteristica-item">
+            <div class="caracteristica-icono"><i class="fa-solid fa-microphone-lines"></i></div>
+            <div>
+              <p class="caracteristica-titulo">Facturación por voz</p>
+              <p class="caracteristica-desc">Emite facturas hablando naturalmente.</p>
+            </div>
+          </div>
+          <div class="caracteristica-item">
+            <div class="caracteristica-icono"><i class="fa-solid fa-brain"></i></div>
+            <div>
+              <p class="caracteristica-titulo">IA integrada</p>
+              <p class="caracteristica-desc">Extracción automática de datos del pedido.</p>
+            </div>
+          </div>
+        </div>
+        <div class="decoracion-circulos">
+          <div class="circulo circulo-1"></div>
+          <div class="circulo circulo-2"></div>
+          <div class="circulo circulo-3"></div>
+        </div>
+      </div>
+    </div>
+    <!-- Panel derecho: opciones de negocio -->
+    <div class="panel-formulario">
+      <div class="tarjeta-onboarding">
+        <div class="encabezado-onboarding">
+          <div class="logo-movil"><span class="marca-texto">Dilo</span></div>
+          <h1 class="titulo-onboarding">¡Vamos a crear tu negocio!</h1>
+          <p class="subtitulo-onboarding">Selecciona una opción para continuar.</p>
+        </div>
+        <div class="opciones-onboarding">
+          <a routerLink="/crear-negocio" class="boton-onboarding"><i class="fa-solid fa-plus"></i> Crear nuevo
+            negocio</a>
+          <a routerLink="/unir-negocio" class="boton-onboarding"><i class="fa-solid fa-key"></i> Unirme con código</a>
+        </div>
+        <div class="separador-onboarding">
+          <span class="separador-linea"></span>
+          <span class="separador-texto">¿Ya tienes un negocio?</span>
+          <span class="separador-linea"></span>
+        </div>
+        <a routerLink="/login" class="boton-regreso">Volver al login</a>
+      </div>
+    </div>
+  </div>
+</body>
+
+</html>

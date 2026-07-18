@@ -1,0 +1,258 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: #f7fafc;
+  color: #2d3748;
+}
+
+.fondo-completo {
+  display: flex;
+  min-height: 100vh;
+  width: 100%;
+}
+
+/* Panel Lateral (Izquierdo) */
+.panel-lateral {
+  flex: 1;
+  background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  padding: 40px;
+}
+
+.panel-contenido {
+  position: relative;
+  z-index: 2;
+  max-width: 480px;
+}
+
+.logo-marca {
+  margin-bottom: 2rem;
+}
+
+.img-logo {
+  height: 48px;
+  width: auto;
+}
+
+.panel-titulo {
+  font-size: 2.5rem;
+  font-weight: 700;
+  line-height: 1.2;
+  margin-bottom: 1rem;
+}
+
+.panel-subtitulo {
+  font-size: 1.1rem;
+  color: #cbd5e0;
+  margin-bottom: 2.5rem;
+  line-height: 1.5;
+}
+
+.caracteristicas-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.caracteristica-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.caracteristica-icono {
+  background: rgba(255, 255, 255, 0.1);
+  height: 48px;
+  width: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  color: #ed8936;
+}
+
+.caracteristica-titulo {
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.caracteristica-desc {
+  font-size: 0.95rem;
+  color: #a0aec0;
+}
+
+/* Decoraciones del Panel Lateral */
+.decoracion-circulos .circulo {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.03);
+  z-index: 1;
+}
+
+.circulo-1 {
+  width: 300px;
+  height: 300px;
+  top: -100px;
+  left: -100px;
+}
+
+.circulo-2 {
+  width: 500px;
+  height: 500px;
+  bottom: -200px;
+  right: -150px;
+}
+
+.circulo-3 {
+  width: 150px;
+  height: 150px;
+  bottom: 20%;
+  left: 10%;
+}
+
+/* Panel Formulario (Derecho) */
+.panel-formulario {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  background: #f7fafc;
+}
+
+.tarjeta-select {
+  background: #fff;
+  border-radius: 24px;
+  padding: 40px;
+  width: 100%;
+  max-width: 500px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+  animation: fadeIn 0.6s ease-out;
+}
+
+.encabezado-select {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.titulo-select {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #1a202c;
+  margin-bottom: 0.5rem;
+}
+
+.subtitulo-select {
+  color: #718096;
+  font-size: 1rem;
+}
+
+.lista-roles {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.item-rol {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.5rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+  transition: all 0.3s ease;
+}
+
+.item-rol:hover {
+  border-color: #ed8936;
+  box-shadow: 0 4px 12px rgba(237, 137, 54, 0.1);
+  transform: translateY(-2px);
+}
+
+.info-rol {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.icono-rol {
+  font-size: 1.5rem;
+  color: #4a5568;
+}
+
+.item-rol:hover .icono-rol {
+  color: #ed8936;
+}
+
+.nombre-rol {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #2d3748;
+}
+
+.boton-seleccionar {
+  background: none;
+  border: none;
+  color: #ed8936;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: opacity 0.3s;
+}
+
+.boton-seleccionar:hover {
+  opacity: 0.8;
+}
+
+.separador-select {
+  height: 1px;
+  background: #e2e8f0;
+  margin: 2rem 0;
+}
+
+.boton-regreso {
+  display: block;
+  text-align: center;
+  color: #718096;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.3s;
+}
+
+.boton-regreso:hover {
+  color: #2d3748;
+}
+
+/* Animaciones */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 900px) {
+  .fondo-completo {
+    flex-direction: column;
+  }
+  .panel-lateral {
+    display: none;
+  }
+  .panel-formulario {
+    padding: 20px;
+  }
+}

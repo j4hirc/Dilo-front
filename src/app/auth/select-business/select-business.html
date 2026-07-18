@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dilo — Selección de Negocio</title>
+  <link rel="stylesheet" href="./select-business.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
+</head>
+<body>
+  <div class="fondo-completo">
+    <div class="panel-lateral">
+      <div class="panel-contenido">
+        <div class="logo-marca">
+          <img src="../../img/logo_dilo_sf.png" alt="Logo Dilo" class="img-logo" />
+        </div>
+        <h2 class="panel-titulo">¡Selecciona tu negocio!</h2>
+        <p class="panel-subtitulo">
+          Elige el negocio con el que deseas continuar. Cada cuenta solo tiene un negocio asociado.
+        </p>
+        <div class="caracteristicas-lista">
+          <div class="caracteristica-item">
+            <div class="caracteristica-icono"><i class="fa-solid fa-briefcase"></i></div>
+            <div>
+              <p class="caracteristica-titulo">Gestión sencilla</p>
+              <p class="caracteristica-desc">Controla tu negocio con una interfaz intuitiva.</p>
+            </div>
+          </div>
+        </div>
+        <div class="decoracion-circulos">
+          <div class="circulo circulo-1"></div>
+          <div class="circulo circulo-2"></div>
+          <div class="circulo circulo-3"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-formulario">
+      <div class="tarjeta-select">
+        <ul class="lista-negocios">
+          <li *ngFor="let biz of businesses" class="item-negocio">
+            <span class="nombre-negocio">{{ biz.nombreComercial }}</span>
+            <button class="boton-seleccionar" (click)="select(biz.idNegocio)">Seleccionar</button>
+          </li>
+        </ul>
+        <a routerLink="/onboarding-negocio" class="boton-regreso">Volver al inicio</a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

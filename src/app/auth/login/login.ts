@@ -54,12 +54,18 @@ export class Login {
             email: response.email,
             nombre: response.nombreCompleto,
             rol: response.rol,
-            negocioId: response.negocioId 
+            roles: response.roles,
+            negocioId: response.selectedBusinessId,
+            businesses: response.businesses,
+            needsBusinessSelection: response.needsBusinessSelection,
+            needsRoleSelection: response.needsRoleSelection
         };
         this.authService.saveUser(usuarioInfo);
 
-        const rol = response.rol; 
-        const tieneNegocio = response.negocioId != null;
+        const rol = response.rol;
+        const isSuperAdmin = response.superAdmin; // or isSuperAdmin, depends on json serialization
+        const tieneNegocio = response.selectedBusinessId != null;
+        const needsRoleSelection = response.needsRoleSelection;
 
         // Opcional: Una alerta bonita de bienvenida antes de redirigir
         Swal.fire({
@@ -71,13 +77,13 @@ export class Login {
           timerProgressBar: true
         }).then(() => {
             // Rutas
-            if (rol === 'SUPER_ADMIN') {
-                this.router.navigate(['/admin-panel']); 
-            } 
-            else if (!tieneNegocio) {
-                this.router.navigate(['/onboarding-negocio']);
-            } 
-            else {
+            if (isSuperAdmin || rol === 'SUPER_ADMIN') {
+                this.router.navigate(['/admin-panel']);
+            } else if (!tieneNegocio) {
+                this.router.navigate(['/onboarding-business']);
+            } else if (needsRoleSelection) {
+                this.router.navigate(['/select-role']);
+            } else {
                 switch (rol) {
                     case 'PROPIETARIO': this.router.navigate(['/dashboard/propietario']); break;
                     case 'VENDEDOR': this.router.navigate(['/dashboard/ventas']); break;

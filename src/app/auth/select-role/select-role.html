@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dilo — Selección de Rol</title>
+  <link rel="stylesheet" href="./select-role.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
+</head>
+<body>
+  <div class="fondo-completo">
+    <div class="panel-lateral">
+      <div class="panel-contenido">
+        <div class="logo-marca">
+          <img src="/images/Dilo-Logo-1.png" alt="Logo Dilo" class="img-logo" />
+        </div>
+        <h2 class="panel-titulo">Múltiples Roles Detectados</h2>
+        <p class="panel-subtitulo">
+          Parece que tienes más de un rol asignado en este negocio. Elige con qué perfil deseas ingresar hoy.
+        </p>
+        <div class="caracteristicas-lista">
+          <div class="caracteristica-item">
+            <div class="caracteristica-icono"><i class="fa-solid fa-users-gear"></i></div>
+            <div>
+              <p class="caracteristica-titulo">Roles Múltiples</p>
+              <p class="caracteristica-desc">Puedes alternar entre tus distintos perfiles de negocio.</p>
+            </div>
+          </div>
+        </div>
+        <div class="decoracion-circulos">
+          <div class="circulo circulo-1"></div>
+          <div class="circulo circulo-2"></div>
+          <div class="circulo circulo-3"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-formulario">
+      <div class="tarjeta-select">
+        <div class="encabezado-select">
+          <h1 class="titulo-select">Selecciona tu Rol</h1>
+          <p class="subtitulo-select">Haz clic en el rol para acceder a tu panel.</p>
+        </div>
+        
+        <ul class="lista-roles">
+          <li *ngFor="let rol of roles" class="item-rol">
+            <div class="info-rol">
+              <i *ngIf="rol === 'PROPIETARIO'" class="fa-solid fa-crown icono-rol"></i>
+              <i *ngIf="rol === 'VENDEDOR'" class="fa-solid fa-store icono-rol"></i>
+              <i *ngIf="rol === 'BODEGUERO'" class="fa-solid fa-box icono-rol"></i>
+              <span class="nombre-rol">{{ rol }}</span>
+            </div>
+            <button class="boton-seleccionar" (click)="select(rol)">
+              Ingresar <i class="fa-solid fa-arrow-right"></i>
+            </button>
+          </li>
+        </ul>
+        
+        <div class="separador-select"></div>
+        <a routerLink="/login" class="boton-regreso">Volver al inicio</a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
