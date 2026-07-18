@@ -14,7 +14,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 5px 5%; /* Padding reducido para compensar el logo gigante */
+  padding: 5px 5%; 
   background-color: white;
   box-shadow: 0 4px 20px rgba(0,0,0,0.03);
   position: sticky;
@@ -23,7 +23,7 @@
 }
 
 .logo-img {
-  height: 120px; /* LOGO MUCHO MÁS GRANDE */
+  height: 120px; 
   cursor: pointer;
   transition: transform 0.2s ease;
 }
@@ -34,19 +34,19 @@
 
 .nav-links {
   display: flex;
-  gap: 20px; /* Más espacio entre botones */
+  gap: 20px; 
   align-items: center;
 }
 
-/* BOTONES DEL NAVBAR MÁS GRANDES */
 .nav-links a, .btn-primary {
   text-decoration: none;
-  padding: 14px 30px; /* Aumentado */
-  border-radius: 10px; /* Bordes un poco más suaves */
-  font-weight: 700; /* Letra más gordita */
-  font-size: 1.05rem; /* Letra más grande */
+  padding: 14px 30px; 
+  border-radius: 10px; 
+  font-weight: 700; 
+  font-size: 1.05rem; 
   transition: all 0.3s ease;
   cursor: pointer;
+  text-align: center;
 }
 
 .btn-outline {
@@ -76,12 +76,12 @@
 
 /* --- HERO SECTION --- */
 .hero-section {
-  position: relative; /* CRUCIAL para que la onda se quede pegada abajo */
+  position: relative; 
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 80px 5% 150px; /* Padding inferior grande para que haya espacio antes de la onda */
-  background: linear-gradient(180deg, var(--primary-blue) 0%, #112036 100%); /* Gradiente recto para que coincida perfecto */
+  padding: 80px 5% 150px; 
+  background: linear-gradient(180deg, var(--primary-blue) 0%, #112036 100%); 
   color: white;
   min-height: 75vh;
 }
@@ -90,11 +90,11 @@
   flex: 1;
   max-width: 550px;
   position: relative;
-  z-index: 2; /* Para que el texto quede sobre la onda si se superponen */
+  z-index: 2; 
 }
 
 .hero-content h1 {
-  font-size: 3.4rem; /* Un pelo más grande */
+  font-size: 3.4rem; 
   font-weight: 800;
   line-height: 1.15;
   margin-bottom: 15px;
@@ -115,13 +115,12 @@
   margin-bottom: 40px;
 }
 
-/* EL BOTÓN GIGANTE DEL HERO */
 .btn-primary.large {
   padding: 18px 40px;
   font-size: 1.2rem;
 }
 
-/* --- ONDA INTEGRADA (NUEVO DISEÑO) --- */
+/* --- ONDA INTEGRADA --- */
 .custom-shape-divider-bottom {
   position: absolute;
   bottom: 0;
@@ -135,13 +134,12 @@
   position: relative;
   display: block;
   width: calc(100% + 1.3px);
-  height: 90px; /* Altura de la ola */
+  height: 90px; 
 }
 
 .custom-shape-divider-bottom .shape-fill {
-  fill: var(--bg-cream); /* IMPORTANTE: La ola es del color crema de la siguiente sección */
+  fill: var(--bg-cream); 
 }
-
 
 /* --- HERO IMAGE & MOCKUP --- */
 .hero-image {
@@ -203,10 +201,10 @@
   line-height: 1.5;
 }
 
-/* --- HOW IT WORKS (CON FONDO CREMA) --- */
+/* --- HOW IT WORKS --- */
 .how-it-works {
   padding: 60px 5% 100px;
-  background-color: var(--bg-cream); /* El fondo engancha perfecto con la ola */
+  background-color: var(--bg-cream); 
 }
 
 .steps-container {
@@ -263,7 +261,7 @@
 /* --- ABOUT SECTION --- */
 .about-section {
   padding: 100px 5%;
-  background-color: var(--bg-light); /* Volvemos al blanco limpio */
+  background-color: var(--bg-light); 
 }
 
 .section-title {
@@ -292,7 +290,7 @@
 }
 
 .feature-card {
-  background: white; /* Tarjetas blancas sobre fondo blanco para que resalte la sombra */
+  background: white; 
   padding: 40px;
   border-radius: 20px;
   border: 1px solid #edf2f7;
@@ -306,7 +304,7 @@
 
 .icon-wrapper {
   font-size: 2.5rem;
-  background: var(--bg-cream); /* Detalle en crema para conectar la paleta */
+  background: var(--bg-cream); 
   width: 70px;
   height: 70px;
   display: flex;
@@ -345,7 +343,7 @@
 }
 
 .footer-logo {
-  height: 80px; /* Un poco más grande aquí también */
+  height: 80px; 
   margin-bottom: 15px;
 }
 
@@ -396,12 +394,17 @@
   font-size: 0.9rem;
 }
 
-/* Responsividad */
-@media (max-width: 960px) {
+
+/* =========================================
+   RESPONSIVIDAD (TABLETS Y MOVILES)
+   ========================================= */
+
+/* Tablets y Pantallas Medianas */
+@media (max-width: 1024px) {
   .hero-section {
     flex-direction: column;
     text-align: center;
-    padding: 60px 5% 100px; /* Ajuste para móviles */
+    padding: 60px 5% 120px;
   }
   
   .hero-content {
@@ -416,7 +419,7 @@
   .step-line {
     width: 2px;
     height: 40px;
-    margin: 0;
+    margin: 10px 0;
   }
 
   .footer-content {
@@ -427,5 +430,71 @@
 
   .footer-desc {
     margin: 0 auto;
+  }
+  
+  .footer-contact p {
+    justify-content: center;
+  }
+}
+
+/* Teléfonos Móviles */
+@media (max-width: 768px) {
+  .navbar {
+    flex-direction: column;
+    padding: 15px 5%;
+    gap: 15px;
+  }
+  
+  .logo-img {
+    height: 80px; /* Logo ajustado para que no ocupe media pantalla en móvil */
+  }
+
+  .nav-links {
+    width: 100%;
+    justify-content: center;
+    gap: 10px;
+  }
+  
+  .nav-links a, .btn-primary {
+    padding: 12px 20px;
+    font-size: 0.95rem;
+  }
+
+  .hero-content h1 {
+    font-size: 2.2rem;
+  }
+
+  .slogan {
+    font-size: 1.2rem;
+  }
+
+  .btn-primary.large {
+    width: 100%; /* Botón gigante ancho completo en móvil */
+    padding: 16px 20px;
+  }
+
+  .voice-card-container {
+    padding: 20px;
+    width: 100%;
+  }
+
+  .voice-text p {
+    font-size: 1.05rem;
+  }
+
+  .custom-shape-divider-bottom svg {
+    height: 50px; /* Ola más bajita para no robar espacio en pantallas pequeñas */
+  }
+
+  .section-title h2 {
+    font-size: 2rem;
+  }
+
+  .how-it-works, .about-section, .footer {
+    padding: 50px 5%;
+  }
+  
+  .features-grid {
+    grid-template-columns: 1fr; /* Una sola columna para las tarjetas */
   }
 }
