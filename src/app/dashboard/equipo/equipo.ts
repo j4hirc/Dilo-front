@@ -142,4 +142,61 @@ export class Equipo implements OnInit {
       }
     });
   }
+
+
+
+  cambiarRol(miembro: any) {
+    if (!this.negocioId) return;
+
+    // Diccionario de roles (Ajusta estos nombres exactos a como los guardes en tu BD de Java)
+    const opcionesRoles = {
+      'ADMIN': 'Administrador (Control total)',
+      'VENDEDOR': 'Vendedor (Solo facturación)',
+      'BODEGUERO': 'Bodeguero (Solo inventario)'
+    };
+
+    Swal.fire({
+      title: 'Modificar Rol',
+      text: `Selecciona el nuevo rol para ${miembro.nombreUsuario}:`,
+      input: 'select',
+      inputOptions: opcionesRoles,
+      inputValue: miembro.rol, // Para que aparezca pre-seleccionado el rol actual
+      showCancelButton: true,
+      confirmButtonColor: '#ed8936',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Guardar cambios',
+      cancelButtonText: 'Cancelar',
+      inputValidator: (value) => {
+        return new Promise((resolve) => {
+          if (value === miembro.rol) {
+            resolve('El usuario ya tiene este rol asignado.');
+          } else {
+            resolve(null); // Permite continuar
+          }
+        });
+      }
+    }).then((result) => {
+      if (result.isConfirmed) {
+        const nuevoRol = result.value;
+        const rawToken = localStorage.getItem('dilo_token') || '';
+        const cleanToken = rawToken.replace(/['"]+/g, '');
+        const headers = new HttpHeaders().set('Authorization', `Bearer ${cleanToken}`);
+
+        // 🔥 Llamada al endpoint de Java para actualizar el rol (Asumimos que usas Query Param ?rol=NUEVO_ROL)
+        this.http.put(`${this.apiUrl}/negocios/${this.negocioId}/miembros/${miembro.id}/rol?rol=${nuevoRol}`, null, { headers }).subscribe({
+          next: () => {
+            Swal.fire('¡Actualizado!', 'El rol del colaborador ha sido modificado.', 'success');
+            this.cargarEquipo(this.negocioId!); // Recargamos la lista
+          },
+          error: (err) => {
+            console.error(err);
+            Swal.fire('Oops...', 'Hubo un error al cambiar el rol.', 'error');
+          }
+        });
+      }
+    });
+  }
+
+
+
 }

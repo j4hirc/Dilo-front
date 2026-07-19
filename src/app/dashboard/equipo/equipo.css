@@ -194,11 +194,10 @@
    BOTÓN DE DESACTIVAR (Para los activos)
    ========================================= */
 .team-actions {
-    position: absolute;
-    bottom: 20px;
-    right: 20px;
+    /* Eliminamos el position: absolute, bottom y right */
+    margin-left: 15px;
+    flex-shrink: 0; /* Evita que el botón se aplaste si el nombre es muy largo */
 }
-
 .btn-outline-danger {
     background: transparent;
     border: 1px solid #fee2e2;
@@ -235,4 +234,48 @@
     .request-actions {
         flex-direction: row;
     }
+    
+.team-card {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+
+    .team-actions {
+        margin-left: 0;
+        width: 100%;
+    }
+
+    .btn-outline-danger {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+
+/* =========================================
+   BOTÓN PARA EDITAR ROL
+   ========================================= */
+.btn-edit-role {
+    background-color: #f8fafc; /* Fondo un poco más sutil */
+    border: 1px solid #cbd5e1;
+    color: #64748b;
+    border-radius: 6px;
+    width: 28px; /* Un pelín más grande para que el SVG respire */
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    padding: 0;
+    flex-shrink: 0; /* Evita que se deforme el botón */
+}
+
+.btn-edit-role:hover {
+    background-color: var(--primary-orange);
+    color: white;
+    border-color: var(--primary-orange);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(237, 137, 54, 0.2);
 }
