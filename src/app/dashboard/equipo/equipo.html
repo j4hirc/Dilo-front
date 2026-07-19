@@ -4,29 +4,32 @@
         <p>Administra las solicitudes y accesos de tus colaboradores.</p>
     </div>
     
-    <!-- 🔥 EL CÓDIGO DE INVITACIÓN (Copiable con un clic) -->
+    <!-- 🔥 EL CÓDIGO DE INVITACIÓN -->
     <div class="code-container" (click)="copiarCodigo()" title="Copiar código para enviar a tu equipo">
-        <span class="code-label">CÓDIGO DE INVITACIÓN:</span>
-        <span class="code-value">{{ negocioId }}</span>
-        <span class="copy-icon">📋</span>
+        <div class="code-info">
+            <span class="code-label">CÓDIGO DE INVITACIÓN</span>
+            <span class="code-value">{{ negocioId }}</span>
+        </div>
+        <div class="copy-icon-wrapper">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+        </div>
     </div>
 </div>
 
-<div *ngIf="isLoading" class="loading-container" style="background: white; border-radius: 16px; margin-top: 20px;">
+<div *ngIf="isLoading" class="loading-container" style="background: white; border-radius: 20px; margin-top: 20px; padding: 60px 0;">
     <div class="spinner"></div>
     <p>Cargando información del equipo...</p>
 </div>
 
 <!-- 🔥 SECCIÓN 1: SOLICITUDES PENDIENTES -->
-<div *ngIf="solicitudes.length > 0 && !isLoading">
+<div *ngIf="solicitudes.length > 0 && !isLoading" class="fade-in">
     <div class="section-title">
-        <h3>Solicitudes Pendientes <span>({{ solicitudes.length }})</span></h3>
+        <h3>Solicitudes Pendientes <span class="badge-count">{{ solicitudes.length }}</span></h3>
     </div>
 
     <div class="team-grid mb-4">
         <div class="team-card pending-card" *ngFor="let req of solicitudes">
             
-            <!-- 🔥 AVATAR PENDIENTES CON FOTO -->
             <div class="user-avatar-medium" 
                  [ngClass]="{'gray-bg': !req.fotoPerfil}" 
                  [style.background-image]="req.fotoPerfil ? 'url(' + req.fotoPerfil + ')' : 'none'"
@@ -44,32 +47,37 @@
                 </div>
             </div>
 
+            <!-- 🔥 Botones Soft-UI con SVG -->
             <div class="request-actions">
-                <button class="btn-icon-success" (click)="responderSolicitud(req.id, true)" title="Aceptar solicitud">✔️</button>
-                <button class="btn-icon-danger" (click)="responderSolicitud(req.id, false)" title="Rechazar solicitud">✖️</button>
+                <button class="btn-icon-success" (click)="responderSolicitud(req.id, true)" title="Aceptar solicitud">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                </button>
+                <button class="btn-icon-danger" (click)="responderSolicitud(req.id, false)" title="Rechazar solicitud">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
             </div>
         </div>
     </div>
 </div>
 
 <!-- 🔥 SECCIÓN 2: MIEMBROS ACTIVOS -->
-<div *ngIf="!isLoading">
+<div *ngIf="!isLoading" class="fade-in">
     <div class="section-title">
         <h3>Colaboradores Activos</h3>
     </div>
 
     <div class="card full-height-card">
-        <div class="card-body" style="padding: 25px;">
+        <div class="card-body" style="padding: 30px;">
             <div class="team-grid">
                 
-                <div *ngIf="miembrosActivos.length === 0" style="grid-column: 1 / -1; text-align: center; padding: 40px; color: #64748b;">
-                    No tienes colaboradores activos en este momento.
+                <div *ngIf="miembrosActivos.length === 0" class="empty-state">
+                    <div class="empty-icon">👥</div>
+                    <p>No tienes colaboradores activos en este momento.</p>
                 </div>
 
                 <div class="team-card" *ngFor="let m of miembrosActivos">
                     <div class="status-dot" [ngClass]="{'active-dot': m.estadoLaboral === 'ACTIVO', 'inactive-dot': m.estadoLaboral !== 'ACTIVO'}"></div>
                     
-                    <!-- 🔥 AVATAR ACTIVOS CON FOTO -->
                     <div class="user-avatar-medium" 
                          [ngClass]="{'orange-bg': !m.fotoPerfil}" 
                          [style.background-image]="m.fotoPerfil ? 'url(' + m.fotoPerfil + ')' : 'none'"
@@ -83,11 +91,9 @@
                         <h4>{{ m.nombreUsuario }}</h4>
                         <p class="email-text">{{ m.emailUsuario }}</p>
                         
-                        <!-- 🔥 SECCIÓN DEL ROL ACTUALIZADA CON BOTÓN DE EDITAR -->
-                        <div style="margin-top: 10px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                        <div class="role-container">
                             <span class="role-tag">{{ m.rol }}</span>
                             
-                            <!-- El botón solo aparece si el miembro NO es el propietario principal -->
                             <button *ngIf="m.rol !== 'PROPIETARIO'" class="btn-edit-role" (click)="cambiarRol(m)" title="Cambiar rol">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                             </button>
@@ -106,5 +112,3 @@
         </div>
     </div>
 </div>
-
-
