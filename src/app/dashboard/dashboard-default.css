@@ -501,3 +501,65 @@
 }
 
 .active-dot { background-color: #22c55e; }
+
+/* =========================================
+   🔥 RESPONSIVE DEL DASHBOARD LAYOUT 🔥
+   ========================================= */
+.menu-toggle-btn {
+    display: none;
+    background: none;
+    border: none;
+    color: var(--text-main);
+    cursor: pointer;
+    padding: 5px;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.mobile-overlay {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    /* Ocultamos el panel lateral por defecto */
+    .sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.3s ease-in-out;
+        box-shadow: 4px 0 15px rgba(0,0,0,0.2);
+    }
+    
+    /* Lo mostramos cuando tiene la clase 'open' */
+    .sidebar.open {
+        transform: translateX(0);
+    }
+    
+    /* El fondo oscuro atrás del menú */
+    .mobile-overlay {
+        display: block;
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background-color: rgba(15, 23, 42, 0.5);
+        z-index: 90;
+        backdrop-filter: blur(2px);
+    }
+
+    /* El contenido principal toma todo el ancho */
+    .main-content {
+        margin-left: 0;
+        width: 100%;
+        padding: 15px 20px;
+    }
+
+    /* Mostramos el botón de hamburguesa y ocultamos las migas de pan */
+    .menu-toggle-btn {
+        display: block;
+    }
+    
+    .hide-on-mobile {
+        display: none;
+    }
+}

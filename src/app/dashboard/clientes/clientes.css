@@ -1,0 +1,69 @@
+/* 🔥 Heredamos toda la magia visual que hicimos en productos */
+@import '../productos/productos.css';
+
+/* =========================================
+   DISEÑO DEL CLIENTE (Avatares y Textos)
+   ========================================= */
+.client-info-cell {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.client-avatar {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary-orange, #ed8936), #f97316);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    font-weight: 800;
+    flex-shrink: 0;
+    box-shadow: 0 4px 10px rgba(237, 137, 54, 0.2);
+}
+
+.client-details {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.client-name {
+    font-weight: 700;
+    color: #0f172a;
+    font-size: 1.05rem;
+}
+
+.client-sub {
+    font-size: 0.85rem;
+    color: #94a3b8;
+}
+
+/* =========================================
+   DATOS DE CONTACTO (Columna)
+   ========================================= */
+.contact-details {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.contact-line {
+    font-size: 0.9rem;
+    color: #475569;
+    font-weight: 500;
+}
+
+.empty-text {
+    font-style: italic;
+    color: #cbd5e1;
+}
+
+/* Reducimos un poco el alto máximo del modal para que no se coma la pantalla en PC */
+.modal-body-scrollable {
+    max-height: 60vh; 
+    overflow-y: auto;
+}

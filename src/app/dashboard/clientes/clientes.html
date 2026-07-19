@@ -1,1 +1,141 @@
-<p>clientes works!</p>
+<div class="page-header">
+    <div class="header-titles">
+        <h2>Directorio de Clientes</h2>
+        <p>Administra la información y el contacto de tus compradores.</p>
+    </div>
+    <button class="btn-primary" (click)="abrirModalNuevo()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
+        Nuevo Cliente
+    </button>
+</div>
+
+<div class="card full-height-card">
+    <div class="filter-bar" *ngIf="!isLoading">
+        <div class="search-box">
+            <span class="search-icon">🔍</span>
+            <input type="text" placeholder="Buscar por nombre, DNI o correo..." [(ngModel)]="searchTerm" (input)="filtrarClientes()">
+        </div>
+    </div>
+
+    <div class="card-body">
+        <div *ngIf="isLoading" class="loading-container">
+            <div class="spinner"></div>
+            <p>Cargando cartera de clientes...</p>
+        </div>
+        
+        <div class="table-responsive" *ngIf="!isLoading">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th style="width: 15%;">DNI / RUC</th>
+                        <th style="width: 35%;">Cliente</th>
+                        <th style="width: 30%;">Contacto</th>
+                        <th style="text-align: center; width: 20%;">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngIf="clientesFiltrados.length === 0">
+                        <td colspan="4" style="text-align: center; padding: 40px; color: #64748b;">
+                            No se encontraron clientes.
+                        </td>
+                    </tr>
+                    <tr *ngFor="let cli of clientesFiltrados">
+                        <td style="font-weight: 600; color: #64748b;">{{ cli.dni }}</td>
+                        
+                        <td>
+                            <div class="client-info-cell">
+                                <div class="client-avatar">
+                                    {{ cli.primerNombre ? cli.primerNombre.charAt(0).toUpperCase() : 'C' }}
+                                </div>
+                                <div class="client-details">
+                                    <span class="client-name">{{ cli.nombreCompleto }}</span>
+                                    <span class="client-sub" *ngIf="cli.direccion">📍 {{ cli.direccion }}</span>
+                                </div>
+                            </div>
+                        </td>
+
+                        <td>
+                            <div class="contact-details">
+                                <span class="contact-line" *ngIf="cli.telefono">📞 {{ cli.telefono }}</span>
+                                <span class="contact-line" *ngIf="cli.email">✉️ {{ cli.email }}</span>
+                                <span class="contact-line empty-text" *ngIf="!cli.telefono && !cli.email">Sin contacto</span>
+                            </div>
+                        </td>
+
+                        <td class="action-cells" style="justify-content: center;">
+                            <button class="btn-icon text-blue" title="Editar" (click)="abrirModalEditar(cli)">✏️</button>
+                            <button class="btn-icon text-red" title="Eliminar" (click)="eliminarCliente(cli.id)">🗑️</button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- 🔥 MODAL DE CREACIÓN / EDICIÓN -->
+<div class="modal-overlay" *ngIf="showModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>{{ isEditing ? 'Editar Cliente' : 'Nuevo Cliente' }}</h3>
+            <button class="close-btn" (click)="cerrarModal()">✕</button>
+        </div>
+        
+        <div class="modal-body modal-body-scrollable">
+            
+            <div class="form-group">
+                <label>DNI / RUC *</label>
+                <input type="text" [(ngModel)]="clienteForm.dni" placeholder="Ej: 0987654321" maxlength="13">
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Primer Nombre *</label>
+                    <input type="text" [(ngModel)]="clienteForm.primerNombre" placeholder="Ej: Juan">
+                </div>
+                <div class="form-group">
+                    <label>Segundo Nombre</label>
+                    <input type="text" [(ngModel)]="clienteForm.segundoNombre" placeholder="Ej: Carlos">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Apellido Paterno *</label>
+                    <input type="text" [(ngModel)]="clienteForm.apellidoPaterno" placeholder="Ej: Pérez">
+                </div>
+                <div class="form-group">
+                    <label>Apellido Materno</label>
+                    <input type="text" [(ngModel)]="clienteForm.apellidoMaterno" placeholder="Ej: Gómez">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Teléfono</label>
+                    <input type="text" [(ngModel)]="clienteForm.telefono" placeholder="Ej: 0991234567">
+                </div>
+                <div class="form-group">
+                    <label>Fecha de Nacimiento</label>
+                    <input type="date" [(ngModel)]="clienteForm.fechaNacimiento">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Correo Electrónico</label>
+                <input type="email" [(ngModel)]="clienteForm.email" placeholder="Ej: juan.perez@email.com">
+            </div>
+
+            <div class="form-group">
+                <label>Dirección</label>
+                <textarea [(ngModel)]="clienteForm.direccion" rows="2" placeholder="Ej: Calle Principal 123"></textarea>
+            </div>
+            
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn-secondary" (click)="cerrarModal()">Cancelar</button>
+            <button class="btn-primary" (click)="guardarCliente()">Guardar Cliente</button>
+        </div>
+    </div>
+</div>

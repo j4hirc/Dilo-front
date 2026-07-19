@@ -1,1 +1,66 @@
-<p>configuracion works!</p>
+<div class="page-header">
+    <div class="header-titles">
+        <h2>Configuración del Negocio</h2>
+        <p>Actualiza la información fiscal y el logo de tu empresa.</p>
+    </div>
+</div>
+
+<div *ngIf="isLoading" class="loading-container" style="background: white; border-radius: 16px; margin-top: 20px;">
+    <div class="spinner"></div>
+    <p>Cargando información...</p>
+</div>
+
+<div class="card full-height-card" *ngIf="!isLoading">
+    <div class="card-body form-body">
+        
+        <!-- 🔥 SECCIÓN DEL LOGO -->
+        <div class="logo-section">
+            <div class="business-image-preview" [style.background-image]="imagenActual ? 'url(' + imagenActual + ')' : 'none'">
+                <span *ngIf="!imagenActual">🏪</span>
+            </div>
+            <div class="upload-btn-wrapper">
+                <button class="btn-outline-small">Subir Nuevo Logo</button>
+                <input type="file" (change)="onFileSelected($event)" accept="image/png, image/jpeg, image/webp" title="Seleccionar nueva imagen">
+            </div>
+            <p class="help-text text-center mt-2">Formatos: JPG, PNG, WEBP. Max 2MB.</p>
+        </div>
+
+        <!-- 🔥 FORMULARIO FISCAL -->
+        <div class="form-grid">
+            <div class="form-group">
+                <label>Número de RUC *</label>
+                <input type="text" [(ngModel)]="negocioForm.ruc" placeholder="Ej: 0102030405001" maxlength="13">
+            </div>
+            
+            <div class="form-group">
+                <label>Nombre Comercial *</label>
+                <input type="text" [(ngModel)]="negocioForm.nombreComercial" placeholder="Ej: Tienda La Esquina">
+            </div>
+
+            <div class="form-group">
+                <label>Razón Social *</label>
+                <input type="text" [(ngModel)]="negocioForm.razonSocial" placeholder="Ej: Juan Pérez S.A.">
+            </div>
+
+            <div class="form-group">
+                <label>Dirección Matriz *</label>
+                <input type="text" [(ngModel)]="negocioForm.direccion" placeholder="Ej: Calle Principal 123 y Secundaria">
+            </div>
+        </div>
+
+        <!-- 🔥 CHECKBOX CONTABILIDAD -->
+        <div class="form-group checkbox-container">
+            <input type="checkbox" [(ngModel)]="negocioForm.obligadoContabilidad" id="contabilidadCheck">
+            <label for="contabilidadCheck">Obligado a llevar contabilidad</label>
+        </div>
+
+    </div>
+
+    <!-- 🔥 BOTÓN DE GUARDAR -->
+    <div class="card-footer">
+        <button class="btn-primary btn-large" (click)="guardarCambios()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+            Guardar Cambios
+        </button>
+    </div>
+</div>

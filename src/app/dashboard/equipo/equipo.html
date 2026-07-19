@@ -1,1 +1,102 @@
-<p>equipo works!</p>
+<div class="page-header">
+    <div class="header-titles">
+        <h2>Mi Equipo</h2>
+        <p>Administra las solicitudes y accesos de tus colaboradores.</p>
+    </div>
+    
+    <!-- 🔥 EL CÓDIGO DE INVITACIÓN (Copiable con un clic) -->
+    <div class="code-container" (click)="copiarCodigo()" title="Copiar código para enviar a tu equipo">
+        <span class="code-label">CÓDIGO DE INVITACIÓN:</span>
+        <span class="code-value">{{ negocioId }}</span>
+        <span class="copy-icon">📋</span>
+    </div>
+</div>
+
+<div *ngIf="isLoading" class="loading-container" style="background: white; border-radius: 16px; margin-top: 20px;">
+    <div class="spinner"></div>
+    <p>Cargando información del equipo...</p>
+</div>
+
+<!-- 🔥 SECCIÓN 1: SOLICITUDES PENDIENTES -->
+<div *ngIf="solicitudes.length > 0 && !isLoading">
+    <div class="section-title">
+        <h3>Solicitudes Pendientes <span>({{ solicitudes.length }})</span></h3>
+    </div>
+
+    <div class="team-grid mb-4">
+        <div class="team-card pending-card" *ngFor="let req of solicitudes">
+            
+            <!-- 🔥 AVATAR PENDIENTES CON FOTO -->
+            <div class="user-avatar-medium" 
+                 [ngClass]="{'gray-bg': !req.fotoPerfil}" 
+                 [style.background-image]="req.fotoPerfil ? 'url(' + req.fotoPerfil + ')' : 'none'"
+                 style="background-size: cover; background-position: center;">
+                <span *ngIf="!req.fotoPerfil">
+                    {{ req.nombreUsuario ? req.nombreUsuario.substring(0, 2).toUpperCase() : 'US' }}
+                </span>
+            </div>
+            
+            <div class="team-info">
+                <h4>{{ req.nombreUsuario }}</h4>
+                <p class="email-text">{{ req.emailUsuario }}</p>
+                <div style="margin-top: 8px;">
+                    <span class="status-tag status-yellow">Esperando aprobación</span>
+                </div>
+            </div>
+
+            <div class="request-actions">
+                <button class="btn-icon-success" (click)="responderSolicitud(req.id, true)" title="Aceptar solicitud">✔️</button>
+                <button class="btn-icon-danger" (click)="responderSolicitud(req.id, false)" title="Rechazar solicitud">✖️</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 🔥 SECCIÓN 2: MIEMBROS ACTIVOS -->
+<div *ngIf="!isLoading">
+    <div class="section-title">
+        <h3>Colaboradores Activos</h3>
+    </div>
+
+    <div class="card full-height-card">
+        <div class="card-body" style="padding: 25px;">
+            <div class="team-grid">
+                
+                <div *ngIf="miembrosActivos.length === 0" style="grid-column: 1 / -1; text-align: center; padding: 40px; color: #64748b;">
+                    No tienes colaboradores activos en este momento.
+                </div>
+
+                <div class="team-card" *ngFor="let m of miembrosActivos">
+                    <div class="status-dot" [ngClass]="{'active-dot': m.estadoLaboral === 'ACTIVO', 'inactive-dot': m.estadoLaboral !== 'ACTIVO'}"></div>
+                    
+                    <!-- 🔥 AVATAR ACTIVOS CON FOTO -->
+                    <div class="user-avatar-medium" 
+                         [ngClass]="{'orange-bg': !m.fotoPerfil}" 
+                         [style.background-image]="m.fotoPerfil ? 'url(' + m.fotoPerfil + ')' : 'none'"
+                         style="background-size: cover; background-position: center;">
+                        <span *ngIf="!m.fotoPerfil">
+                            {{ m.nombreUsuario ? m.nombreUsuario.substring(0, 2).toUpperCase() : 'US' }}
+                        </span>
+                    </div>
+                    
+                    <div class="team-info">
+                        <h4>{{ m.nombreUsuario }}</h4>
+                        <p class="email-text">{{ m.emailUsuario }}</p>
+                        
+                        <div style="margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap;">
+                            <span class="role-tag">{{ m.rol }}</span>
+                        </div>
+                    </div>
+
+                    <div class="team-actions" *ngIf="m.rol !== 'PROPIETARIO'">
+                        <button class="btn-outline-danger" (click)="desactivarMiembro(m.id)" title="Quitar acceso al sistema">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path><line x1="12" y1="2" x2="12" y2="12"></line></svg>
+                            Desactivar
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>

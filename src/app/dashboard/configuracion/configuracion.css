@@ -1,0 +1,184 @@
+/* Heredamos los botones y tarjetas generales */
+@import '../productos/productos.css';
+
+.card-body.form-body {
+    padding: 50px 60px; /* 🔥 Mucho más amplio y respirable en PC */
+    display: flex;
+    flex-direction: column;
+    gap: 40px; /* Más aire entre la foto y el formulario */
+}
+
+/* =========================================
+   SECCIÓN DEL LOGO (Gigante y Premium)
+   ========================================= */
+.logo-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    padding-bottom: 35px;
+    border-bottom: 1px dashed var(--border-color, #e2e8f0);
+}
+
+.business-image-preview {
+    width: 180px; /* 🔥 LOGO MUCHO MÁS GRANDE */
+    height: 180px;
+    border-radius: 25px; /* Bordes más redondeados y modernos */
+    background-color: #f8fafc;
+    background-size: cover;
+    background-position: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 4px solid #cbd5e1; /* Borde más grueso */
+    box-shadow: 0 12px 30px rgba(0,0,0,0.1); /* Sombra elegante */
+    font-size: 5rem; /* Emoji gigante si no hay foto */
+    color: #94a3b8;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Efecto 3D al pasar el mouse por el logo */
+.business-image-preview:hover {
+    transform: scale(1.05);
+    box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+}
+
+.upload-btn-wrapper {
+    position: relative;
+    overflow: hidden;
+    display: inline-block;
+    margin-top: 5px;
+}
+
+.text-center { text-align: center; }
+.mt-2 { margin-top: 8px; font-size: 0.95rem; }
+
+/* =========================================
+   GRID DEL FORMULARIO FISCAL
+   ========================================= */
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 35px; /* 🔥 Más separación entre las columnas */
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group label {
+    font-size: 1.05rem; /* 🔥 Letra más grande y legible */
+    font-weight: 700;
+    color: var(--text-main, #0f172a);
+    margin-bottom: 10px;
+}
+
+.form-group input {
+    padding: 16px 20px; /* 🔥 Cajas de texto más gorditas y cómodas */
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+    font-size: 1.1rem; /* 🔥 El texto que escribes es más grande */
+    color: #0f172a;
+    transition: all 0.2s;
+    font-family: inherit;
+    background-color: #f8fafc;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: var(--primary-orange, #ed8936);
+    background-color: #ffffff;
+    box-shadow: 0 0 0 4px rgba(237, 137, 54, 0.15); /* Resplandor naranja */
+}
+
+/* =========================================
+   CHECKBOX CONTABILIDAD (Fácil de pulsar)
+   ========================================= */
+.checkbox-container {
+    flex-direction: row;
+    align-items: center;
+    gap: 15px;
+    background: #fff7ed;
+    padding: 20px 25px; /* 🔥 Caja del checkbox más grande */
+    border-radius: 14px;
+    border: 1px solid #ffedd5;
+    margin-top: 10px;
+    transition: background-color 0.2s;
+}
+
+.checkbox-container:hover {
+    background-color: #ffedd5;
+}
+
+.checkbox-container input[type="checkbox"] {
+    width: 26px; /* 🔥 Cuadrito mucho más grande */
+    height: 26px;
+    cursor: pointer;
+    accent-color: var(--primary-orange);
+}
+
+.checkbox-container label {
+    margin: 0;
+    cursor: pointer;
+    font-size: 1.15rem; /* 🔥 Texto más visible */
+    font-weight: 700;
+    color: #c2410c; /* Naranja fuerte */
+}
+
+/* =========================================
+   PIE DE TARJETA Y BOTONES
+   ========================================= */
+.card-footer {
+    padding: 30px 60px; /* 🔥 Más espacio en el pie */
+    background-color: #f8fafc;
+    border-top: 1px solid var(--border-color, #e2e8f0);
+    display: flex;
+    justify-content: flex-end;
+}
+
+.btn-large {
+    padding: 16px 35px; /* 🔥 Botón de guardar GIGANTE */
+    font-size: 1.15rem;
+    border-radius: 12px;
+    box-shadow: 0 6px 15px rgba(237, 137, 54, 0.25);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.btn-large:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(237, 137, 54, 0.35);
+}
+
+/* =========================================
+   🔥 RESPONSIVE (MÓVILES Y TABLETS) 🔥
+   ========================================= */
+@media (max-width: 768px) {
+    .form-grid {
+        grid-template-columns: 1fr; /* Todo pasa a 1 sola columna hacia abajo */
+        gap: 20px;
+    }
+    
+    .card-body.form-body {
+        padding: 25px 20px; /* Se ajusta a los bordes del celular */
+        gap: 25px;
+    }
+
+    .business-image-preview {
+        width: 150px; /* Achicamos un pelín el logo para que no desborde la pantalla */
+        height: 150px;
+        font-size: 4rem;
+    }
+    
+    .card-footer {
+        padding: 25px 20px;
+        justify-content: center; /* Centramos el botón */
+    }
+    
+    .btn-large {
+        width: 100%; /* Botón de lado a lado para pulsarlo con el pulgar */
+        justify-content: center;
+    }
+}

@@ -1,142 +1,147 @@
-
-<section class="welcome-section">
-    <div class="welcome-text">
-        <h1>Bienvenido, {{ usuarioLogueado?.nombre ? (usuarioLogueado.nombre.split(' ')[0]) : 'Juan' }} 👋</h1>
-        <p>Aquí está el rendimiento de tu negocio hoy</p>
-    </div>
-    <button class="btn-primary" routerLink="/dashboard/facturas">
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-        Nueva factura
-    </button>
-</section>
-
-<div class="alert-banner">
-    <div class="alert-content">
-        <div class="alert-icon">⚠️</div>
-        <p><strong>Revisa tus productos</strong> por debajo del stock mínimo en bodega.</p>
-    </div>
-    <a routerLink="/dashboard/inventario" class="alert-link">Ver inventario ➔</a>
+<div *ngIf="isLoading" class="loading-container" style="padding: 100px 0; text-align: center;">
+    <div class="spinner"></div>
+    <p style="color: #64748b; font-weight: 500;">Cargando tu panel de control...</p>
 </div>
 
-<section class="stats-grid">
-    <div class="stat-card">
-        <div class="stat-icon-wrapper bg-blue">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
-        </div>
-        <div class="stat-info">
-            <h3>${{ ventasMes | number:'1.2-2' }}</h3>
-            <p>Ventas del mes</p>
-        </div>
-        <span class="badge badge-green">↗ +18%</span>
-    </div>
-
-    <div class="stat-card">
-        <div class="stat-icon-wrapper bg-orange">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ed8936" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-        </div>
-        <div class="stat-info">
-            <h3>{{ facturasEmitidas }}</h3>
-            <p>Facturas emitidas</p>
-        </div>
-        <span class="badge badge-green">↗ +9%</span>
-    </div>
-
-    <div class="stat-card">
-        <div class="stat-icon-wrapper bg-green">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-        </div>
-        <div class="stat-info">
-            <h3>{{ clientesActivos }}</h3>
-            <p>Clientes activos</p>
-        </div>
-        <span class="badge badge-green">↗ +4%</span>
-    </div>
-
-    <div class="stat-card">
-        <div class="stat-icon-wrapper bg-purple">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9333ea" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line></svg>
-        </div>
-        <div class="stat-info">
-            <h3>{{ pedidosVoz }}</h3>
-            <p>Pedidos por voz</p>
-        </div>
-        <span class="badge badge-green">↗ +62%</span>
-    </div>
-</section>
-
-<div class="content-grid">
-    <div class="card">
-        <div class="card-header">
-            <h3>Facturas recientes</h3>
-            <a routerLink="/dashboard/facturas" class="link-action">Ver todas ➔</a>
-        </div>
-        <div class="card-body">
-            <div *ngIf="facturas.length === 0" style="padding: 20px; text-align: center; color: #64748b; font-size: 0.9rem;">
-                No hay facturas registradas.
+<div *ngIf="!isLoading">
+    <section class="welcome-section">
+        <div class="welcome-profile">
+            <div class="business-logo" [style.background-image]="negocio?.rutaImagen ? 'url(' + negocio?.rutaImagen + ')' : 'none'">
+                <span *ngIf="!negocio?.rutaImagen">🏪</span>
             </div>
-            <div class="list-item" *ngFor="let fac of facturas">
-                <div class="item-info">
-                    <h4>{{ fac.numero }}</h4>
-                    <p>{{ fac.cliente }}</p>
-                </div>
-                <div class="item-actions">
-                    <span class="tag tag-gray">{{ fac.tipo }}</span>
-                </div>
-                <div class="item-amount">
-                    <h4>${{ fac.monto.toFixed(2) }}</h4>
-                    <span class="status" [ngClass]="{'status-green': fac.estado === 'AUTORIZADO' || fac.estado === 'Emitida', 'status-yellow': fac.estado === 'CREADA', 'status-red': fac.estado === 'ANULADA'}">
-                        {{ fac.estado }}
-                    </span>
-                </div>
+            <div class="welcome-text">
+                <h1>Bienvenido, {{ usuarioLogueado?.nombre ? (usuarioLogueado.nombre.split(' ')[0]) : 'Propietario' }} 👋</h1>
+                <p>Rendimiento de <strong>{{ negocio?.nombreComercial || negocio?.razonSocial || 'Tu Negocio' }}</strong> hoy</p>
             </div>
         </div>
+    </section>
+
+    <div class="alert-banner">
+        <div class="alert-content">
+            <div class="alert-icon">⚠️</div>
+            <p><strong>Revisa tus productos</strong> por debajo del stock mínimo en bodega.</p>
+        </div>
+        <a routerLink="/dashboard/bodegas" class="alert-link">Ver inventario ➔</a>
     </div>
 
-    <div class="card">
-        <div class="card-header">
-            <h3>Productos más vendidos</h3>
-            <span class="badge-gray">Este mes</span>
-        </div>
-        <div class="card-body">
-            <div *ngIf="productos.length === 0" style="padding: 20px; text-align: center; color: #64748b; font-size: 0.9rem;">
-                No hay productos registrados.
+    <!-- 🔥 AHORA SOLO SON 3 TARJETAS -->
+    <section class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon-wrapper bg-blue">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
             </div>
-            <div class="product-item" *ngFor="let prod of productos; let i = index">
-                <div class="product-row">
-                    <div class="product-name">
-                        <span class="number-badge">{{ i + 1 }}</span>
-                        {{ prod.nombre }}
+            <div class="stat-info">
+                <h3>${{ ventasMes | number:'1.2-2' }}</h3>
+                <p>Ventas del mes</p>
+            </div>
+            <span class="badge badge-green">↗ +18%</span>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon-wrapper bg-orange">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ed8936" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+            </div>
+            <div class="stat-info">
+                <h3>{{ facturasEmitidas }}</h3>
+                <p>Facturas emitidas</p>
+            </div>
+            <span class="badge badge-green">↗ +9%</span>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon-wrapper bg-green">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+            </div>
+            <div class="stat-info">
+                <h3>{{ clientesActivos }}</h3>
+                <p>Clientes activos</p>
+            </div>
+            <span class="badge badge-green">↗ +4%</span>
+        </div>
+    </section>
+
+    <div class="content-grid">
+        <div class="card">
+            <div class="card-header">
+                <h3>Facturas recientes</h3>
+                <a routerLink="/dashboard/facturas" class="link-action">Ver todas ➔</a>
+            </div>
+            <div class="card-body">
+                <div *ngIf="facturas.length === 0" style="padding: 40px 20px; text-align: center; color: #64748b; font-size: 0.95rem;">
+                    No hay facturas registradas recientemente.
+                </div>
+                <div class="list-item" *ngFor="let fac of facturas">
+                    <div class="item-info">
+                        <h4>{{ fac.numero }}</h4>
+                        <p>{{ fac.cliente }}</p>
                     </div>
-                    <div class="product-qty">{{ prod.cantidad }} uds.</div>
+                    <div class="item-actions">
+                        <span class="tag tag-gray">{{ fac.tipo }}</span>
+                    </div>
+                    <div class="item-amount">
+                        <h4>${{ fac.monto | number:'1.2-2' }}</h4>
+                        <span class="status" [ngClass]="{'status-green': fac.estado === 'AUTORIZADO' || fac.estado === 'Emitida', 'status-yellow': fac.estado === 'CREADA', 'status-red': fac.estado === 'ANULADA'}">
+                            {{ fac.estado }}
+                        </span>
+                    </div>
                 </div>
-                <div class="progress-bg">
-                    <div class="progress-fill" [style.width.%]="prod.porcentaje"></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h3>Productos más vendidos</h3>
+                <span class="badge-gray">Este mes</span>
+            </div>
+            <div class="card-body">
+                <div *ngIf="productos.length === 0" style="padding: 40px 20px; text-align: center; color: #64748b; font-size: 0.95rem;">
+                    No hay suficientes datos de inventario.
+                </div>
+                <div class="product-item" *ngFor="let prod of productos; let i = index">
+                    <div class="product-row">
+                        <div class="product-name">
+                            <span class="number-badge">{{ i + 1 }}</span>
+                            {{ prod.nombre }}
+                        </div>
+                        <div class="product-qty">{{ prod.cantidad }} uds.</div>
+                    </div>
+                    <div class="progress-bg">
+                        <div class="progress-fill" [style.width.%]="prod.porcentaje"></div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
+
+    <section class="team-section card mt-4">
+        <div class="card-header">
+            <h3>Mi equipo</h3>
+            <button class="btn-outline" routerLink="/dashboard/equipo">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                Ver todo el equipo
+            </button>
+        </div>
+        <div class="team-grid">
+            <div *ngIf="equipo.length === 0" style="padding: 40px; text-align: center; color: #64748b; font-size: 0.95rem; grid-column: span 3;">
+                No hay miembros registrados en el equipo.
+            </div>
+            
+            <div class="team-card" *ngFor="let user of equipo">
+                <!-- 🔥 LA FOTO DEL EQUIPO AQUÍ -->
+                <div class="user-avatar-medium" 
+                     [ngClass]="{'orange-bg': !user.fotoPerfil}"
+                     [style.background-image]="user.fotoPerfil ? 'url(' + user.fotoPerfil + ')' : 'none'"
+                     style="background-size: cover; background-position: center;">
+                    <span *ngIf="!user.fotoPerfil">{{ user.iniciales }}</span>
+                </div>
+                
+                <div class="team-info">
+                    <h4>{{ user.nombre }}</h4>
+                    <span class="role-tag">{{ user.rol }}</span>
+                </div>
+                <div class="status-dot" [ngClass]="{'active-dot': user.activo, 'inactive-dot': !user.activo}"></div>
+            </div>
+
+        </div>
+    </section>
 </div>
-
-<section class="team-section card mt-4">
-    <div class="card-header">
-        <h3>Mi equipo</h3>
-        <button class="btn-outline" routerLink="/dashboard/equipo">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-            Ver todo el equipo
-        </button>
-    </div>
-    <div class="team-grid">
-        <div *ngIf="equipo.length === 0" style="padding: 20px; text-align: center; color: #64748b; font-size: 0.9rem; grid-column: span 3;">
-            No hay equipo registrado.
-        </div>
-        <div class="team-card" *ngFor="let user of equipo">
-            <div class="user-avatar-medium" [style.background-color]="user.color">{{ user.iniciales }}</div>
-            <div class="team-info">
-                <h4>{{ user.nombre }}</h4>
-                <span class="role-tag">{{ user.rol }}</span>
-            </div>
-            <div class="status-dot" [ngClass]="{'active-dot': user.activo}"></div>
-        </div>
-    </div>
-</section>
-

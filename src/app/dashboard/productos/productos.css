@@ -1,12 +1,16 @@
+/* =========================================
+   CABECERA DE PÁGINA (Responsive)
+   ========================================= */
 .page-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-end;
     margin-bottom: 25px;
+    gap: 15px; /* Espacio extra por si se juntan */
 }
 
 .header-titles h2 {
-    font-size: 1.6rem;
+    font-size: 1.8rem; /* 🔥 Más grande (antes 1.6) */
     color: var(--text-main);
     margin: 0 0 5px 0;
     font-weight: 800;
@@ -15,19 +19,20 @@
 .header-titles p {
     color: var(--text-muted);
     margin: 0;
-    font-size: 0.95rem;
+    font-size: 1.05rem; /* 🔥 Más grande */
 }
 
 .btn-primary {
     background-color: var(--primary-orange);
     color: white;
     border: none;
-    padding: 10px 20px;
+    padding: 12px 24px; /* 🔥 Botón más gordito */
     border-radius: 8px;
     font-weight: 600;
-    font-size: 0.95rem;
+    font-size: 1rem; /* 🔥 Letra más grande */
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 8px;
     cursor: pointer;
     transition: background-color 0.2s;
@@ -41,7 +46,7 @@
     background: var(--card-bg, #ffffff);
     border-radius: 16px;
     border: 1px solid var(--border-color, #e2e8f0);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.04); /* 🔥 Sombra un poco más marcada */
     overflow: hidden;
 }
 
@@ -49,21 +54,25 @@
     padding: 0;
 }
 
+/* =========================================
+   TABLA (Más grande y legible)
+   ========================================= */
 .table-responsive {
     width: 100%;
-    overflow-x: auto;
+    overflow-x: auto; /* Permite scroll horizontal en móviles si la tabla es muy ancha */
 }
 
 .data-table {
     width: 100%;
     border-collapse: collapse;
     text-align: left;
+    min-width: 800px; /* 🔥 Asegura que la tabla no se aplaste feo en móviles */
 }
 
 .data-table th {
     background-color: #f8fafc;
-    padding: 15px 20px;
-    font-size: 0.85rem;
+    padding: 18px 24px; /* 🔥 Más espacio interior */
+    font-size: 0.95rem; /* 🔥 Más grande (antes 0.85) */
     font-weight: 700;
     color: #475569;
     text-transform: uppercase;
@@ -72,8 +81,8 @@
 }
 
 .data-table td {
-    padding: 15px 20px;
-    font-size: 0.9rem;
+    padding: 18px 24px; /* 🔥 Más espacio interior */
+    font-size: 1rem; /* 🔥 Más grande (antes 0.9) */
     color: var(--text-muted, #64748b);
     border-bottom: 1px solid #f1f5f9;
     vertical-align: middle;
@@ -89,13 +98,13 @@
 .product-info-cell {
     display: flex;
     align-items: center;
-    gap: 15px;
+    gap: 18px; /* 🔥 Más separación */
 }
 
 .product-img-thumb {
-    width: 45px;
-    height: 45px;
-    border-radius: 8px;
+    width: 55px; /* 🔥 Foto más grande (antes 45px) */
+    height: 55px;
+    border-radius: 10px;
     background-color: #f1f5f9;
     background-size: cover;
     background-position: center;
@@ -103,36 +112,36 @@
     align-items: center;
     justify-content: center;
     border: 1px solid #e2e8f0;
-    font-size: 1.2rem;
+    font-size: 1.5rem; /* Emoji más grande si no hay foto */
     flex-shrink: 0;
 }
 
 .product-details {
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 4px;
 }
 
 .product-name {
     font-weight: 600;
     color: #0f172a;
-    font-size: 0.95rem;
+    font-size: 1.05rem; /* 🔥 Nombre más destacado */
 }
 
 .product-brand {
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     color: #94a3b8;
 }
 
 /* =========================================
-   ETIQUETAS Y ESTADOS
+   ETIQUETAS Y ESTADOS (Más visibles)
    ========================================= */
 .tag {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    font-size: 0.75rem;
-    padding: 4px 10px;
+    font-size: 0.85rem; /* 🔥 Más grande */
+    padding: 6px 12px;
     border-radius: 20px;
     font-weight: 600;
 }
@@ -140,26 +149,32 @@
 .tag-purple { background-color: #faf5ff; color: #9333ea; }
 .tag-gray { background-color: #f1f5f9; color: #64748b; }
 
-.status { font-size: 0.75rem; font-weight: 600; padding: 4px 10px; border-radius: 12px; }
+.status { 
+    font-size: 0.85rem; /* 🔥 Más grande */
+    font-weight: 600; 
+    padding: 6px 12px; 
+    border-radius: 12px; 
+}
 .status-green { background-color: #dcfce7; color: #166534; }
 .status-gray { background-color: #f1f5f9; color: #475569; }
 
 .action-cells {
     display: flex;
-    gap: 10px;
+    gap: 12px; /* Botones más separados */
 }
 
 .btn-icon {
     background: none;
     border: none;
     cursor: pointer;
-    font-size: 1.1rem;
+    font-size: 1.3rem; /* 🔥 Iconos de editar/eliminar más grandes */
     opacity: 0.7;
-    transition: opacity 0.2s;
+    transition: opacity 0.2s, transform 0.2s;
 }
 
 .btn-icon:hover {
     opacity: 1;
+    transform: scale(1.1); /* Efecto hover de crecimiento */
 }
 
 /* =========================================
@@ -172,11 +187,12 @@
     justify-content: center;
     padding: 60px 20px;
     color: var(--text-muted, #64748b);
+    font-size: 1.1rem;
 }
 
 .spinner {
-    width: 45px;
-    height: 45px;
+    width: 50px; /* 🔥 Un poco más grande */
+    height: 50px;
     border: 4px solid var(--border-color, #e2e8f0);
     border-top-color: var(--primary-orange, #ed8936);
     border-radius: 50%;
@@ -201,16 +217,20 @@
     justify-content: center;
     z-index: 1000;
     backdrop-filter: blur(3px);
+    padding: 20px; /* Para que no pegue a los bordes en celular */
 }
 
 .modal-content {
     background: #ffffff;
     width: 100%;
-    max-width: 500px;
+    max-width: 550px; /* 🔥 Modal un poco más ancho */
     border-radius: 16px;
     box-shadow: 0 10px 25px rgba(0,0,0,0.1);
     overflow: hidden;
     animation: slideUp 0.3s ease-out;
+    max-height: 90vh; /* Evita que se salga de la pantalla */
+    display: flex;
+    flex-direction: column;
 }
 
 @keyframes slideUp {
@@ -229,13 +249,13 @@
 .modal-header h3 {
     margin: 0;
     color: var(--text-main, #0f172a);
-    font-size: 1.2rem;
+    font-size: 1.3rem; /* 🔥 Más grande */
 }
 
 .close-btn {
     background: none;
     border: none;
-    font-size: 1.2rem;
+    font-size: 1.5rem; /* 🔥 Más fácil de presionar */
     color: #64748b;
     cursor: pointer;
 }
@@ -244,10 +264,11 @@
 
 .modal-body {
     padding: 25px;
+    overflow-y: auto; /* Permite scroll solo en el cuerpo del modal */
 }
 
 .form-group {
-    margin-bottom: 15px;
+    margin-bottom: 18px;
     display: flex;
     flex-direction: column;
 }
@@ -259,17 +280,17 @@
 }
 
 .form-group label {
-    font-size: 0.85rem;
+    font-size: 0.95rem; /* 🔥 Más grande */
     font-weight: 600;
     color: #475569;
-    margin-bottom: 6px;
+    margin-bottom: 8px;
 }
 
 .form-group input, .form-group textarea, .form-group select {
-    padding: 10px 12px;
+    padding: 12px 15px; /* 🔥 Campos de texto más grandes */
     border: 1px solid #cbd5e1;
     border-radius: 8px;
-    font-size: 0.95rem;
+    font-size: 1rem; /* 🔥 Letra más grande adentro */
     color: #0f172a;
     transition: border-color 0.2s;
     font-family: inherit;
@@ -278,10 +299,11 @@
 .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
     outline: none;
     border-color: var(--primary-orange, #ed8936);
+    box-shadow: 0 0 0 3px rgba(237, 137, 54, 0.1);
 }
 
 .help-text {
-    font-size: 0.75rem;
+    font-size: 0.85rem;
     color: #94a3b8;
     margin-top: 5px;
 }
@@ -299,9 +321,10 @@
     background-color: #ffffff;
     color: #475569;
     border: 1px solid #cbd5e1;
-    padding: 10px 20px;
+    padding: 12px 20px;
     border-radius: 8px;
     font-weight: 600;
+    font-size: 1rem;
     cursor: pointer;
     transition: all 0.2s;
 }
@@ -318,11 +341,11 @@
     gap: 15px;
     padding: 20px;
     border-bottom: 1px solid var(--border-color, #e2e8f0);
-    background-color: #f8fafc; /* Un gris muy suavecito para que resalte del blanco */
+    background-color: #f8fafc;
 }
 
 .search-box {
-    flex: 1; /* Para que la barra de búsqueda tome todo el espacio disponible */
+    flex: 1;
     position: relative;
     display: flex;
     align-items: center;
@@ -332,15 +355,15 @@
     position: absolute;
     left: 15px;
     color: #94a3b8;
-    font-size: 1.1rem;
+    font-size: 1.2rem;
 }
 
 .search-box input {
     width: 100%;
-    padding: 12px 15px 12px 40px; /* Espacio extra a la izquierda para la lupa */
+    padding: 14px 15px 14px 45px; /* 🔥 Más gordito */
     border: 1px solid #cbd5e1;
     border-radius: 8px;
-    font-size: 0.95rem;
+    font-size: 1rem;
     color: #0f172a;
     outline: none;
     transition: all 0.2s;
@@ -349,35 +372,31 @@
 
 .search-box input:focus {
     border-color: var(--primary-orange, #ed8936);
-    box-shadow: 0 0 0 3px rgba(237, 137, 54, 0.1); /* Efecto de resplandor naranja */
+    box-shadow: 0 0 0 3px rgba(237, 137, 54, 0.1);
 }
 
 .category-filter select {
-    padding: 12px 15px;
+    padding: 14px 15px; /* 🔥 Más gordito */
     border: 1px solid #cbd5e1;
     border-radius: 8px;
-    font-size: 0.95rem;
+    font-size: 1rem;
     color: #0f172a;
     background-color: white;
     outline: none;
     cursor: pointer;
     font-family: inherit;
-    min-width: 200px; /* Para que no se encoja mucho */
+    min-width: 220px;
     transition: all 0.2s;
 }
 
 .category-filter select:focus {
     border-color: var(--primary-orange, #ed8936);
+    box-shadow: 0 0 0 3px rgba(237, 137, 54, 0.1);
 }
 
 /* =========================================
    ESTILOS DE LA FOTO DENTRO DEL MODAL
    ========================================= */
-.modal-body-scrollable {
-    max-height: 70vh;
-    overflow-y: auto;
-}
-
 .image-preview-container {
     display: flex;
     flex-direction: column;
@@ -389,8 +408,8 @@
 }
 
 .modal-image-preview {
-    width: 120px;
-    height: 120px;
+    width: 140px; /* 🔥 Foto más grande en el modal */
+    height: 140px;
     border-radius: 16px;
     background-color: #f1f5f9;
     background-size: cover;
@@ -400,7 +419,7 @@
     justify-content: center;
     border: 2px solid #cbd5e1;
     box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-    font-size: 2.5rem;
+    font-size: 3rem;
 }
 
 .upload-btn-wrapper {
@@ -413,9 +432,9 @@
     border: 1px solid var(--primary-orange, #ed8936);
     color: var(--primary-orange, #ed8936);
     background-color: transparent;
-    padding: 8px 16px;
+    padding: 10px 20px;
     border-radius: 20px;
-    font-size: 0.85rem;
+    font-size: 0.95rem;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
@@ -437,10 +456,10 @@
 }
 
 .custom-select {
-    padding: 10px 12px;
+    padding: 12px 15px;
     border: 1px solid #cbd5e1;
     border-radius: 8px;
-    font-size: 0.95rem;
+    font-size: 1rem;
     font-family: inherit;
     background-color: white;
     color: #0f172a;
@@ -450,4 +469,52 @@
 
 .custom-select:focus {
     border-color: var(--primary-orange, #ed8936);
+}
+
+/* =========================================
+   🔥 RESPONSIVE (MÓVILES Y TABLETS) 🔥
+   ========================================= */
+@media (max-width: 768px) {
+    /* La cabecera se apila */
+    .page-header {
+        flex-direction: column;
+        align-items: stretch;
+        text-align: center;
+    }
+    
+    .btn-primary {
+        width: 100%; /* Botón ocupa todo el ancho */
+        justify-content: center;
+    }
+
+    /* La barra de búsqueda se apila */
+    .filter-bar {
+        flex-direction: column;
+        padding: 15px;
+    }
+
+    .category-filter select {
+        width: 100%; /* Select ocupa todo el ancho */
+    }
+
+    /* El modal se ajusta a la pantalla pequeña */
+    .form-row {
+        grid-template-columns: 1fr; /* Los campos del modal se ponen uno debajo del otro */
+        gap: 0;
+    }
+
+    .modal-content {
+        margin: 10px;
+        max-height: 95vh;
+    }
+
+    /* Ajuste en los botones del modal */
+    .modal-footer {
+        flex-direction: column-reverse; /* El botón de cancelar va abajo en móviles */
+    }
+
+    .btn-secondary, .modal-footer .btn-primary {
+        width: 100%;
+        text-align: center;
+    }
 }

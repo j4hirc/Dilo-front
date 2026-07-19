@@ -5,7 +5,6 @@ export const routes: Routes = [
   { path: 'login', loadComponent: () => import('./auth/login/login').then(m => m.Login) },
   { path: 'registro', loadComponent: () => import('./auth/registro/registro').then(m => m.Registro) },
 
-
   {
     path: 'dashboard',
     loadComponent: () => import('./dashboard/dashboard-default').then(m => m.DashboardDefault),
@@ -15,9 +14,12 @@ export const routes: Routes = [
       { path: 'clientes', loadComponent: () => import('./dashboard/clientes/clientes').then(m => m.Clientes) },
       { path: 'productos', loadComponent: () => import('./dashboard/productos/productos').then(m => m.Productos) },
       { path: 'bodegas', loadComponent: () => import('./dashboard/bodegas/bodegas').then(m => m.Bodegas) },
-      { path: 'dashboard/facturas', loadComponent: () => import('./dashboard/facturas/facturas').then(m => m.Facturas) },
-      { path: 'dashboard/productos', loadComponent: () => import('./dashboard/productos/productos').then(m => m.Productos) },
-      { path: 'dashboard/categorias', loadComponent: () => import('./dashboard/categorias/categorias').then(m => m.Categorias) },
+      { path: 'categorias', loadComponent: () => import('./dashboard/categorias/categorias').then(m => m.Categorias) },
+      { path: 'equipo', loadComponent: () => import('./dashboard/equipo/equipo').then(m => m.Equipo) },
+      { path: 'configuracion', loadComponent: () => import('./dashboard/configuracion/configuracion').then(m => m.Configuracion) },
+      
+      // 🔥 AQUÍ AGREGAMOS TU PERFIL DE USUARIO
+      { path: 'perfil', loadComponent: () => import('./dashboard/perfil/perfil').then(m => m.Perfil) },
 
       { path: '', redirectTo: 'propietario', pathMatch: 'full' }
     ]
