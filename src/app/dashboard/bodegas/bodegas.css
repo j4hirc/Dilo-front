@@ -1,0 +1,229 @@
+@import '../productos/productos.css';
+
+/* Animación de entrada */
+.fade-in { animation: fadeIn 0.4s ease-in-out; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.mt-4 { margin-top: 25px; }
+
+/* =========================================
+   HEADER Y BOTONES
+   ========================================= */
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 25px;
+}
+
+.btn-primary {
+    background-color: var(--primary-orange, #ed8936);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 10px rgba(237, 137, 54, 0.2);
+}
+
+.btn-primary:hover {
+    background-color: #dd6b20;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(237, 137, 54, 0.3);
+}
+
+.btn-secondary {
+    background-color: #f1f5f9;
+    color: var(--text-main, #0f172a);
+    border: 1px solid #e2e8f0;
+    padding: 10px 20px;
+    border-radius: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-secondary:hover {
+    background-color: #e2e8f0;
+}
+
+/* =========================================
+   BUSCADOR
+   ========================================= */
+.search-container {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 30px;
+}
+
+.search-box {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    background-color: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+    padding: 0 15px;
+    transition: all 0.2s;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.search-box:focus-within {
+    border-color: var(--primary-orange);
+    box-shadow: 0 0 0 3px rgba(237, 137, 54, 0.1);
+}
+
+.search-box input {
+    width: 100%;
+    border: none;
+    padding: 12px 10px;
+    font-size: 0.95rem;
+    color: var(--text-main);
+    outline: none;
+    background: transparent;
+}
+
+/* =========================================
+   GRID Y TARJETAS DE BODEGAS
+   ========================================= */
+.team-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 24px;
+}
+
+.bodega-card {
+    border: 1px solid #f1f5f9;
+    border-radius: 20px;
+    padding: 24px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    position: relative;
+    background: #ffffff;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.02);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.bodega-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 15px 35px rgba(0,0,0,0.06);
+    border-color: #e2e8f0;
+}
+
+.bodega-icon-wrapper {
+    width: 60px;
+    height: 60px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #eff6ff, #dbeafe); /* Azul muy suave */
+    color: #3b82f6; /* Azul brillante */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.bodega-info { flex: 1; min-width: 0; }
+
+.bodega-info h4 { 
+    margin: 0 0 6px 0; 
+    font-size: 1.15rem; 
+    color: var(--text-main); 
+    font-weight: 800; 
+    white-space: nowrap; 
+    overflow: hidden; 
+    text-overflow: ellipsis; 
+}
+
+.address-text { 
+    margin: 0 0 10px 0; 
+    font-size: 0.85rem; 
+    color: #64748b; 
+    white-space: nowrap; 
+    overflow: hidden; 
+    text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.bodega-id {
+    display: inline-block;
+    background-color: #f8fafc;
+    color: #475569;
+    font-size: 0.7rem;
+    font-weight: 800;
+    padding: 4px 10px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+/* =========================================
+   BOTONES DE ACCIÓN (Editar / Eliminar)
+   ========================================= */
+.bodega-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+.btn-action {
+    border-radius: 10px;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+}
+
+.btn-action.edit { background: #f1f5f9; color: #475569; }
+.btn-action.edit:hover { background: #e2e8f0; color: #0f172a; transform: scale(1.05); }
+
+.btn-action.delete { background: #fee2e2; color: #dc2626; }
+.btn-action.delete:hover { background: #dc2626; color: white; transform: scale(1.05); box-shadow: 0 4px 10px rgba(220, 38, 38, 0.2); }
+
+/* =========================================
+   ESTADO VACÍO (EMPTY STATE)
+   ========================================= */
+.empty-state { 
+    grid-column: 1 / -1; 
+    text-align: center; 
+    padding: 60px 20px; 
+    color: #64748b; 
+    background: #f8fafc; 
+    border-radius: 20px; 
+    border: 2px dashed #cbd5e1; 
+}
+.empty-icon { color: #94a3b8; margin-bottom: 15px; display: flex; justify-content: center; }
+
+/* MODIFICACIÓN DE SWEETALERT2 PARA LOS INPUTS DE MODAL */
+.custom-swal-input {
+    margin: 10px auto;
+    width: 85%;
+    border-radius: 8px;
+    font-size: 1rem;
+}
+
+/* =========================================
+   RESPONSIVE (MÓVILES)
+   ========================================= */
+@media (max-width: 768px) {
+    .page-header { flex-direction: column; align-items: stretch; gap: 15px; }
+    .btn-primary { justify-content: center; }
+    .search-container { flex-direction: column; }
+    .btn-secondary { width: 100%; }
+    .team-grid { grid-template-columns: 1fr; }
+    
+    .bodega-card { flex-direction: column; align-items: flex-start; }
+    .bodega-actions { flex-direction: row; margin-left: 0; width: 100%; justify-content: flex-end; margin-top: 10px; }
+}

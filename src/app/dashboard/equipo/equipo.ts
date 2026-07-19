@@ -1,6 +1,8 @@
 import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { forkJoin, of } from 'rxjs'; // 🔥 IMPORTANTE
+import { catchError } from 'rxjs/operators'; // 🔥 IMPORTANTE
 import Swal from 'sweetalert2';
 
 @Component({
@@ -15,9 +17,11 @@ export class Equipo implements OnInit {
   private cdr = inject(ChangeDetectorRef);
 
   miembrosActivos: any[] = [];
-  solicitudes: any[] = []; // 🔥 Nueva lista solo para los pendientes
+  solicitudes: any[] = [];
   isLoading = true;
   negocioId: number | null = null;
+  codigoInvitacion: string = 'Cargando...'; // 🔥 NUEVA VARIABLE
+
   private apiUrl = 'https://dilo-backend-mxlu.onrender.com/api/v1';
 
   ngOnInit(): void {
@@ -39,13 +43,23 @@ export class Equipo implements OnInit {
     const cleanToken = rawToken.replace(/['"]+/g, '');
     const headers = new HttpHeaders().set('Authorization', `Bearer ${cleanToken}`);
 
-    this.http.get<any[]>(`${this.apiUrl}/negocios/${id}/miembros`, { headers }).subscribe({
-      next: (data) => {
-        const equipoCompleto = Array.isArray(data) ? data : [];
+    // 🔥 PREPARAMOS LAS DOS PETICIONES (Miembros y Datos del Negocio)
+    const reqMiembros = this.http.get<any[]>(`${this.apiUrl}/negocios/${id}/miembros`, { headers }).pipe(catchError(() => of([])));
+    const reqNegocio = this.http.get<any>(`${this.apiUrl}/negocios/${id}`, { headers }).pipe(catchError(() => of(null)));
 
-        // 🔥 MAGIA: Filtramos quién ya está adentro y quién está tocando la puerta
+    // 🔥 EJECUTAMOS AL MISMO TIEMPO
+    forkJoin([reqMiembros, reqNegocio]).subscribe({
+      next: ([miemData, negData]) => {
+        const equipoCompleto = Array.isArray(miemData) ? miemData : [];
         this.solicitudes = equipoCompleto.filter(m => m.estadoInvitacion === 'PENDIENTE');
         this.miembrosActivos = equipoCompleto.filter(m => m.estadoInvitacion !== 'PENDIENTE');
+
+        // 🔥 ASIGNAMOS EL CÓDIGO REAL DEL NEGOCIO
+        if (negData && negData.codigoInvitacion) {
+          this.codigoInvitacion = negData.codigoInvitacion;
+        } else {
+          this.codigoInvitacion = 'NO-DISPONIBLE';
+        }
 
         this.isLoading = false;
         this.cdr.detectChanges();
@@ -58,10 +72,10 @@ export class Equipo implements OnInit {
     });
   }
 
-  // 🔥 Botón para copiar el ID del negocio y pasarlo por WhatsApp
+  // 🔥 ACTUALIZADO PARA COPIAR EL CÓDIGO REAL
   copiarCodigo() {
-    if (this.negocioId) {
-      navigator.clipboard.writeText(this.negocioId.toString()).then(() => {
+    if (this.codigoInvitacion && this.codigoInvitacion !== 'Cargando...' && this.codigoInvitacion !== 'NO-DISPONIBLE') {
+      navigator.clipboard.writeText(this.codigoInvitacion).then(() => {
         Swal.fire({
           toast: true,
           position: 'top-end',
@@ -74,7 +88,6 @@ export class Equipo implements OnInit {
     }
   }
 
-  // 🔥 NUEVO: Función para Aceptar o Rechazar a los que quieren entrar
   responderSolicitud(miembroId: number, aceptar: boolean) {
     if (!this.negocioId) return;
 
@@ -95,13 +108,11 @@ export class Equipo implements OnInit {
         const cleanToken = rawToken.replace(/['"]+/g, '');
         const headers = new HttpHeaders().set('Authorization', `Bearer ${cleanToken}`);
 
-        // Llamamos a tu endpoint en Java enviando el boolean
-        // 🔥 Cambiamos el {} por null
         this.http.put(`${this.apiUrl}/negocios/${this.negocioId}/miembros/${miembroId}/responder?aceptar=${aceptar}`, null, { headers })
           .subscribe({
             next: () => {
               Swal.fire('¡Listo!', `La solicitud fue ${aceptar ? 'aceptada' : 'rechazada'}.`, 'success');
-              this.cargarEquipo(this.negocioId!); // Recargamos para que pase a la lista de activos
+              this.cargarEquipo(this.negocioId!);
             },
             error: (err) => {
               console.error(err);
@@ -143,12 +154,9 @@ export class Equipo implements OnInit {
     });
   }
 
-
-
   cambiarRol(miembro: any) {
     if (!this.negocioId) return;
 
-    // Diccionario de roles (Ajusta estos nombres exactos a como los guardes en tu BD de Java)
     const opcionesRoles = {
       'ADMIN': 'Administrador (Control total)',
       'VENDEDOR': 'Vendedor (Solo facturación)',
@@ -160,7 +168,7 @@ export class Equipo implements OnInit {
       text: `Selecciona el nuevo rol para ${miembro.nombreUsuario}:`,
       input: 'select',
       inputOptions: opcionesRoles,
-      inputValue: miembro.rol, // Para que aparezca pre-seleccionado el rol actual
+      inputValue: miembro.rol,
       showCancelButton: true,
       confirmButtonColor: '#ed8936',
       cancelButtonColor: '#64748b',
@@ -171,7 +179,7 @@ export class Equipo implements OnInit {
           if (value === miembro.rol) {
             resolve('El usuario ya tiene este rol asignado.');
           } else {
-            resolve(null); // Permite continuar
+            resolve(null);
           }
         });
       }
@@ -182,11 +190,10 @@ export class Equipo implements OnInit {
         const cleanToken = rawToken.replace(/['"]+/g, '');
         const headers = new HttpHeaders().set('Authorization', `Bearer ${cleanToken}`);
 
-        // 🔥 Llamada al endpoint de Java para actualizar el rol (Asumimos que usas Query Param ?rol=NUEVO_ROL)
         this.http.put(`${this.apiUrl}/negocios/${this.negocioId}/miembros/${miembro.id}/rol?rol=${nuevoRol}`, null, { headers }).subscribe({
           next: () => {
             Swal.fire('¡Actualizado!', 'El rol del colaborador ha sido modificado.', 'success');
-            this.cargarEquipo(this.negocioId!); // Recargamos la lista
+            this.cargarEquipo(this.negocioId!);
           },
           error: (err) => {
             console.error(err);
@@ -196,7 +203,4 @@ export class Equipo implements OnInit {
       }
     });
   }
-
-
-
 }
