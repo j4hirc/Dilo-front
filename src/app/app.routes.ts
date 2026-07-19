@@ -17,8 +17,8 @@ export const routes: Routes = [
       { path: 'categorias', loadComponent: () => import('./dashboard/categorias/categorias').then(m => m.Categorias) },
       { path: 'equipo', loadComponent: () => import('./dashboard/equipo/equipo').then(m => m.Equipo) },
       { path: 'configuracion', loadComponent: () => import('./dashboard/configuracion/configuracion').then(m => m.Configuracion) },
-      
-      // 🔥 AQUÍ AGREGAMOS TU PERFIL DE USUARIO
+      { path: 'kardex', loadComponent: () => import('./dashboard/kardex/kardex').then(m => m.Kardex) },
+      { path: 'inventario', loadComponent: () => import('./dashboard/inventario/inventario').then(m => m.Inventario) },
       { path: 'perfil', loadComponent: () => import('./dashboard/perfil/perfil').then(m => m.Perfil) },
 
       { path: '', redirectTo: 'propietario', pathMatch: 'full' }

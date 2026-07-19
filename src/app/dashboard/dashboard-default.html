@@ -6,7 +6,7 @@
     <!-- 🔥 SIDEBAR (Ahora con clase dinámica) -->
     <aside class="sidebar" [class.open]="isSidebarOpen">
         <div class="sidebar-header">
-            <img src="images/Dilo-Logo-1.png" alt="Logo Dilo" class="sidebar-logo">
+            <img src="images/Dilo-Blanco.png" alt="Logo Dilo" class="sidebar-logo">
             <span class="role-badge">PROPIETARIO</span>
         </div>
         
@@ -32,10 +32,18 @@
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
                 Categorías
             </a>
-            <!-- 🔥 NUEVO BOTÓN DE BODEGAS AGREGADO AQUÍ -->
             <a routerLink="/dashboard/bodegas" routerLinkActive="active" class="menu-item" (click)="isSidebarOpen = false">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
                 Bodegas
+            </a>
+            <a routerLink="/dashboard/inventario" routerLinkActive="active" class="menu-item" (click)="isSidebarOpen = false">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                Inventario
+            </a>
+            <!-- 🔥 NUEVO BOTÓN DE KARDEX AQUÍ -->
+            <a routerLink="/dashboard/kardex" routerLinkActive="active" class="menu-item" (click)="isSidebarOpen = false">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"></polyline><polyline points="23 20 23 14 17 14"></polyline><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path></svg>
+                Kardex
             </a>
             
             <p class="menu-label mt-4">ADMINISTRACIÓN</p>
@@ -55,11 +63,17 @@
 
         <div class="sidebar-footer">
             <div class="user-info">
-                <div class="user-avatar-small orange-bg">
-                    {{ usuarioLogueado?.nombre ? usuarioLogueado.nombre.substring(0, 2).toUpperCase() : 'NA' }}
+                <!-- 🔥 FOTO RESTAURADA EN SIDEBAR -->
+                <div class="user-avatar-small" 
+                     [ngClass]="{'orange-bg': !usuarioLogueado?.fotoPerfil}" 
+                     [style.background-image]="usuarioLogueado?.fotoPerfil ? 'url(' + usuarioLogueado.fotoPerfil + ')' : 'none'" 
+                     style="background-size: cover; background-position: center;">
+                    <span *ngIf="!usuarioLogueado?.fotoPerfil">
+                        {{ usuarioLogueado?.primerNombre ? usuarioLogueado.primerNombre.substring(0, 2).toUpperCase() : 'US' }}
+                    </span>
                 </div>
                 <div class="user-details">
-                    <h4>Mi Negocio</h4>
+                    <h4>{{ usuarioLogueado?.primerNombre || 'Mi Negocio' }}</h4>
                     <p>{{ usuarioLogueado?.email }}</p>
                 </div>
                 <button class="logout-btn" (click)="cerrarSesion()">
@@ -84,8 +98,14 @@
             </div>
             
             <div class="header-actions">
-                <div class="user-avatar orange-bg">
-                    {{ usuarioLogueado?.nombre ? usuarioLogueado.nombre.substring(0, 2).toUpperCase() : 'EC' }}
+                <!-- 🔥 FOTO RESTAURADA EN TOP HEADER -->
+                <div class="user-avatar" 
+                     [ngClass]="{'orange-bg': !usuarioLogueado?.fotoPerfil}" 
+                     [style.background-image]="usuarioLogueado?.fotoPerfil ? 'url(' + usuarioLogueado.fotoPerfil + ')' : 'none'" 
+                     style="background-size: cover; background-position: center;">
+                    <span *ngIf="!usuarioLogueado?.fotoPerfil">
+                        {{ usuarioLogueado?.primerNombre ? usuarioLogueado.primerNombre.substring(0, 2).toUpperCase() : 'EC' }}
+                    </span>
                 </div>
             </div>
         </header>

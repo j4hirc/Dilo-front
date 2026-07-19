@@ -257,15 +257,25 @@ export class Productos implements OnInit {
     });
   }
 
-  manejarError(err: any) {
+ manejarError(err: any) {
     Swal.close();
     console.error('Error detallado de Java:', err);
+    
+    const mensajeBackend = err.error?.message || err.error; 
+
     if (err.status === 401) {
       Swal.fire({ icon: 'warning', title: 'Sesión expirada', text: 'Cierra sesión y vuelve a entrar.' });
-    } else if (err.status === 500) {
-      Swal.fire('Error 500 (Backend)', 'El servidor de Java falló al procesar los datos. Revisa los logs de tu Spring Boot.', 'error');
-    } else {
-      Swal.fire('Oops...', 'Ocurrió un error al procesar la solicitud.', 'error');
+    } 
+    // 🔥 Si es un error 400 (Bad Request), es nuestra validación de código duplicado
+    else if (err.status === 400 && typeof mensajeBackend === 'string') {
+        Swal.fire('Atención', mensajeBackend, 'warning');
+    }
+    // 🔥 Fallback por si Java sigue escupiendo 500 pero logró mandar el mensaje
+    else if (err.status === 500 && typeof mensajeBackend === 'string' && mensajeBackend.includes('Ya existe')) {
+        Swal.fire('Atención', mensajeBackend, 'warning');
+    } 
+    else {
+      Swal.fire('Error del Servidor', 'Ocurrió un error al guardar el producto. Revisa los logs de Java.', 'error');
     }
   }
 }

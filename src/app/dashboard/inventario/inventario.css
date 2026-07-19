@@ -1,0 +1,51 @@
+@import '../productos/productos.css';
+
+/* Etiquetas para la bodega */
+.tag-gray {
+    background-color: #f1f5f9;
+    color: #475569;
+    font-weight: 700;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    display: inline-block;
+    border: 1px solid #e2e8f0;
+}
+
+/* Colores de los números del Stock */
+.text-green { color: #16a34a; }
+.text-red { 
+    color: #dc2626; 
+    animation: pulseRed 2s infinite; /* Pequeña animación si el stock está en rojo */
+}
+
+/* Etiquetas de Estado */
+.status {
+    font-size: 0.8rem;
+    font-weight: 800;
+    padding: 6px 12px;
+    border-radius: 12px;
+    display: inline-block;
+}
+
+.status-green {
+    background-color: #dcfce7;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+}
+
+.status-red {
+    background-color: #fee2e2;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+}
+
+@keyframes pulseRed {
+    0% { opacity: 1; }
+    50% { opacity: 0.6; }
+    100% { opacity: 1; }
+}
+
+.data-table th, .data-table td {
+    vertical-align: middle;
+}
