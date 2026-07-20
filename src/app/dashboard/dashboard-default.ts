@@ -1,6 +1,7 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
+import { HttpClient, HttpHeaders } from '@angular/common/http'; // 🔥 Agregado para peticiones HTTP
 
 @Component({
   selector: 'app-dashboard-default',
@@ -11,18 +12,49 @@ import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/rou
 })
 export class DashboardDefault implements OnInit {
   private router = inject(Router);
+  private http = inject(HttpClient); // 🔥 Inyectamos HttpClient
   
   negocioId: number | null = null;
   usuarioLogueado: any = null;
-  isSidebarOpen = false; // 🔥 NUEVO: Controla si el menú está abierto en el celular
+  isSidebarOpen = false;
+
+  // 🔥 NUEVAS VARIABLES PARA ALERTAS
+  alertasCaducidad: any[] = [];
+  showNotificaciones = false;
+  private apiUrl = 'https://dilo-backend-mxlu.onrender.com/api/v1';
 
   ngOnInit() {
     const userStr = localStorage.getItem('usuario');
     this.usuarioLogueado = userStr ? JSON.parse(userStr) : null;
     this.negocioId = this.usuarioLogueado?.negocioId;
+
+    // 🔥 Cargamos las alertas si tenemos el ID del negocio
+    if (this.negocioId) {
+       this.cargarAlertasCaducidad();
+    }
   }
 
-  // 🔥 NUEVO: Función para abrir/cerrar el menú en celulares
+  // 🔥 NUEVA FUNCIÓN: Consulta las alertas al backend
+  cargarAlertasCaducidad() {
+    const rawToken = localStorage.getItem('dilo_token') || '';
+    const cleanToken = rawToken.replace(/['"]+/g, ''); 
+    const headers = new HttpHeaders().set('Authorization', `Bearer ${cleanToken}`);
+
+    // Consultamos los lotes que vencen en los próximos 30 días
+    this.http.get<any[]>(`${this.apiUrl}/negocios/${this.negocioId}/dashboard/alertas-caducidad?dias=30`, { headers })
+      .subscribe({
+        next: (data) => {
+          this.alertasCaducidad = data || [];
+        },
+        error: (err) => console.error("Error al cargar alertas de caducidad", err)
+      });
+  }
+
+  // 🔥 NUEVA FUNCIÓN: Muestra/Oculta el menú de la campana
+  toggleNotificaciones() {
+    this.showNotificaciones = !this.showNotificaciones;
+  }
+
   toggleSidebar() {
     this.isSidebarOpen = !this.isSidebarOpen;
   }

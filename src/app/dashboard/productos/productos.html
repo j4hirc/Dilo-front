@@ -55,8 +55,11 @@
                                     <span *ngIf="!prod.imagen">📦</span>
                                 </div>
                                 <div class="product-details">
-                                    <span class="product-name">{{ prod.nombre }}</span>
-                                    <span class="product-brand">Marca: {{ prod.marca }}</span>
+                                    <span class="product-name">
+                                        {{ prod.nombre }} 
+                                        <span *ngIf="prod.tieneCaducidad" title="Controla Caducidad" style="font-size: 0.85rem;">⏳</span>
+                                    </span>
+                                    <span class="product-brand">Marca: {{ prod.marca }} | {{ prod.unidadMedida }}</span>
                                 </div>
                             </div>
                         </td>
@@ -88,14 +91,12 @@
         
         <div class="modal-body modal-body-scrollable">
             
-            <!-- 🔥 CUADRO HERMOSO PARA LA FOTO DEL PRODUCTO -->
             <div class="image-preview-container">
                 <div class="modal-image-preview" [style.background-image]="imagenActual ? 'url(' + imagenActual + ')' : 'none'">
                     <span *ngIf="!imagenActual">📸</span>
                 </div>
                 <div class="upload-btn-wrapper">
                     <button class="btn-outline-small">Cambiar Foto</button>
-                    <!-- El input oculto debajo del botón -->
                     <input type="file" (change)="onFileSelected($event)" accept="image/png, image/jpeg, image/webp" title="Seleccionar nueva imagen">
                 </div>
             </div>
@@ -130,9 +131,28 @@
                 </div>
             </div>
 
-            <div class="form-group" style="flex-direction: row; align-items: center; gap: 10px; margin-top: 5px; padding: 10px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
-                <input type="checkbox" [(ngModel)]="productoForm.grabaIva" id="ivaCheck" style="width: 18px; height: 18px; cursor: pointer; margin: 0;">
-                <label for="ivaCheck" style="margin: 0; cursor: pointer; color: #0f172a;">Este producto graba IVA (15%)</label>
+            <!-- 🔥 NUEVO CAMPO: UNIDAD DE MEDIDA -->
+            <div class="form-group">
+                <label>Unidad de Medida *</label>
+                <select [(ngModel)]="productoForm.unidadMedida" class="custom-select">
+                    <option value="UNIDADES">Unidades (Cajas, Botellas, Piezas)</option>
+                    <option value="LIBRAS">Libras (Peso)</option>
+                    <option value="KILOGRAMOS">Kilogramos (Peso)</option>
+                    <option value="LITROS">Litros (Volumen)</option>
+                </select>
+            </div>
+
+            <!-- 🔥 NUEVOS CAMPOS: CHECKBOXES DE IVA Y CADUCIDAD (EN FILA) -->
+            <div class="form-row" style="margin-top: 5px; gap: 10px;">
+                <div class="form-group" style="flex: 1; flex-direction: row; align-items: center; gap: 10px; padding: 12px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 0;">
+                    <input type="checkbox" [(ngModel)]="productoForm.grabaIva" id="ivaCheck" style="width: 18px; height: 18px; cursor: pointer; margin: 0;">
+                    <label for="ivaCheck" style="margin: 0; cursor: pointer; color: #0f172a; font-weight: 600;">Graba IVA (15%)</label>
+                </div>
+                
+                <div class="form-group" style="flex: 1; flex-direction: row; align-items: center; gap: 10px; padding: 12px; background: #fffbeb; border-radius: 8px; border: 1px solid #fde68a; margin-bottom: 0;">
+                    <input type="checkbox" [(ngModel)]="productoForm.tieneCaducidad" id="caducidadCheck" style="width: 18px; height: 18px; cursor: pointer; margin: 0;">
+                    <label for="caducidadCheck" style="margin: 0; cursor: pointer; color: #92400e; font-weight: 600;">Tiene Caducidad</label>
+                </div>
             </div>
 
         </div>

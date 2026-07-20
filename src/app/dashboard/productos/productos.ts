@@ -37,7 +37,9 @@ export class Productos implements OnInit {
     marca: '',
     precioUnitario: 0,
     categoriaId: 0,
-    grabaIva: false
+    grabaIva: false,
+    unidadMedida: 'UNIDADES', // 🔥 Inicializamos nuevo campo
+    tieneCaducidad: false     // 🔥 Inicializamos nuevo campo
   };
 
   ngOnInit(): void {
@@ -86,7 +88,9 @@ export class Productos implements OnInit {
             categoriaId: p.categoriaId,
             categoriaNombre: p.categoriaNombre || 'General',
             grabaIva: p.grabaIva || false,
-            imagen: p.imagen || null
+            imagen: p.imagen || null,
+            unidadMedida: p.unidadMedida || 'UNIDADES', // 🔥 Mapeo
+            tieneCaducidad: p.tieneCaducidad || false   // 🔥 Mapeo
           }));
           
           this.filtrarProductos(); 
@@ -128,7 +132,9 @@ export class Productos implements OnInit {
     this.productoForm = { 
         nombre: '', codigoPrincipal: '', marca: '', precioUnitario: 0, 
         categoriaId: this.categorias.length > 0 ? this.categorias[0].id : 0, 
-        grabaIva: false 
+        grabaIva: false,
+        unidadMedida: 'UNIDADES', // 🔥 Reseteo
+        tieneCaducidad: false     // 🔥 Reseteo
     };
     this.showModal = true;
   }
@@ -138,7 +144,6 @@ export class Productos implements OnInit {
     this.currentProductId = prod.id;
     this.selectedFile = null;
     
-    // 🔥 FIX IMAGEN: Nos aseguramos de que si existe, se pueda ver en el preview
     this.imagenActual = prod.imagen; 
     
     this.productoForm = {
@@ -147,7 +152,9 @@ export class Productos implements OnInit {
       marca: prod.marca === 'Sin marca' ? '' : prod.marca,
       precioUnitario: prod.precioUnitario,
       categoriaId: prod.categoriaId,
-      grabaIva: prod.grabaIva
+      grabaIva: prod.grabaIva,
+      unidadMedida: prod.unidadMedida,       // 🔥 Carga
+      tieneCaducidad: prod.tieneCaducidad    // 🔥 Carga
     };
     this.showModal = true;
   }
@@ -194,15 +201,15 @@ export class Productos implements OnInit {
       precio: precioNumerico,
       precioUnitario: precioNumerico,
       categoriaId: categoriaNumerica,
-      grabaIva: this.productoForm.grabaIva
+      grabaIva: this.productoForm.grabaIva,
+      unidadMedida: this.productoForm.unidadMedida,     // 🔥 Envío al Backend
+      tieneCaducidad: this.productoForm.tieneCaducidad  // 🔥 Envío al Backend
     };
 
     console.log("📤 Enviando datos a Java:", requestDTO);
 
-    // Se empaqueta en JSON puro tal como lo pide @RequestPart
     formData.append('datos', new Blob([JSON.stringify(requestDTO)], { type: 'application/json' }));
     
-    // 🔥 FIX: Si no hay foto, NO mandamos el campo para evitar que Java muera
     if (this.selectedFile) {
       formData.append('imagen', this.selectedFile);
     }
@@ -266,11 +273,9 @@ export class Productos implements OnInit {
     if (err.status === 401) {
       Swal.fire({ icon: 'warning', title: 'Sesión expirada', text: 'Cierra sesión y vuelve a entrar.' });
     } 
-    // 🔥 Si es un error 400 (Bad Request), es nuestra validación de código duplicado
     else if (err.status === 400 && typeof mensajeBackend === 'string') {
         Swal.fire('Atención', mensajeBackend, 'warning');
     }
-    // 🔥 Fallback por si Java sigue escupiendo 500 pero logró mandar el mensaje
     else if (err.status === 500 && typeof mensajeBackend === 'string' && mensajeBackend.includes('Ya existe')) {
         Swal.fire('Atención', mensajeBackend, 'warning');
     } 

@@ -18,12 +18,12 @@ export class Kardex implements OnInit {
   kardex: any[] = [];
   kardexFiltrado: any[] = [];
   
-  // Listas de datos
   productos: any[] = [];
   bodegas: any[] = [];
-  inventarioTotal: any[] = []; // 🔥 Guardamos el inventario actual para saber el stock
-  bodegasOrigenDisponibles: any[] = []; // Bodegas filtradas que sí tienen el producto
-  maxCantidad: number | null = null; // Límite de stock
+  inventarioTotal: any[] = []; 
+  proveedores: any[] = []; // 🔥 NUEVA LISTA DE PROVEEDORES
+  bodegasOrigenDisponibles: any[] = []; 
+  maxCantidad: number | null = null; 
 
   isLoading = true;
   negocioId: number | null = null;
@@ -40,7 +40,10 @@ export class Kardex implements OnInit {
     bodegaOrigenId: null as number | null,
     bodegaDestinoId: null as number | null,
     cantidad: 1,
-    motivo: ''
+    costoUnitario: null as number | null,
+    documentoReferencia: '',
+    motivo: '',
+    proveedorId: null as number | null // 🔥 NUEVO CAMPO
   };
 
   ngOnInit(): void {
@@ -88,8 +91,10 @@ export class Kardex implements OnInit {
       this.bodegas = res;
       this.bodegasOrigenDisponibles = [...res]; 
     });
-    // 🔥 Descargamos el stock actual en memoria
     this.http.get<any[]>(`${this.apiUrl}/negocios/${id}/inventario`, { headers }).subscribe(res => this.inventarioTotal = res);
+    
+    // 🔥 NUEVO: Descargamos la lista de proveedores
+    this.http.get<any[]>(`${this.apiUrl}/negocios/${id}/proveedores`, { headers }).subscribe(res => this.proveedores = res);
   }
 
   aplicarFiltros() {
@@ -105,6 +110,8 @@ export class Kardex implements OnInit {
         (k.productoNombre && k.productoNombre.toLowerCase().includes(term)) ||
         (k.bodegaOrigenNombre && k.bodegaOrigenNombre.toLowerCase().includes(term)) ||
         (k.bodegaDestinoNombre && k.bodegaDestinoNombre.toLowerCase().includes(term)) ||
+        (k.numeroLote && k.numeroLote.toLowerCase().includes(term)) ||
+        (k.documentoReferencia && k.documentoReferencia.toLowerCase().includes(term)) ||
         (k.motivo && k.motivo.toLowerCase().includes(term))
       );
     }
@@ -114,7 +121,17 @@ export class Kardex implements OnInit {
   }
 
   abrirModalNuevo() {
-    this.transaccionForm = { tipo: 'INGRESO', productoId: null, bodegaOrigenId: null, bodegaDestinoId: null, cantidad: 1, motivo: '' };
+    this.transaccionForm = { 
+        tipo: 'INGRESO', 
+        productoId: null, 
+        bodegaOrigenId: null, 
+        bodegaDestinoId: null, 
+        cantidad: 1, 
+        costoUnitario: null,
+        documentoReferencia: '',
+        motivo: '',
+        proveedorId: null // 🔥 Reseteamos proveedor
+    };
     this.maxCantidad = null;
     this.bodegasOrigenDisponibles = [...this.bodegas];
     this.showModal = true;
@@ -124,15 +141,14 @@ export class Kardex implements OnInit {
     this.showModal = false;
     this.cdr.detectChanges();
   }
-
-  // ==========================================
-  // 🔥 LÓGICA INTELIGENTE DE AUTO-SELECCIÓN Y LÍMITES
-  // ==========================================
   
   onTipoChange() {
     this.transaccionForm.bodegaOrigenId = null;
     this.transaccionForm.bodegaDestinoId = null;
     this.transaccionForm.cantidad = 1;
+    this.transaccionForm.costoUnitario = null;
+    this.transaccionForm.documentoReferencia = '';
+    this.transaccionForm.proveedorId = null;
     this.evaluarDisponibilidad();
   }
 
@@ -150,28 +166,22 @@ export class Kardex implements OnInit {
     if (!this.transaccionForm.productoId) return;
 
     if (this.transaccionForm.tipo === 'EGRESO' || this.transaccionForm.tipo === 'TRANSFERENCIA') {
-      // 1. Buscamos qué bodegas tienen este producto y stock > 0
       const invProducto = this.inventarioTotal.filter(i => i.productoId === this.transaccionForm.productoId && i.cantidadActual > 0);
       const idsBodegasConStock = invProducto.map(i => i.bodegaId);
       
-      // 2. Filtramos el combo para que solo salgan las bodegas que SÍ lo tienen
       this.bodegasOrigenDisponibles = this.bodegas.filter(b => idsBodegasConStock.includes(b.id));
 
-      // 3. ¡AUTO SELECCIÓN! Si solo está en 1 bodega, la elegimos solitos
       if (this.bodegasOrigenDisponibles.length === 1) {
         this.transaccionForm.bodegaOrigenId = this.bodegasOrigenDisponibles[0].id;
         this.actualizarMaxCantidad();
       } else if (this.bodegasOrigenDisponibles.length === 0) {
-        // No hay en ningún lado
         this.maxCantidad = 0;
         this.transaccionForm.cantidad = 0;
         Swal.fire('Sin Existencias', 'Este producto no tiene stock en ninguna bodega. No puedes transferir ni egresar.', 'info');
       } else {
-        // Hay en varias bodegas, esperamos que él elija
         this.maxCantidad = null; 
       }
     } else {
-      // Es un Ingreso, no necesitamos evaluar límites de origen
       this.bodegasOrigenDisponibles = [...this.bodegas];
       this.maxCantidad = null;
     }
@@ -181,8 +191,6 @@ export class Kardex implements OnInit {
     if (this.transaccionForm.productoId && this.transaccionForm.bodegaOrigenId) {
       const inv = this.inventarioTotal.find(i => i.productoId === this.transaccionForm.productoId && i.bodegaId === this.transaccionForm.bodegaOrigenId);
       this.maxCantidad = inv ? inv.cantidadActual : 0;
-      
-      // Si la cantidad que puso es mayor al máximo, se lo bajamos de golpe
       this.validarCantidad();
     } else {
       this.maxCantidad = null;
@@ -191,11 +199,9 @@ export class Kardex implements OnInit {
 
   validarCantidad() {
     if (this.maxCantidad !== null && this.transaccionForm.cantidad > this.maxCantidad) {
-      this.transaccionForm.cantidad = this.maxCantidad; // Le cortamos las alas 🦅
+      this.transaccionForm.cantidad = this.maxCantidad;
     }
   }
-
-  // ==========================================
 
   registrarTransaccion() {
     if (!this.negocioId) return;
@@ -224,16 +230,41 @@ export class Kardex implements OnInit {
       }
     }
 
+    let motivoFinal = this.transaccionForm.motivo;
+
+    // 🔥 MAGIA AQUÍ: Si hay proveedor, lo inyectamos en el motivo para que se vea hermoso en la tabla.
+    if (this.transaccionForm.tipo === 'INGRESO' && this.transaccionForm.proveedorId) {
+        const prov = this.proveedores.find(p => p.id === this.transaccionForm.proveedorId);
+        if (prov) {
+            motivoFinal = `${this.transaccionForm.motivo} (Prov: ${prov.nombre})`;
+        }
+    }
+
+    const userStr = localStorage.getItem('usuario');
+    const usuarioLogueado = userStr ? JSON.parse(userStr) : null;
+    const emailUsuario = usuarioLogueado?.email || '';
+
     const rawToken = localStorage.getItem('dilo_token') || '';
     const cleanToken = rawToken.replace(/['"]+/g, ''); 
     const headers = new HttpHeaders().set('Authorization', `Bearer ${cleanToken}`);
 
     Swal.fire({ title: 'Registrando transacción...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
-    this.http.post(`${this.apiUrl}/negocios/${this.negocioId}/kardex`, this.transaccionForm, { headers })
+    // Armar DTO final
+    const payload = {
+        tipo: this.transaccionForm.tipo,
+        productoId: this.transaccionForm.productoId,
+        bodegaOrigenId: this.transaccionForm.bodegaOrigenId,
+        bodegaDestinoId: this.transaccionForm.bodegaDestinoId,
+        cantidad: this.transaccionForm.cantidad,
+        motivo: motivoFinal, // Enviamos el motivo enriquecido
+        costoUnitario: this.transaccionForm.costoUnitario,
+        documentoReferencia: this.transaccionForm.documentoReferencia
+    };
+
+    this.http.post(`${this.apiUrl}/negocios/${this.negocioId}/kardex?emailUsuario=${emailUsuario}`, payload, { headers })
       .subscribe({
         next: () => {
-          // 🔥 1. CERRAMOS EL MODAL INMEDIATAMENTE ANTES DEL MENSAJE DE ÉXITO
           this.cerrarModal(); 
           
           Swal.fire({
@@ -242,7 +273,6 @@ export class Kardex implements OnInit {
             icon: 'success',
             confirmButtonColor: '#ed8936'
           }).then(() => {
-            // 🔥 2. CUANDO EL USUARIO LE DA A "OK", RECARGAMOS LOS DATOS
             this.cargarKardex(this.negocioId!);
             this.cargarListas(this.negocioId!); 
           });

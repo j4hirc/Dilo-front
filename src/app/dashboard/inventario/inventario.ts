@@ -8,7 +8,7 @@ import Swal from 'sweetalert2';
 @Component({
   selector: 'app-inventario',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink], // Agregamos RouterLink para el botón de ir al Kardex
+  imports: [CommonModule, FormsModule, RouterLink], 
   templateUrl: './inventario.html',
   styleUrls: ['./inventario.css'],
 })
@@ -18,7 +18,11 @@ export class Inventario implements OnInit {
 
   inventario: any[] = [];
   inventarioFiltrado: any[] = [];
-  bodegasDisponibles: string[] = []; // Para llenar el select de filtros
+  bodegasDisponibles: string[] = []; 
+
+  // 🔥 NUEVAS VARIABLES PARA EL RESUMEN
+  totalInvertido: number = 0;
+  totalArticulos: number = 0;
 
   isLoading = true;
   negocioId: number | null = null;
@@ -48,9 +52,14 @@ export class Inventario implements OnInit {
 
     this.http.get<any[]>(`${this.apiUrl}/negocios/${id}/inventario`, { headers }).subscribe({
       next: (data) => {
-        this.inventario = data || [];
+        // 🔥 Mapeamos para garantizar que vengan como números y no rompan la suma
+        this.inventario = (data || []).map(item => ({
+            ...item,
+            costoPromedio: Number(item.costoPromedio || 0),
+            valorInventario: Number(item.valorInventario || 0),
+            cantidadActual: Number(item.cantidadActual || 0)
+        }));
 
-        // 🔥 Extraemos los nombres de las bodegas sin repetir para el filtro
         const bodegasSet = new Set(this.inventario.map(item => item.bodegaNombre));
         this.bodegasDisponibles = Array.from(bodegasSet);
 
@@ -69,12 +78,10 @@ export class Inventario implements OnInit {
   aplicarFiltros() {
     let result = this.inventario;
 
-    // Filtrar por Bodega específica
     if (this.bodegaSeleccionada) {
       result = result.filter(item => item.bodegaNombre === this.bodegaSeleccionada);
     }
 
-    // Filtrar por Barra de búsqueda (Nombre o código)
     if (this.searchTerm.trim()) {
       const term = this.searchTerm.toLowerCase();
       result = result.filter(item =>
@@ -84,11 +91,16 @@ export class Inventario implements OnInit {
     }
 
     this.inventarioFiltrado = result;
+    this.calcularTotales(); // 🔥 Recalculamos totales cuando el usuario filtra
     this.cdr.detectChanges();
   }
 
+  // 🔥 NUEVO MÉTODO QUE SUMA TODO
+  calcularTotales() {
+      this.totalInvertido = this.inventarioFiltrado.reduce((sum, item) => sum + item.valorInventario, 0);
+      this.totalArticulos = this.inventarioFiltrado.reduce((sum, item) => sum + item.cantidadActual, 0);
+  }
 
-  // 🔥 NUEVA FUNCIÓN PARA EDITAR EL STOCK MÍNIMO
   editarStockMinimo(item: any) {
     if (!this.negocioId) return;
 
@@ -113,11 +125,10 @@ export class Inventario implements OnInit {
 
           Swal.fire({ title: 'Guardando...', didOpen: () => Swal.showLoading() });
 
-          // 🔥 AQUÍ ESTÁ EL CAMBIO A PATCH Y ?valor=
           this.http.patch(`${this.apiUrl}/negocios/${this.negocioId}/inventario/${item.id}/stock-minimo?valor=${nuevoMinimo}`, null, { headers }).subscribe({
             next: () => {
               Swal.fire('¡Actualizado!', 'El stock mínimo ha sido guardado.', 'success');
-              this.cargarInventario(this.negocioId!); // Recargamos la tabla
+              this.cargarInventario(this.negocioId!); 
             },
             error: (err) => {
               console.error(err);
@@ -128,5 +139,4 @@ export class Inventario implements OnInit {
       }
     });
   }
-
 }

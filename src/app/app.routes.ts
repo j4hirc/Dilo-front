@@ -13,12 +13,16 @@ export const routes: Routes = [
       { path: 'facturas', loadComponent: () => import('./dashboard/facturas/facturas').then(m => m.Facturas) },
       { path: 'clientes', loadComponent: () => import('./dashboard/clientes/clientes').then(m => m.Clientes) },
       { path: 'productos', loadComponent: () => import('./dashboard/productos/productos').then(m => m.Productos) },
-      { path: 'bodegas', loadComponent: () => import('./dashboard/bodegas/bodegas').then(m => m.Bodegas) },
       { path: 'categorias', loadComponent: () => import('./dashboard/categorias/categorias').then(m => m.Categorias) },
+      { path: 'bodegas', loadComponent: () => import('./dashboard/bodegas/bodegas').then(m => m.Bodegas) },
+      { path: 'inventario', loadComponent: () => import('./dashboard/inventario/inventario').then(m => m.Inventario) },
+      { path: 'kardex', loadComponent: () => import('./dashboard/kardex/kardex').then(m => m.Kardex) },
+      
+      // 🔥 NUEVA RUTA DE PROVEEDORES
+      { path: 'proveedores', loadComponent: () => import('./dashboard/proveedores/proveedores').then(m => m.Proveedores) },
+      
       { path: 'equipo', loadComponent: () => import('./dashboard/equipo/equipo').then(m => m.Equipo) },
       { path: 'configuracion', loadComponent: () => import('./dashboard/configuracion/configuracion').then(m => m.Configuracion) },
-      { path: 'kardex', loadComponent: () => import('./dashboard/kardex/kardex').then(m => m.Kardex) },
-      { path: 'inventario', loadComponent: () => import('./dashboard/inventario/inventario').then(m => m.Inventario) },
       { path: 'perfil', loadComponent: () => import('./dashboard/perfil/perfil').then(m => m.Perfil) },
 
       { path: '', redirectTo: 'propietario', pathMatch: 'full' }
