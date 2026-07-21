@@ -1,71 +1,99 @@
-<!DOCTYPE html>
-<html lang="es">
-
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dilo — Onboarding Negocio</title>
-  <link rel="stylesheet" href="./onboarding-business.css" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
-</head>
-
-<body>
-  <div class="fondo-completo">
-    <div class="panel-lateral">
-      <div class="panel-contenido">
-        <div class="logo-marca">
-          <img src="/images/Dilo-Logo-1.png" alt="Logo Dilo" class="img-logo" />
-        </div>
-        <h2 class="panel-titulo">¡Bienvenido a Dilo!<br />Gestiona tu negocio con IA.</h2>
-        <p class="panel-subtitulo">
-          Un negocio, una cuenta. Crea tu negocio o únete con un código para comenzar a facturar en segundos.
+<div class="onboarding-wrapper">
+  
+  <!-- PANEL LATERAL (Info & Branding) -->
+  <aside class="onboarding-sidebar">
+    <div class="sidebar-bg-glow"></div>
+    
+    <div class="sidebar-content animate-fade-in" style="animation-delay: 0.1s;">
+      <div class="brand-logo">
+        <img src="/images/Dilo-Blanco.png" alt="Dilo Logo" class="logo-img" />
+      </div>
+      
+      <div class="sidebar-text">
+        <h1 class="main-title">
+          El futuro de tu negocio <br/>
+          <span class="text-orange">comienza aquí.</span>
+        </h1>
+        <p class="main-subtitle">
+          Automatiza tu facturación, controla tu inventario y deja que nuestra IA haga el trabajo pesado por ti.
         </p>
-        <div class="caracteristicas-lista">
-          <div class="caracteristica-item">
-            <div class="caracteristica-icono"><i class="fa-solid fa-microphone-lines"></i></div>
-            <div>
-              <p class="caracteristica-titulo">Facturación por voz</p>
-              <p class="caracteristica-desc">Emite facturas hablando naturalmente.</p>
-            </div>
-          </div>
-          <div class="caracteristica-item">
-            <div class="caracteristica-icono"><i class="fa-solid fa-brain"></i></div>
-            <div>
-              <p class="caracteristica-titulo">IA integrada</p>
-              <p class="caracteristica-desc">Extracción automática de datos del pedido.</p>
-            </div>
-          </div>
-        </div>
-        <div class="decoracion-circulos">
-          <div class="circulo circulo-1"></div>
-          <div class="circulo circulo-2"></div>
-          <div class="circulo circulo-3"></div>
-        </div>
       </div>
-    </div>
-    <!-- Panel derecho: opciones de negocio -->
-    <div class="panel-formulario">
-      <div class="tarjeta-onboarding">
-        <div class="encabezado-onboarding">
-          <div class="logo-movil"><span class="marca-texto">Dilo</span></div>
-          <h1 class="titulo-onboarding">¡Vamos a crear tu negocio!</h1>
-          <p class="subtitulo-onboarding">Selecciona una opción para continuar.</p>
-        </div>
-        <div class="opciones-onboarding">
-          <a routerLink="/crear-negocio" class="boton-onboarding"><i class="fa-solid fa-plus"></i> Crear nuevo
-            negocio</a>
-          <a routerLink="/unir-negocio" class="boton-onboarding"><i class="fa-solid fa-key"></i> Unirme con código</a>
-        </div>
-        <div class="separador-onboarding">
-          <span class="separador-linea"></span>
-          <span class="separador-texto">¿Ya tienes un negocio?</span>
-          <span class="separador-linea"></span>
-        </div>
-        <a routerLink="/login" class="boton-regreso">Volver al login</a>
-      </div>
-    </div>
-  </div>
-</body>
 
-</html>
+      <div class="feature-list">
+        <div class="feature-item">
+          <div class="feature-icon">
+            <i class="fa-solid fa-microphone-lines"></i>
+          </div>
+          <div class="feature-info">
+            <h3>Facturación ultra rápida</h3>
+            <p>Vende sin tocar el teclado usando tu voz.</p>
+          </div>
+        </div>
+        
+        <div class="feature-item">
+          <div class="feature-icon">
+            <i class="fa-solid fa-bolt"></i>
+          </div>
+          <div class="feature-info">
+            <h3>Gestión inteligente</h3>
+            <p>Datos y reportes en tiempo real.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- PANEL PRINCIPAL (Acciones) -->
+  <main class="onboarding-main">
+    <div class="action-card animate-fade-in">
+      
+      <div class="card-header">
+        <div class="welcome-icon">
+          <i class="fa-solid fa-store"></i>
+        </div>
+        <h2 class="card-title">Configura tu espacio</h2>
+        <p class="card-subtitle">Elige cómo deseas comenzar en Dilo.</p>
+      </div>
+
+      <div class="options-container">
+        <!-- Tarjeta 1: Crear Negocio -->
+        <a routerLink="/crear-negocio" class="option-card primary-option">
+          <div class="option-icon"><i class="fa-solid fa-rocket"></i></div>
+          <div class="option-content">
+            <div class="option-title-row">
+              <h3>Soy el dueño</h3>
+              <span class="badge">RECOMENDADO</span>
+            </div>
+            <p>Registrar y configurar un negocio nuevo</p>
+          </div>
+          <div class="arrow-container">
+            <i class="fa-solid fa-chevron-right"></i>
+          </div>
+        </a>
+
+        <!-- Tarjeta 2: Unirse a Negocio -->
+        <a routerLink="/unir-negocio" class="option-card secondary-option">
+          <div class="option-icon"><i class="fa-solid fa-users"></i></div>
+          <div class="option-content">
+            <div class="option-title-row">
+              <h3>Soy parte del equipo</h3>
+            </div>
+            <p>Tengo un código de invitación de mi jefe</p>
+          </div>
+          <div class="arrow-container">
+            <i class="fa-solid fa-chevron-right"></i>
+          </div>
+        </a>
+      </div>
+
+      <!-- Footer: CERRAR SESIÓN -->
+      <div class="card-footer">
+        <button (click)="cerrarSesion()" class="logout-btn">
+          <i class="fa-solid fa-arrow-right-from-bracket"></i>
+          Cerrar Sesión
+        </button>
+      </div>
+      
+    </div>
+  </main>
+</div>

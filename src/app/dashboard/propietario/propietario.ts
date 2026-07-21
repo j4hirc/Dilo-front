@@ -4,6 +4,7 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Router, RouterLink } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
+import Swal from 'sweetalert2'; // 🔥 Importamos SweetAlert para avisar si algo falla
 
 @Component({
   selector: 'app-propietario',
@@ -24,7 +25,7 @@ export class Propietario implements OnInit {
   
   ventasMes: number = 0;
   facturasEmitidas: number = 0;
-  clientesActivos: number = 0; // 🔥 Aquí se guardará el total
+  clientesActivos: number = 0;
 
   isLoading = true;
   usuarioLogueado: any;
@@ -33,14 +34,38 @@ export class Propietario implements OnInit {
   private apiUrl = 'https://dilo-backend-mxlu.onrender.com/api/v1';
 
   ngOnInit(): void {
-    const userStr = localStorage.getItem('usuario');
+    // 🔥 1. BÚSQUEDA A PRUEBA DE BALAS EN LOCALSTORAGE
+    const userStr = localStorage.getItem('usuario') || localStorage.getItem('dilo_user');
     this.usuarioLogueado = userStr ? JSON.parse(userStr) : null;
-    this.negocioId = this.usuarioLogueado?.negocioId;
+    
+    // 🔥 2. BUSCAMOS EL ID EN TODAS LAS VARIABLES POSIBLES
+    this.negocioId = this.usuarioLogueado?.negocioId || 
+                     this.usuarioLogueado?.selectedBusinessId || 
+                     this.usuarioLogueado?.idNegocio;
+                     
+    console.log("👀 Datos de sesión en Dashboard:", this.usuarioLogueado);
+    console.log("🔥 ID del Negocio detectado:", this.negocioId);
     
     if (this.negocioId) {
       this.cargarDatosDashboard(this.negocioId);
     } else {
+      console.error("🚨 CRÍTICO: No se encontró el ID del negocio en el Dashboard.");
       this.isLoading = false;
+      this.cdr.detectChanges();
+      
+      // 🔥 3. SI FALLA, LE AVISAMOS AL USUARIO EN VEZ DE DEJARLO EN BLANCO
+      Swal.fire({
+        icon: 'warning',
+        title: 'Sesión desactualizada',
+        text: 'No logramos detectar tu negocio actual. Por favor, cierra sesión y vuelve a ingresar.',
+        confirmButtonColor: '#ed8936',
+        confirmButtonText: 'Ir al Login',
+        allowOutsideClick: false
+      }).then((result) => {
+        if (result.isConfirmed) {
+          this.cerrarSesion();
+        }
+      });
     }
   }
 
@@ -49,7 +74,7 @@ export class Propietario implements OnInit {
     const cleanToken = rawToken.replace(/['"]+/g, ''); 
     const headers = new HttpHeaders().set('Authorization', `Bearer ${cleanToken}`);
 
-    // 🔥 Preparamos TODAS las peticiones (Agregamos la de clientes)
+    // 🔥 Preparamos TODAS las peticiones (Atrapando errores para que no colapse)
     const reqInventario = this.http.get<any[]>(`${this.apiUrl}/negocios/${id}/inventario`, { headers }).pipe(catchError(() => of([])));
     const reqMiembros = this.http.get<any[]>(`${this.apiUrl}/negocios/${id}/miembros`, { headers }).pipe(catchError(() => of([])));
     const reqFacturas = this.http.get<any[]>(`${this.apiUrl}/negocios/${id}/facturas`, { headers }).pipe(catchError(() => of([])));
@@ -59,15 +84,21 @@ export class Propietario implements OnInit {
     // 🔥 Ejecutamos las 5 al mismo tiempo
     forkJoin([reqInventario, reqMiembros, reqFacturas, reqNegocio, reqClientes]).subscribe(([invData, miemData, facData, negData, cliData]) => {
       
+      console.log("✅ Datos recibidos del backend:", { invData, miemData, facData, negData, cliData });
+
       this.negocio = negData;
 
-      this.productos = invData.slice(0, 4).map(item => ({
+      // Mapeo de inventario (aseguramos que sea un array)
+      const inventarioArray = Array.isArray(invData) ? invData : [];
+      this.productos = inventarioArray.slice(0, 4).map(item => ({
         nombre: item.productoNombre || 'Producto sin nombre',
         cantidad: item.cantidadActual || 0,
         porcentaje: Math.min(Math.round((item.cantidadActual / 50) * 100), 100)
       }));
 
-      this.equipo = miemData.slice(0, 3).map(miembro => {
+      // Mapeo de equipo (aseguramos que sea un array)
+      const miembrosArray = Array.isArray(miemData) ? miemData : [];
+      this.equipo = miembrosArray.slice(0, 3).map(miembro => {
         const nombreCompleto = miembro.nombreCompleto || miembro.nombreUsuario || 'Usuario';
         return {
           iniciales: nombreCompleto.substring(0, 2).toUpperCase(),
@@ -78,10 +109,12 @@ export class Propietario implements OnInit {
         };
       });
 
-      this.facturasEmitidas = facData.length;
-      this.ventasMes = facData.reduce((acc, f) => acc + (f.totalFactura || f.total || 0), 0);
+      // Mapeo de facturas (aseguramos que sea un array)
+      const facturasArray = Array.isArray(facData) ? facData : [];
+      this.facturasEmitidas = facturasArray.length;
+      this.ventasMes = facturasArray.reduce((acc, f) => acc + (f.totalFactura || f.total || 0), 0);
       
-      this.facturas = facData.slice(0, 4).map(f => ({
+      this.facturas = facturasArray.slice(0, 4).map(f => ({
         numero: f.numeroFactura || 'S/N',
         cliente: f.clienteNombre || f.cliente?.nombre || 'Consumidor Final',
         tipo: f.formaPago || 'Manual',
@@ -98,7 +131,10 @@ export class Propietario implements OnInit {
   }
 
   cerrarSesion() {
-    localStorage.clear();
+    // 🔥 Limpieza profunda de sesión
+    localStorage.removeItem('dilo_token');
+    localStorage.removeItem('dilo_user');
+    localStorage.removeItem('usuario');
     this.router.navigate(['/login']);
   }
 }

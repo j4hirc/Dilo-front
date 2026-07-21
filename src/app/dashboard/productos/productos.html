@@ -1,7 +1,7 @@
 <div class="page-header">
     <div class="header-titles">
         <h2>Catálogo de Productos</h2>
-        <p>Visualiza y gestiona el portafolio de productos de tu negocio.</p>
+        <p>Visualiza y gestiona el portafolio de productos y sus márgenes.</p>
     </div>
     <button class="btn-primary" (click)="abrirModalNuevo()">
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
@@ -33,17 +33,18 @@
             <table class="data-table">
                 <thead>
                     <tr>
-                        <th>Código</th>
-                        <th>Producto / Marca</th>
-                        <th>Categoría</th>
-                        <th>Precio Unit.</th>
-                        <th>Impuesto</th>
-                        <th style="text-align: center;">Acciones</th>
+                        <th style="width: 10%;">Código</th>
+                        <th style="width: 25%;">Producto / Marca</th>
+                        <th style="width: 15%;">Categoría</th>
+                        <th style="text-align: right; width: 12%;">Costo Prom.</th>
+                        <th style="text-align: right; width: 12%;">PVP Venta</th>
+                        <th style="text-align: center; width: 12%;">Impuesto</th>
+                        <th style="text-align: center; width: 14%;">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr *ngIf="productosFiltrados.length === 0">
-                        <td colspan="6" style="text-align: center; padding: 40px; color: #64748b;">
+                        <td colspan="7" style="text-align: center; padding: 40px; color: #64748b;">
                             No se encontraron productos con esos filtros.
                         </td>
                     </tr>
@@ -64,8 +65,18 @@
                             </div>
                         </td>
                         <td><span class="tag tag-purple">{{ prod.categoriaNombre }}</span></td>
-                        <td style="font-weight: 600;">${{ prod.precioUnitario | number:'1.2-2' }}</td>
-                        <td>
+                        
+                        <!-- 🔥 NUEVO: Columna de Costo Promedio -->
+                        <td style="text-align: right; font-weight: 600; color: #ea580c;">
+                            ${{ prod.costoPromedioActual | number:'1.2-4' }}
+                        </td>
+                        
+                        <!-- Precio de Venta (PVP) -->
+                        <td style="text-align: right; font-weight: 800; color: #0f172a; font-size: 1.05rem;">
+                            ${{ prod.precioUnitario | number:'1.2-2' }}
+                        </td>
+                        
+                        <td style="text-align: center;">
                             <span class="status" [ngClass]="{'status-green': prod.grabaIva, 'status-gray': !prod.grabaIva}">
                                 {{ prod.grabaIva ? 'Con IVA' : 'Sin IVA' }}
                             </span>
@@ -131,7 +142,6 @@
                 </div>
             </div>
 
-            <!-- 🔥 NUEVO CAMPO: UNIDAD DE MEDIDA -->
             <div class="form-group">
                 <label>Unidad de Medida *</label>
                 <select [(ngModel)]="productoForm.unidadMedida" class="custom-select">
@@ -142,7 +152,6 @@
                 </select>
             </div>
 
-            <!-- 🔥 NUEVOS CAMPOS: CHECKBOXES DE IVA Y CADUCIDAD (EN FILA) -->
             <div class="form-row" style="margin-top: 5px; gap: 10px;">
                 <div class="form-group" style="flex: 1; flex-direction: row; align-items: center; gap: 10px; padding: 12px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 0;">
                     <input type="checkbox" [(ngModel)]="productoForm.grabaIva" id="ivaCheck" style="width: 18px; height: 18px; cursor: pointer; margin: 0;">

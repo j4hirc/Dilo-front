@@ -1,0 +1,125 @@
+<div class="onboarding-wrapper">
+  <div class="action-card fade-in-up ancho-extendido">
+    
+    <div class="card-header">
+      <div class="welcome-icon">
+        <i class="fa-solid fa-building"></i>
+      </div>
+      <h1 class="card-title">Crear Nuevo Negocio</h1>
+      <p class="card-subtitle">Configura la información principal de tu empresa para empezar a facturar.</p>
+    </div>
+
+    <form [formGroup]="createForm" (ngSubmit)="onSubmit()" class="formulario">
+      
+      <!-- Subida de Logo -->
+      <div class="contenedor-logo">
+        <div class="logo-preview-container" [class.has-image]="logoPreview">
+          <img *ngIf="logoPreview" [src]="logoPreview" alt="Preview Logo" class="imagen-preview" />
+          <div class="logo-overlay">
+            <i class="fa-solid fa-camera fa-2x"></i>
+          </div>
+        </div>
+        <label for="logoUpload" class="label-subir-logo">
+          {{ logoPreview ? 'Cambiar Logo' : 'Subir Logo (Opcional)' }}
+        </label>
+        <input type="file" id="logoUpload" (change)="onFileSelected($event)" accept="image/*" class="input-oculto" />
+      </div>
+
+      <!-- Grid de Inputs Básicos -->
+      <div class="grid-inputs">
+        <!-- RUC -->
+        <div class="grupo-input">
+          <label for="ruc">RUC *</label>
+          <input 
+            type="text" 
+            id="ruc"
+            formControlName="ruc" 
+            placeholder="13 dígitos" 
+            maxlength="13" 
+            [ngClass]="{'input-error': createForm.get('ruc')?.invalid && createForm.get('ruc')?.touched}"
+          />
+          <span *ngIf="createForm.get('ruc')?.errors?.['required'] && createForm.get('ruc')?.touched" class="mensaje-error">El RUC es obligatorio.</span>
+          <span *ngIf="(createForm.get('ruc')?.errors?.['minlength'] || createForm.get('ruc')?.errors?.['maxlength']) && createForm.get('ruc')?.touched" class="mensaje-error">El RUC debe tener exactamente 13 dígitos.</span>
+        </div>
+
+        <!-- Razón Social -->
+        <div class="grupo-input">
+          <label for="razonSocial">Razón Social *</label>
+          <input 
+            type="text" 
+            id="razonSocial"
+            formControlName="razonSocial" 
+            placeholder="Ej: Empresa S.A." 
+            [ngClass]="{'input-error': createForm.get('razonSocial')?.invalid && createForm.get('razonSocial')?.touched}"
+          />
+          <span *ngIf="createForm.get('razonSocial')?.invalid && createForm.get('razonSocial')?.touched" class="mensaje-error">La razón social es requerida.</span>
+        </div>
+
+        <!-- Nombre Comercial -->
+        <div class="grupo-input">
+          <label for="nombreComercial">Nombre Comercial *</label>
+          <input 
+            type="text" 
+            id="nombreComercial"
+            formControlName="nombreComercial" 
+            placeholder="Ej: Mi Tienda" 
+            [ngClass]="{'input-error': createForm.get('nombreComercial')?.invalid && createForm.get('nombreComercial')?.touched}"
+          />
+          <span *ngIf="createForm.get('nombreComercial')?.invalid && createForm.get('nombreComercial')?.touched" class="mensaje-error">El nombre comercial es requerido.</span>
+        </div>
+
+        <!-- Dirección -->
+        <div class="grupo-input">
+          <label for="direccion">Dirección Matriz *</label>
+          <input 
+            type="text" 
+            id="direccion"
+            formControlName="direccion" 
+            placeholder="Calle principal y secundaria" 
+            [ngClass]="{'input-error': createForm.get('direccion')?.invalid && createForm.get('direccion')?.touched}"
+          />
+          <span *ngIf="createForm.get('direccion')?.invalid && createForm.get('direccion')?.touched" class="mensaje-error">La dirección es requerida por el SRI.</span>
+        </div>
+        
+        <!-- Método de Valoración (Ancho Completo) -->
+        <div class="grupo-input campo-ancho-completo">
+          <label for="metodoCosteo" class="label-destacado">Método de Valoración de Inventario *</label>
+          <span class="texto-ayuda">Define cómo el sistema calculará el costo de tu mercadería al vender.</span>
+          <select 
+            id="metodoCosteo"
+            formControlName="metodoCosteo" 
+            class="select-premium"
+            [ngClass]="{'input-error': createForm.get('metodoCosteo')?.invalid && createForm.get('metodoCosteo')?.touched}"
+          >
+            <option value="PROMEDIO">Promedio Ponderado (Recomendado)</option>
+            <option value="FIFO">FIFO (Primeras Entradas, Primeras Salidas)</option>
+            <option value="LIFO">LIFO (Últimas Entradas, Primeras Salidas)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Obligado a llevar contabilidad -->
+      <div class="contenedor-checkbox">
+        <label class="checkbox-moderno">
+          <input type="checkbox" formControlName="obligadoContabilidad" />
+          <span class="checkmark"></span>
+          <div class="checkbox-texto">
+            <strong>Obligado a llevar contabilidad</strong>
+            <p>Márcalo solo si el SRI te lo exige explícitamente.</p>
+          </div>
+        </label>
+      </div>
+
+      <button type="submit" class="boton-primario" [disabled]="isLoading">
+        <span *ngIf="!isLoading">Registrar Negocio</span>
+        <span *ngIf="isLoading"><i class="fa-solid fa-spinner fa-spin"></i> Creando tu espacio...</span>
+      </button>
+    </form>
+
+    <div class="card-footer">
+      <a routerLink="/onboarding-business" class="enlace-regreso">
+        <i class="fa-solid fa-arrow-left"></i> Volver a opciones
+      </a>
+    </div>
+  </div>
+</div>

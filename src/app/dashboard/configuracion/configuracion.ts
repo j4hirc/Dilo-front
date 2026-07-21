@@ -2,6 +2,7 @@ import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router'; // 🔥 Importamos el Router
 import Swal from 'sweetalert2';
 
 @Component({
@@ -14,6 +15,7 @@ import Swal from 'sweetalert2';
 export class Configuracion implements OnInit {
   private http = inject(HttpClient);
   private cdr = inject(ChangeDetectorRef);
+  private router = inject(Router); // 🔥 Inyectamos el router para poder sacarlo al login
   
   isLoading = true;
   negocioId: number | null = null;
@@ -29,19 +31,40 @@ export class Configuracion implements OnInit {
     razonSocial: '',
     nombreComercial: '',
     direccion: '',
-    obligadoContabilidad: false
+    obligadoContabilidad: false,
+    metodoCosteo: 'PROMEDIO' 
   };
 
   ngOnInit(): void {
-    const userStr = localStorage.getItem('usuario');
+    // 🔥 BÚSQUEDA A PRUEBA DE BALAS EN LOCALSTORAGE
+    const userStr = localStorage.getItem('usuario') || localStorage.getItem('dilo_user');
     const usuarioLogueado = userStr ? JSON.parse(userStr) : null;
-    this.negocioId = usuarioLogueado?.negocioId;
+    
+    console.log("👀 Revisando qué hay guardado en el navegador (Config):", usuarioLogueado);
+
+    // Buscamos el ID en cualquier llave posible
+    this.negocioId = usuarioLogueado?.negocioId || usuarioLogueado?.selectedBusinessId || usuarioLogueado?.idNegocio;
     
     if (this.negocioId) {
       this.cargarNegocio(this.negocioId);
     } else {
+      console.error("🚨 CRÍTICO en Configuración: No hay negocioId en el localStorage.");
       this.isLoading = false;
       this.cdr.detectChanges();
+
+      // 🔥 ALERTA VISUAL PARA LIMPIAR LA SESIÓN ROTA
+      Swal.fire({
+        icon: 'warning',
+        title: 'Sesión desactualizada',
+        text: 'No logramos detectar tu negocio actual. Por favor, cierra sesión y vuelve a ingresar para sincronizar tus datos.',
+        confirmButtonColor: '#ed8936',
+        confirmButtonText: 'Ir al Login',
+        allowOutsideClick: false
+      }).then((result) => {
+        if (result.isConfirmed) {
+          this.cerrarSesion();
+        }
+      });
     }
   }
 
@@ -58,7 +81,8 @@ export class Configuracion implements OnInit {
           razonSocial: data.razonSocial || '',
           nombreComercial: data.nombreComercial || '',
           direccion: data.direccion || '',
-          obligadoContabilidad: data.obligadoContabilidad || false
+          obligadoContabilidad: data.obligadoContabilidad || false,
+          metodoCosteo: data.metodoCosteo || 'PROMEDIO' 
         };
         this.imagenActual = data.rutaImagen || null;
         
@@ -77,7 +101,6 @@ export class Configuracion implements OnInit {
     if (event.target.files.length > 0) {
       this.selectedFile = event.target.files[0];
       
-      // Vista previa de la imagen local
       const reader = new FileReader();
       reader.onload = (e: any) => {
         this.imagenActual = e.target.result;
@@ -88,9 +111,11 @@ export class Configuracion implements OnInit {
   }
   
   guardarCambios() {
-    if (!this.negocioId) return;
+    if (!this.negocioId) {
+      Swal.fire('Error', 'No se encontró el ID del negocio. Cierra sesión e inténtalo de nuevo.', 'error');
+      return;
+    }
 
-    // Validación básica
     if (!this.negocioForm.ruc || !this.negocioForm.razonSocial || !this.negocioForm.nombreComercial || !this.negocioForm.direccion) {
       Swal.fire('Campos Incompletos', 'Por favor, llena todos los campos obligatorios (*).', 'warning');
       return;
@@ -106,7 +131,8 @@ export class Configuracion implements OnInit {
       razonSocial: this.negocioForm.razonSocial,
       nombreComercial: this.negocioForm.nombreComercial,
       direccion: this.negocioForm.direccion,
-      obligadoContabilidad: this.negocioForm.obligadoContabilidad
+      obligadoContabilidad: this.negocioForm.obligadoContabilidad,
+      metodoCosteo: this.negocioForm.metodoCosteo 
     };
 
     // Empaquetar como lo espera @RequestPart("datos")
@@ -123,7 +149,6 @@ export class Configuracion implements OnInit {
       .subscribe({
         next: () => {
           Swal.fire('¡Éxito!', 'Los datos de tu negocio han sido actualizados.', 'success').then(() => {
-            // Recargar la página para que la imagen nueva aparezca en la barra lateral
             window.location.reload(); 
           });
         },
@@ -133,5 +158,13 @@ export class Configuracion implements OnInit {
           Swal.fire('Error', 'Hubo un problema al actualizar el negocio.', 'error');
         }
       });
+  }
+
+  // 🔥 MÉTODO PARA LIMPIAR SESIÓN ROTA
+  cerrarSesion() {
+    localStorage.removeItem('dilo_token');
+    localStorage.removeItem('dilo_user');
+    localStorage.removeItem('usuario');
+    this.router.navigate(['/login']);
   }
 }

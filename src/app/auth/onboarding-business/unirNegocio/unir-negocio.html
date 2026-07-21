@@ -1,0 +1,41 @@
+<div class="onboarding-wrapper">
+  <div class="action-card fade-in-up">
+    
+    <div class="card-header">
+      <div class="welcome-icon">
+        <i class="fa-solid fa-users-viewfinder"></i>
+      </div>
+      <h1 class="card-title">Unirse a un Negocio</h1>
+      <p class="card-subtitle">Ingresa el código proporcionado por el administrador para unirte al equipo.</p>
+    </div>
+
+    <form [formGroup]="joinForm" (ngSubmit)="onSubmit()" class="formulario">
+      
+      <!-- Código de Invitación -->
+      <div class="grupo-input">
+        <label for="codigoInvitacion">Código de Invitación *</label>
+        <input 
+          type="text" 
+          id="codigoInvitacion" 
+          formControlName="codigoInvitacion" 
+          placeholder="Ej: A1B2C3D4"
+          [ngClass]="{'input-error': joinForm.get('codigoInvitacion')?.invalid && joinForm.get('codigoInvitacion')?.touched}"
+        />
+        <span *ngIf="joinForm.get('codigoInvitacion')?.invalid && joinForm.get('codigoInvitacion')?.touched" class="mensaje-error">
+          El código es requerido y debe tener al menos 6 caracteres.
+        </span>
+      </div>
+
+      <button type="submit" class="boton-primario" [disabled]="isLoading">
+        <span *ngIf="!isLoading">Unirme al Negocio</span>
+        <span *ngIf="isLoading"><i class="fa-solid fa-spinner fa-spin"></i> Verificando credenciales...</span>
+      </button>
+    </form>
+
+    <div class="card-footer">
+      <a routerLink="/onboarding-business" class="enlace-regreso">
+        <i class="fa-solid fa-arrow-left"></i> Volver a opciones
+      </a>
+    </div>
+  </div>
+</div>

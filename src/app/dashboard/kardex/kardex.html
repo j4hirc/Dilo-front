@@ -1,27 +1,48 @@
 <div class="page-header">
     <div class="header-titles">
         <h2>Kardex / Movimientos</h2>
-        <p>Historial completo y valorado de entradas, salidas y transferencias de bodega.</p>
+        <p>Auditoría completa de entradas, salidas y transferencias de bodega.</p>
     </div>
     <button class="btn-primary" (click)="abrirModalNuevo()">
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"></polyline><polyline points="23 20 23 14 17 14"></polyline><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path></svg>
-        Registrar Movimiento
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+        Registrar Ajuste Manual
     </button>
 </div>
 
 <div class="card full-height-card">
-    <div class="filter-bar" *ngIf="!isLoading">
-        <div class="search-box">
-            <span class="search-icon">🔍</span>
-            <input type="text" placeholder="Buscar por producto, bodega o motivo..." [(ngModel)]="searchTerm" (input)="aplicarFiltros()">
+    
+    <!-- 🔥 NUEVA BARRA DE FILTROS AVANZADOS -->
+    <div class="advanced-filter-bar" *ngIf="!isLoading">
+        <div class="search-box flex-grow">
+            <span class="search-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            </span>
+            <input type="text" placeholder="Buscar producto, motivo, ref o lote..." [(ngModel)]="searchTerm" (input)="aplicarFiltros()">
         </div>
-        <div class="category-filter">
-            <select [(ngModel)]="filtroTipo" (change)="aplicarFiltros()">
-                <option value="">📊 Todos los movimientos</option>
+        
+        <div class="filter-controls">
+            <select [(ngModel)]="filtroTipo" (change)="aplicarFiltros()" class="custom-select-small">
+                <option value="">Tipo: Todos</option>
                 <option value="INGRESO">🟢 Ingresos (+)</option>
                 <option value="EGRESO">🔴 Egresos (-)</option>
                 <option value="TRANSFERENCIA">🔵 Transferencias</option>
             </select>
+
+            <select [(ngModel)]="bodegaFiltro" (change)="aplicarFiltros()" class="custom-select-small">
+                <option value="">Bodega: Todas</option>
+                <option *ngFor="let b of bodegas" [value]="b.id">🏢 {{ b.nombre }}</option>
+            </select>
+
+            <div class="date-range">
+                <input type="date" [(ngModel)]="fechaInicio" (change)="aplicarFiltros()" class="custom-select-small" title="Fecha Desde">
+                <span class="date-separator">a</span>
+                <input type="date" [(ngModel)]="fechaFin" (change)="aplicarFiltros()" class="custom-select-small" title="Fecha Hasta">
+            </div>
+
+            <!-- Botón para limpiar filtros (solo aparece si hay algo filtrado) -->
+            <button class="btn-clear-filters" *ngIf="searchTerm || filtroTipo || bodegaFiltro || fechaInicio || fechaFin" (click)="limpiarFiltros()" title="Limpiar Filtros">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
         </div>
     </div>
 
@@ -35,14 +56,14 @@
             <table class="data-table">
                 <thead>
                     <tr>
-                        <th style="width: 10%;">Fecha</th>
+                        <th style="width: 12%;">Fecha y Hora</th>
                         <th style="width: 10%;">Tipo</th>
-                        <th style="width: 20%;">Producto / Ref.</th>
+                        <th style="width: 22%;">Producto / Ref.</th>
                         <th style="text-align: center; width: 8%;">Cant.</th>
                         <th style="text-align: right; width: 10%;">Costo U.</th>
-                        <th style="text-align: right; width: 12%;">Costo Total</th>
-                        <th style="width: 15%;">Bodegas</th>
-                        <th style="width: 15%;">Motivo / Resp.</th>
+                        <th style="text-align: right; width: 10%;">Total Mvto.</th>
+                        <th style="width: 15%;">Ubicación</th>
+                        <th style="width: 13%;">Motivo / Resp.</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -52,48 +73,54 @@
                         </td>
                     </tr>
                     <tr *ngFor="let kx of kardexFiltrado">
-                        <td style="font-size: 0.85rem; color: #64748b;">{{ kx.fechaTransaccion | date:'short' }}</td>
+                        <td>
+                            <div style="font-weight: 700; color: #0f172a; font-size: 0.9rem;">{{ kx.fechaTransaccion | date:'dd/MM/yyyy' }}</div>
+                            <div style="font-size: 0.75rem; color: #64748b;">{{ kx.fechaTransaccion | date:'HH:mm:ss' }}</div>
+                        </td>
                         
                         <td>
-                            <span class="tag" 
-                                  [ngClass]="{'tag-green': kx.tipo === 'INGRESO', 'tag-red': kx.tipo === 'EGRESO', 'tag-blue': kx.tipo === 'TRANSFERENCIA'}">
+                            <span class="status" 
+                                  [ngClass]="{'status-green': kx.tipo === 'INGRESO', 'status-red': kx.tipo === 'EGRESO', 'status-blue': kx.tipo === 'TRANSFERENCIA'}">
                                 {{ kx.tipo }}
                             </span>
                         </td>
                         
                         <td>
                             <div style="font-weight: 700; color: #0f172a;">{{ kx.productoNombre }}</div>
-                            <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 4px;" *ngIf="kx.numeroLote || kx.documentoReferencia">
-                                <span *ngIf="kx.numeroLote">Lote: {{ kx.numeroLote }} </span>
-                                <span *ngIf="kx.documentoReferencia">| Doc: {{ kx.documentoReferencia }}</span>
+                            <div style="font-size: 0.75rem; color: #64748b; margin-top: 4px;" *ngIf="kx.numeroLote || kx.documentoReferencia">
+                                <span *ngIf="kx.numeroLote" class="tag-gray" style="padding: 2px 6px; font-size: 0.7rem; margin-right: 4px;">Lote #{{ kx.numeroLote }} </span>
+                                <span *ngIf="kx.documentoReferencia" style="font-weight: 600;">Doc: {{ kx.documentoReferencia }}</span>
                             </div>
                         </td>
                         
-                        <td style="font-weight: 900; font-size: 1.1rem; text-align: center;" 
+                        <td style="font-weight: 900; font-size: 1.15rem; text-align: center;" 
                             [ngClass]="{'text-green': kx.tipo === 'INGRESO', 'text-red': kx.tipo === 'EGRESO', 'text-blue': kx.tipo === 'TRANSFERENCIA'}">
                             {{ kx.tipo === 'EGRESO' ? '-' : '+' }}{{ kx.cantidad }}
                         </td>
 
                         <td style="text-align: right; font-weight: 600; color: #475569;">
-                            {{ kx.costoUnitario ? '$' + (kx.costoUnitario | number:'1.2-4') : '-' }}
+                            {{ kx.costoUnitario ? '$' + (kx.costoUnitario | number:'1.4-4') : '-' }}
                         </td>
 
                         <td style="text-align: right;">
-                            <div style="font-weight: 800; color: #0f172a;">{{ kx.costoTotal ? '$' + (kx.costoTotal | number:'1.2-2') : '-' }}</div>
-                            <div style="font-size: 0.7rem; color: #94a3b8; font-weight: 600;" *ngIf="kx.metodoAplicado">{{ kx.metodoAplicado }}</div>
+                            <div style="font-weight: 800; color: #0f172a; font-size: 1.05rem;">{{ kx.costoTotal ? '$' + (kx.costoTotal | number:'1.2-2') : '-' }}</div>
+                            <div style="font-size: 0.7rem; color: #94a3b8; font-weight: 700;" *ngIf="kx.metodoAplicado">{{ kx.metodoAplicado }}</div>
                         </td>
                         
-                        <td style="font-size: 0.85rem; color: #475569;">
-                            <div *ngIf="kx.tipo === 'INGRESO'">Hacia: <strong>{{ kx.bodegaDestinoNombre }}</strong></div>
-                            <div *ngIf="kx.tipo === 'EGRESO'">Desde: <strong>{{ kx.bodegaOrigenNombre }}</strong></div>
+                        <td style="font-size: 0.85rem; color: #475569; line-height: 1.4;">
+                            <div *ngIf="kx.tipo === 'INGRESO'">Hacia: <strong style="color: #0f172a;">{{ kx.bodegaDestinoNombre }}</strong></div>
+                            <div *ngIf="kx.tipo === 'EGRESO'">Desde: <strong style="color: #0f172a;">{{ kx.bodegaOrigenNombre }}</strong></div>
                             <div *ngIf="kx.tipo === 'TRANSFERENCIA'">
-                                De: {{ kx.bodegaOrigenNombre }} <br>➔ A: {{ kx.bodegaDestinoNombre }}
+                                De: <strong>{{ kx.bodegaOrigenNombre }}</strong> <br>➔ A: <strong>{{ kx.bodegaDestinoNombre }}</strong>
                             </div>
                         </td>
                         
                         <td>
-                            <div style="font-weight: 500; color: #0f172a; font-size: 0.9rem;">{{ kx.motivo }}</div>
-                            <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 4px;">👤 {{ kx.usuarioResponsableNombre }}</div>
+                            <div style="font-weight: 600; color: #0f172a; font-size: 0.85rem; line-height: 1.3;">{{ kx.motivo }}</div>
+                            <div style="font-size: 0.75rem; color: #64748b; margin-top: 4px; display: flex; align-items: center; gap: 4px;">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                {{ kx.usuarioResponsableNombre }}
+                            </div>
                         </td>
                     </tr>
                 </tbody>
@@ -104,87 +131,104 @@
 
 <!-- 🔥 MODAL PARA REGISTRAR TRANSACCIÓN MANUAL -->
 <div class="modal-overlay" *ngIf="showModal">
-    <div class="modal-content">
+    <div class="modal-content modal-lg">
         <div class="modal-header">
-            <h3>Nuevo Movimiento Manual</h3>
-            <button class="close-btn" (click)="cerrarModal()">✕</button>
+            <h3>Nuevo Ajuste Manual <span style="font-size: 0.9rem; color: #64748b; font-weight: normal;">(Merma o Sobrante)</span></h3>
+            <button class="close-btn" (click)="cerrarModal()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
         </div>
         
-        <div class="modal-body modal-body-scrollable">
-            <div class="form-group">
-                <label>Tipo de Movimiento *</label>
-                <select [(ngModel)]="transaccionForm.tipo" class="custom-select" (change)="onTipoChange()">
-                    <option value="INGRESO">🟢 INGRESO (Ajuste Positivo / Devolución)</option>
-                    <option value="EGRESO">🔴 EGRESO (Ajuste Negativo / Merma)</option>
-                    <option value="TRANSFERENCIA">🔵 TRANSFERENCIA (Mover entre bodegas)</option>
-                </select>
+        <div class="modal-body modal-body-scrollable" style="background: #f8fafc; padding: 20px;">
+            
+            <!-- AVISO VISUAL -->
+            <div style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 12px 15px; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                <p style="margin: 0; color: #1e3a8a; font-size: 0.85rem;">
+                    <strong>Atención:</strong> Para ingresar facturas de proveedores, usa el módulo de <a routerLink="/dashboard/compras" (click)="cerrarModal()" style="color: #2563eb; font-weight: bold; text-decoration: underline;">Abastecimiento</a>.
+                </p>
             </div>
 
-            <div class="form-group">
-                <label>Producto *</label>
-                <select [(ngModel)]="transaccionForm.productoId" class="custom-select" (change)="onProductoChange()">
-                    <option [ngValue]="null" disabled>Selecciona un producto</option>
-                    <option *ngFor="let p of productos" [ngValue]="p.id">{{ p.codigoPrincipal }} - {{ p.nombre }}</option>
-                </select>
-            </div>
+            <div class="card-section">
+                <h4 class="section-title">Detalles del Movimiento</h4>
+                
+                <div class="form-row triple-col">
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label>Tipo de Movimiento *</label>
+                        <select [(ngModel)]="transaccionForm.tipo" class="custom-select" (change)="onTipoChange()">
+                            <option value="INGRESO">INGRESO (Ajuste Positivo / Producto Encontrado)</option>
+                            <option value="EGRESO">EGRESO (Ajuste Negativo / Merma / Daño)</option>
+                            <option value="TRANSFERENCIA">TRANSFERENCIA (Mover stock entre bodegas)</option>
+                        </select>
+                    </div>
 
-            <div class="form-row">
-                <div class="form-group" *ngIf="transaccionForm.tipo === 'EGRESO' || transaccionForm.tipo === 'TRANSFERENCIA'">
-                    <label>Bodega Origen *</label>
-                    <select [(ngModel)]="transaccionForm.bodegaOrigenId" class="custom-select" (change)="onBodegaOrigenChange()">
-                        <option [ngValue]="null" disabled>Selecciona bodega origen</option>
-                        <option *ngFor="let b of bodegasOrigenDisponibles" [ngValue]="b.id">{{ b.nombre }}</option>
-                    </select>
-                    <small *ngIf="maxCantidad !== null" style="color: #ea580c; font-weight: 700; margin-top: 6px; display: block;">
-                        📦 Stock disponible: {{ maxCantidad }} uds.
-                    </small>
-                </div>
-
-                <div class="form-group" *ngIf="transaccionForm.tipo === 'INGRESO' || transaccionForm.tipo === 'TRANSFERENCIA'">
-                    <label>Bodega Destino *</label>
-                    <select [(ngModel)]="transaccionForm.bodegaDestinoId" class="custom-select">
-                        <option [ngValue]="null" disabled>Selecciona bodega destino</option>
-                        <option *ngFor="let b of bodegas" [ngValue]="b.id" [disabled]="b.id === transaccionForm.bodegaOrigenId">{{ b.nombre }}</option>
-                    </select>
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label>Producto a Ajustar *</label>
+                        <select [(ngModel)]="transaccionForm.productoId" class="custom-select" (change)="onProductoChange()">
+                            <option [ngValue]="null" disabled>Selecciona un producto</option>
+                            <option *ngFor="let p of productos" [ngValue]="p.id">{{ p.codigoPrincipal }} - {{ p.nombre }}</option>
+                        </select>
+                    </div>
                 </div>
             </div>
 
-            <!-- 🔥 NUEVO: Proveedor y Referencia Documental -->
-            <div class="form-row" *ngIf="transaccionForm.tipo === 'INGRESO'">
-                <div class="form-group">
-                    <label>Proveedor <small>(Opcional)</small></label>
-                    <select [(ngModel)]="transaccionForm.proveedorId" class="custom-select">
-                        <option [ngValue]="null">Sin proveedor / Inventario Interno</option>
-                        <option *ngFor="let prov of proveedores" [ngValue]="prov.id">🏢 {{ prov.nombre }}</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Doc. Referencia <small>(Opcional)</small></label>
-                    <input type="text" [(ngModel)]="transaccionForm.documentoReferencia" placeholder="Ej: FAC-001 o Guía">
+            <div class="card-section mt-3">
+                <h4 class="section-title">Ubicación y Cantidad</h4>
+                
+                <div class="form-row triple-col">
+                    <div class="form-group" *ngIf="transaccionForm.tipo === 'EGRESO' || transaccionForm.tipo === 'TRANSFERENCIA'">
+                        <label>Bodega Origen *</label>
+                        <select [(ngModel)]="transaccionForm.bodegaOrigenId" class="custom-select" (change)="onBodegaOrigenChange()">
+                            <option [ngValue]="null" disabled>Selecciona bodega origen</option>
+                            <option *ngFor="let b of bodegasOrigenDisponibles" [ngValue]="b.id">{{ b.nombre }}</option>
+                        </select>
+                        <small *ngIf="maxCantidad !== null" style="color: #ea580c; font-weight: 700; margin-top: 6px; display: block;">
+                            Stock disponible: {{ maxCantidad }} uds.
+                        </small>
+                    </div>
+
+                    <div class="form-group" *ngIf="transaccionForm.tipo === 'INGRESO' || transaccionForm.tipo === 'TRANSFERENCIA'">
+                        <label>Bodega Destino *</label>
+                        <select [(ngModel)]="transaccionForm.bodegaDestinoId" class="custom-select">
+                            <option [ngValue]="null" disabled>Selecciona bodega destino</option>
+                            <option *ngFor="let b of bodegas" [ngValue]="b.id" [disabled]="b.id === transaccionForm.bodegaOrigenId">{{ b.nombre }}</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Cantidad a Mover *</label>
+                        <input type="number" [(ngModel)]="transaccionForm.cantidad" min="1" [max]="maxCantidad !== null ? maxCantidad : ''" (input)="validarCantidad()">
+                    </div>
+
+                    <div class="form-group" *ngIf="transaccionForm.tipo === 'INGRESO'">
+                        <label>Costo Unitario ($) <small>(Opcional)</small></label>
+                        <input type="number" [(ngModel)]="transaccionForm.costoUnitario" min="0" step="0.01" placeholder="Costo del ajuste">
+                    </div>
                 </div>
             </div>
 
-            <!-- 🔥 Fila final: Costo y Cantidad -->
-            <div class="form-row">
-                <div class="form-group" *ngIf="transaccionForm.tipo === 'INGRESO'">
-                    <label>Costo Unitario ($) <small>(Opcional)</small></label>
-                    <input type="number" [(ngModel)]="transaccionForm.costoUnitario" min="0" step="0.01" placeholder="Costo del ajuste">
-                </div>
-                <div class="form-group">
-                    <label>Cantidad *</label>
-                    <input type="number" [(ngModel)]="transaccionForm.cantidad" min="1" [max]="maxCantidad !== null ? maxCantidad : ''" (input)="validarCantidad()">
+            <div class="card-section mt-3">
+                <h4 class="section-title">Justificación</h4>
+                <div class="form-row">
+                    <div class="form-group" style="flex: 2;">
+                        <label>Motivo del ajuste *</label>
+                        <input type="text" [(ngModel)]="transaccionForm.motivo" placeholder="Ej: Merma por daño, Conteo físico final de mes, etc.">
+                    </div>
+                    <div class="form-group" style="flex: 1;" *ngIf="transaccionForm.tipo !== 'TRANSFERENCIA'">
+                        <label>Doc. Referencia <small>(Opcional)</small></label>
+                        <input type="text" [(ngModel)]="transaccionForm.documentoReferencia" placeholder="Ej: Memo-001">
+                    </div>
                 </div>
             </div>
 
-            <div class="form-group">
-                <label>Motivo del movimiento *</label>
-                <input type="text" [(ngModel)]="transaccionForm.motivo" placeholder="Ej: Ajuste de inventario, merma, etc.">
-            </div>
         </div>
 
-        <div class="modal-footer">
+        <div class="modal-footer" style="background: white;">
             <button class="btn-secondary" (click)="cerrarModal()">Cancelar</button>
-            <button class="btn-primary" (click)="registrarTransaccion()" [disabled]="maxCantidad === 0">Registrar Movimiento</button>
+            <button class="btn-primary" (click)="registrarTransaccion()" [disabled]="maxCantidad === 0">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                Registrar Ajuste
+            </button>
         </div>
     </div>
 </div>

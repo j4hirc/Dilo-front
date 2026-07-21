@@ -38,8 +38,8 @@ export class Productos implements OnInit {
     precioUnitario: 0,
     categoriaId: 0,
     grabaIva: false,
-    unidadMedida: 'UNIDADES', // 🔥 Inicializamos nuevo campo
-    tieneCaducidad: false     // 🔥 Inicializamos nuevo campo
+    unidadMedida: 'UNIDADES',
+    tieneCaducidad: false 
   };
 
   ngOnInit(): void {
@@ -85,12 +85,16 @@ export class Productos implements OnInit {
             nombre: p.nombre || 'Producto sin nombre',
             marca: p.marca || 'Sin marca',
             precioUnitario: Number(p.precioUnitario || 0),
+            
+            // 🔥 NUEVO: Recibimos el costo promedio desde Java
+            costoPromedioActual: Number(p.costoPromedioActual || 0),
+            
             categoriaId: p.categoriaId,
             categoriaNombre: p.categoriaNombre || 'General',
             grabaIva: p.grabaIva || false,
             imagen: p.imagen || null,
-            unidadMedida: p.unidadMedida || 'UNIDADES', // 🔥 Mapeo
-            tieneCaducidad: p.tieneCaducidad || false   // 🔥 Mapeo
+            unidadMedida: p.unidadMedida || 'UNIDADES',
+            tieneCaducidad: p.tieneCaducidad || false
           }));
           
           this.filtrarProductos(); 
@@ -133,8 +137,8 @@ export class Productos implements OnInit {
         nombre: '', codigoPrincipal: '', marca: '', precioUnitario: 0, 
         categoriaId: this.categorias.length > 0 ? this.categorias[0].id : 0, 
         grabaIva: false,
-        unidadMedida: 'UNIDADES', // 🔥 Reseteo
-        tieneCaducidad: false     // 🔥 Reseteo
+        unidadMedida: 'UNIDADES',
+        tieneCaducidad: false
     };
     this.showModal = true;
   }
@@ -143,7 +147,6 @@ export class Productos implements OnInit {
     this.isEditing = true;
     this.currentProductId = prod.id;
     this.selectedFile = null;
-    
     this.imagenActual = prod.imagen; 
     
     this.productoForm = {
@@ -153,8 +156,8 @@ export class Productos implements OnInit {
       precioUnitario: prod.precioUnitario,
       categoriaId: prod.categoriaId,
       grabaIva: prod.grabaIva,
-      unidadMedida: prod.unidadMedida,       // 🔥 Carga
-      tieneCaducidad: prod.tieneCaducidad    // 🔥 Carga
+      unidadMedida: prod.unidadMedida,
+      tieneCaducidad: prod.tieneCaducidad
     };
     this.showModal = true;
   }
@@ -202,11 +205,9 @@ export class Productos implements OnInit {
       precioUnitario: precioNumerico,
       categoriaId: categoriaNumerica,
       grabaIva: this.productoForm.grabaIva,
-      unidadMedida: this.productoForm.unidadMedida,     // 🔥 Envío al Backend
-      tieneCaducidad: this.productoForm.tieneCaducidad  // 🔥 Envío al Backend
+      unidadMedida: this.productoForm.unidadMedida,
+      tieneCaducidad: this.productoForm.tieneCaducidad
     };
-
-    console.log("📤 Enviando datos a Java:", requestDTO);
 
     formData.append('datos', new Blob([JSON.stringify(requestDTO)], { type: 'application/json' }));
     
@@ -266,8 +267,6 @@ export class Productos implements OnInit {
 
  manejarError(err: any) {
     Swal.close();
-    console.error('Error detallado de Java:', err);
-    
     const mensajeBackend = err.error?.message || err.error; 
 
     if (err.status === 401) {

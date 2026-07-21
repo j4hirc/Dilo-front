@@ -20,7 +20,6 @@ export class Inventario implements OnInit {
   inventarioFiltrado: any[] = [];
   bodegasDisponibles: string[] = []; 
 
-  // 🔥 NUEVAS VARIABLES PARA EL RESUMEN
   totalInvertido: number = 0;
   totalArticulos: number = 0;
 
@@ -30,6 +29,12 @@ export class Inventario implements OnInit {
 
   searchTerm: string = '';
   bodegaSeleccionada: string = '';
+
+  // 🔥 VARIABLES PARA EL MODAL DE LOTES
+  showModalLotes = false;
+  isLoadingLotes = false;
+  productoLotesActivo: any = null;
+  lotesDelProducto: any[] = [];
 
   ngOnInit(): void {
     const userStr = localStorage.getItem('usuario');
@@ -52,7 +57,6 @@ export class Inventario implements OnInit {
 
     this.http.get<any[]>(`${this.apiUrl}/negocios/${id}/inventario`, { headers }).subscribe({
       next: (data) => {
-        // 🔥 Mapeamos para garantizar que vengan como números y no rompan la suma
         this.inventario = (data || []).map(item => ({
             ...item,
             costoPromedio: Number(item.costoPromedio || 0),
@@ -91,11 +95,10 @@ export class Inventario implements OnInit {
     }
 
     this.inventarioFiltrado = result;
-    this.calcularTotales(); // 🔥 Recalculamos totales cuando el usuario filtra
+    this.calcularTotales(); 
     this.cdr.detectChanges();
   }
 
-  // 🔥 NUEVO MÉTODO QUE SUMA TODO
   calcularTotales() {
       this.totalInvertido = this.inventarioFiltrado.reduce((sum, item) => sum + item.valorInventario, 0);
       this.totalArticulos = this.inventarioFiltrado.reduce((sum, item) => sum + item.cantidadActual, 0);
@@ -131,12 +134,45 @@ export class Inventario implements OnInit {
               this.cargarInventario(this.negocioId!); 
             },
             error: (err) => {
-              console.error(err);
-              Swal.fire('Error', 'No se pudo actualizar el stock mínimo.', 'error');
+              Swal.fire('Error', 'No se pudo actualizar el stock mínimo', 'error');
             }
           });
         }
       }
     });
+  }
+
+  // 🔥 NUEVOS MÉTODOS PARA AUDITORÍA DE LOTES
+  abrirModalLotes(item: any) {
+      if (!this.negocioId) return;
+
+      this.productoLotesActivo = item;
+      this.showModalLotes = true;
+      this.isLoadingLotes = true;
+      this.lotesDelProducto = [];
+
+      const rawToken = localStorage.getItem('dilo_token') || '';
+      const cleanToken = rawToken.replace(/['"]+/g, '');
+      const headers = new HttpHeaders().set('Authorization', `Bearer ${cleanToken}`);
+
+      // Consultamos al backend los lotes activos
+      this.http.get<any[]>(`${this.apiUrl}/negocios/${this.negocioId}/inventario/bodegas/${item.bodegaId}/productos/${item.productoId}/lotes`, { headers }).subscribe({
+          next: (data) => {
+              this.lotesDelProducto = data || [];
+              this.isLoadingLotes = false;
+              this.cdr.detectChanges();
+          },
+          error: (err) => {
+              console.error('Error al cargar lotes', err);
+              this.isLoadingLotes = false;
+              this.cdr.detectChanges();
+          }
+      });
+  }
+
+  cerrarModalLotes() {
+      this.showModalLotes = false;
+      this.productoLotesActivo = null;
+      this.lotesDelProducto = [];
   }
 }

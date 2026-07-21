@@ -1,8 +1,8 @@
 import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { forkJoin, of } from 'rxjs'; // 🔥 IMPORTANTE
-import { catchError } from 'rxjs/operators'; // 🔥 IMPORTANTE
+import { forkJoin, of } from 'rxjs'; 
+import { catchError } from 'rxjs/operators'; 
 import Swal from 'sweetalert2';
 
 @Component({
@@ -20,20 +20,38 @@ export class Equipo implements OnInit {
   solicitudes: any[] = [];
   isLoading = true;
   negocioId: number | null = null;
-  codigoInvitacion: string = 'Cargando...'; // 🔥 NUEVA VARIABLE
+  codigoInvitacion: string = 'Cargando...'; 
 
   private apiUrl = 'https://dilo-backend-mxlu.onrender.com/api/v1';
 
   ngOnInit(): void {
-    const userStr = localStorage.getItem('usuario');
+    // 🔥 BÚSQUEDA A PRUEBA DE BALAS EN LOCALSTORAGE (Igual que en configuración)
+    const userStr = localStorage.getItem('usuario') || localStorage.getItem('dilo_user');
     const usuarioLogueado = userStr ? JSON.parse(userStr) : null;
-    this.negocioId = usuarioLogueado?.negocioId;
+    
+    console.log("👀 Datos en localStorage (Equipo):", usuarioLogueado);
+
+    // 🔥 Buscamos el ID en cualquier llave posible
+    this.negocioId = usuarioLogueado?.negocioId || 
+                     usuarioLogueado?.selectedBusinessId || 
+                     usuarioLogueado?.idNegocio;
 
     if (this.negocioId) {
       this.cargarEquipo(this.negocioId);
     } else {
+      console.error("🚨 CRÍTICO: No hay negocioId en el localStorage.");
+      this.codigoInvitacion = 'ERROR: Sin Negocio';
       this.isLoading = false;
       this.cdr.detectChanges();
+      
+      // 🔥 ALERTA VISUAL PARA LIMPIAR LA SESIÓN ROTA
+      Swal.fire({
+        icon: 'warning',
+        title: 'Sesión desactualizada',
+        text: 'No podemos encontrar el ID de tu negocio. Por favor, cierra sesión y vuelve a ingresar para sincronizar tus datos.',
+        confirmButtonColor: '#ed8936',
+        confirmButtonText: 'Entendido'
+      });
     }
   }
 
@@ -43,20 +61,20 @@ export class Equipo implements OnInit {
     const cleanToken = rawToken.replace(/['"]+/g, '');
     const headers = new HttpHeaders().set('Authorization', `Bearer ${cleanToken}`);
 
-    // 🔥 PREPARAMOS LAS DOS PETICIONES (Miembros y Datos del Negocio)
     const reqMiembros = this.http.get<any[]>(`${this.apiUrl}/negocios/${id}/miembros`, { headers }).pipe(catchError(() => of([])));
     const reqNegocio = this.http.get<any>(`${this.apiUrl}/negocios/${id}`, { headers }).pipe(catchError(() => of(null)));
 
-    // 🔥 EJECUTAMOS AL MISMO TIEMPO
     forkJoin([reqMiembros, reqNegocio]).subscribe({
       next: ([miemData, negData]) => {
+        console.log("🔥 Datos del negocio recibidos en equipo:", negData);
+
         const equipoCompleto = Array.isArray(miemData) ? miemData : [];
         this.solicitudes = equipoCompleto.filter(m => m.estadoInvitacion === 'PENDIENTE');
         this.miembrosActivos = equipoCompleto.filter(m => m.estadoInvitacion !== 'PENDIENTE');
 
-        // 🔥 ASIGNAMOS EL CÓDIGO REAL DEL NEGOCIO
-        if (negData && negData.codigoInvitacion) {
-          this.codigoInvitacion = negData.codigoInvitacion;
+        // 🔥 ATRAPAMOS EL CÓDIGO VENGA COMO VENGA
+        if (negData) {
+          this.codigoInvitacion = negData.codigoInvitacion || negData.codigo || 'NO-DISPONIBLE';
         } else {
           this.codigoInvitacion = 'NO-DISPONIBLE';
         }
@@ -72,9 +90,8 @@ export class Equipo implements OnInit {
     });
   }
 
-  // 🔥 ACTUALIZADO PARA COPIAR EL CÓDIGO REAL
   copiarCodigo() {
-    if (this.codigoInvitacion && this.codigoInvitacion !== 'Cargando...' && this.codigoInvitacion !== 'NO-DISPONIBLE') {
+    if (this.codigoInvitacion && this.codigoInvitacion !== 'Cargando...' && !this.codigoInvitacion.includes('ERROR') && this.codigoInvitacion !== 'NO-DISPONIBLE') {
       navigator.clipboard.writeText(this.codigoInvitacion).then(() => {
         Swal.fire({
           toast: true,
@@ -85,6 +102,8 @@ export class Equipo implements OnInit {
           timer: 2000
         });
       });
+    } else {
+      Swal.fire('Error', 'No hay un código válido para copiar.', 'error');
     }
   }
 

@@ -1,7 +1,7 @@
 <div class="page-header">
     <div class="header-titles">
         <h2>Configuración del Negocio</h2>
-        <p>Actualiza la información fiscal y el logo de tu empresa.</p>
+        <p>Actualiza la información fiscal, preferencias contables y logo de tu empresa.</p>
     </div>
 </div>
 
@@ -46,10 +46,21 @@
                 <label>Dirección Matriz *</label>
                 <input type="text" [(ngModel)]="negocioForm.direccion" placeholder="Ej: Calle Principal 123 y Secundaria">
             </div>
+            
+            <!-- 🔥 NUEVO: MÉTODO DE COSTEO -->
+            <div class="form-group" style="grid-column: 1 / -1;">
+                <label style="color: #ea580c; font-weight: 700;">Método de Valoración de Inventario (Costeo) *</label>
+                <p style="font-size: 0.8rem; color: #64748b; margin-top: 0; margin-bottom: 8px;">Este método define cómo el sistema calculará el costo de tu mercadería al vender.</p>
+                <select [(ngModel)]="negocioForm.metodoCosteo" class="custom-select" style="border: 1px solid #fed7aa; background-color: #fffbeb;">
+                    <option value="PROMEDIO">📊 Promedio Ponderado (Recomendado)</option>
+                    <option value="FIFO">➡️ FIFO (Primeras Entradas, Primeras Salidas)</option>
+                    <option value="LIFO">⬅️ LIFO (Últimas Entradas, Primeras Salidas)</option>
+                </select>
+            </div>
         </div>
 
         <!-- 🔥 CHECKBOX CONTABILIDAD -->
-        <div class="form-group checkbox-container">
+        <div class="form-group checkbox-container" style="margin-top: 15px;">
             <input type="checkbox" [(ngModel)]="negocioForm.obligadoContabilidad" id="contabilidadCheck">
             <label for="contabilidadCheck">Obligado a llevar contabilidad</label>
         </div>

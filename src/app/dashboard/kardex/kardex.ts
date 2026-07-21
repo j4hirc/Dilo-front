@@ -2,12 +2,13 @@ import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router'; 
 import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-kardex',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterLink], 
   templateUrl: './kardex.html',
   styleUrls: ['./kardex.css'],
 })
@@ -21,7 +22,6 @@ export class Kardex implements OnInit {
   productos: any[] = [];
   bodegas: any[] = [];
   inventarioTotal: any[] = []; 
-  proveedores: any[] = []; // 🔥 NUEVA LISTA DE PROVEEDORES
   bodegasOrigenDisponibles: any[] = []; 
   maxCantidad: number | null = null; 
 
@@ -29,8 +29,12 @@ export class Kardex implements OnInit {
   negocioId: number | null = null;
   private apiUrl = 'https://dilo-backend-mxlu.onrender.com/api/v1';
 
+  // 🔥 VARIABLES DE FILTROS AVANZADOS
   searchTerm: string = '';
   filtroTipo: string = ''; 
+  bodegaFiltro: string | number = ''; 
+  fechaInicio: string = ''; 
+  fechaFin: string = ''; 
 
   showModal = false;
   
@@ -42,8 +46,7 @@ export class Kardex implements OnInit {
     cantidad: 1,
     costoUnitario: null as number | null,
     documentoReferencia: '',
-    motivo: '',
-    proveedorId: null as number | null // 🔥 NUEVO CAMPO
+    motivo: ''
   };
 
   ngOnInit(): void {
@@ -55,8 +58,10 @@ export class Kardex implements OnInit {
       this.cargarKardex(this.negocioId);
       this.cargarListas(this.negocioId);
     } else {
-      this.isLoading = false;
-      this.cdr.detectChanges();
+      setTimeout(() => {
+        this.isLoading = false;
+        this.cdr.detectChanges();
+      });
     }
   }
 
@@ -75,8 +80,10 @@ export class Kardex implements OnInit {
       },
       error: (err) => {
         console.error('Error al cargar Kardex:', err);
-        this.isLoading = false;
-        this.cdr.detectChanges();
+        setTimeout(() => {
+          this.isLoading = false;
+          this.cdr.detectChanges();
+        });
       }
     });
   }
@@ -92,27 +99,67 @@ export class Kardex implements OnInit {
       this.bodegasOrigenDisponibles = [...res]; 
     });
     this.http.get<any[]>(`${this.apiUrl}/negocios/${id}/inventario`, { headers }).subscribe(res => this.inventarioTotal = res);
-    
-    // 🔥 NUEVO: Descargamos la lista de proveedores
-    this.http.get<any[]>(`${this.apiUrl}/negocios/${id}/proveedores`, { headers }).subscribe(res => this.proveedores = res);
   }
 
+  // 🔥 FUNCIÓN PARA LIMPIAR TODOS LOS FILTROS
+  limpiarFiltros() {
+      this.searchTerm = '';
+      this.filtroTipo = '';
+      this.bodegaFiltro = '';
+      this.fechaInicio = '';
+      this.fechaFin = '';
+      this.aplicarFiltros();
+  }
+
+  
   aplicarFiltros() {
     let result = this.kardex;
     
+    // 1. Filtro por Tipo
     if (this.filtroTipo) {
       result = result.filter(k => k.tipo === this.filtroTipo);
     }
 
+    // 2. Filtro por Bodega (BUSCANDO POR NOMBRE PARA EVITAR EL BUG DEL ID FALTANTE)
+    if (this.bodegaFiltro && this.bodegaFiltro !== '') {
+        const idBodegaBuscada = Number(this.bodegaFiltro);
+        
+        // Buscamos el nombre de la bodega que seleccionaste
+        const bodegaEncontrada = this.bodegas.find(b => b.id === idBodegaBuscada);
+        
+        if (bodegaEncontrada) {
+            const nombreBodega = bodegaEncontrada.nombre;
+            
+            result = result.filter(k => {
+                // Comparamos los nombres exactos que vienen del backend
+                const esOrigen = k.bodegaOrigenNombre === nombreBodega;
+                const esDestino = k.bodegaDestinoNombre === nombreBodega;
+                
+                return esOrigen || esDestino;
+            });
+        }
+    }
+
+    // 3. Rango de Fechas
+    if (this.fechaInicio) {
+        const inicioTimeStamp = new Date(this.fechaInicio + 'T00:00:00').getTime();
+        result = result.filter(k => new Date(k.fechaTransaccion).getTime() >= inicioTimeStamp);
+    }
+
+    if (this.fechaFin) {
+        const finDate = new Date(this.fechaFin + 'T23:59:59');
+        result = result.filter(k => new Date(k.fechaTransaccion).getTime() <= finDate.getTime());
+    }
+
+    // 4. Búsqueda de Texto Abierta (Producto, Lote, Doc, Motivo, o Responsable)
     if (this.searchTerm.trim()) {
       const term = this.searchTerm.toLowerCase();
       result = result.filter(k => 
         (k.productoNombre && k.productoNombre.toLowerCase().includes(term)) ||
-        (k.bodegaOrigenNombre && k.bodegaOrigenNombre.toLowerCase().includes(term)) ||
-        (k.bodegaDestinoNombre && k.bodegaDestinoNombre.toLowerCase().includes(term)) ||
         (k.numeroLote && k.numeroLote.toLowerCase().includes(term)) ||
         (k.documentoReferencia && k.documentoReferencia.toLowerCase().includes(term)) ||
-        (k.motivo && k.motivo.toLowerCase().includes(term))
+        (k.motivo && k.motivo.toLowerCase().includes(term)) ||
+        (k.usuarioResponsableNombre && k.usuarioResponsableNombre.toLowerCase().includes(term))
       );
     }
     
@@ -129,8 +176,7 @@ export class Kardex implements OnInit {
         cantidad: 1, 
         costoUnitario: null,
         documentoReferencia: '',
-        motivo: '',
-        proveedorId: null // 🔥 Reseteamos proveedor
+        motivo: '' 
     };
     this.maxCantidad = null;
     this.bodegasOrigenDisponibles = [...this.bodegas];
@@ -148,7 +194,6 @@ export class Kardex implements OnInit {
     this.transaccionForm.cantidad = 1;
     this.transaccionForm.costoUnitario = null;
     this.transaccionForm.documentoReferencia = '';
-    this.transaccionForm.proveedorId = null;
     this.evaluarDisponibilidad();
   }
 
@@ -230,16 +275,6 @@ export class Kardex implements OnInit {
       }
     }
 
-    let motivoFinal = this.transaccionForm.motivo;
-
-    // 🔥 MAGIA AQUÍ: Si hay proveedor, lo inyectamos en el motivo para que se vea hermoso en la tabla.
-    if (this.transaccionForm.tipo === 'INGRESO' && this.transaccionForm.proveedorId) {
-        const prov = this.proveedores.find(p => p.id === this.transaccionForm.proveedorId);
-        if (prov) {
-            motivoFinal = `${this.transaccionForm.motivo} (Prov: ${prov.nombre})`;
-        }
-    }
-
     const userStr = localStorage.getItem('usuario');
     const usuarioLogueado = userStr ? JSON.parse(userStr) : null;
     const emailUsuario = usuarioLogueado?.email || '';
@@ -248,16 +283,15 @@ export class Kardex implements OnInit {
     const cleanToken = rawToken.replace(/['"]+/g, ''); 
     const headers = new HttpHeaders().set('Authorization', `Bearer ${cleanToken}`);
 
-    Swal.fire({ title: 'Registrando transacción...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+    Swal.fire({ title: 'Registrando ajuste...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
-    // Armar DTO final
     const payload = {
         tipo: this.transaccionForm.tipo,
         productoId: this.transaccionForm.productoId,
         bodegaOrigenId: this.transaccionForm.bodegaOrigenId,
         bodegaDestinoId: this.transaccionForm.bodegaDestinoId,
         cantidad: this.transaccionForm.cantidad,
-        motivo: motivoFinal, // Enviamos el motivo enriquecido
+        motivo: this.transaccionForm.motivo, 
         costoUnitario: this.transaccionForm.costoUnitario,
         documentoReferencia: this.transaccionForm.documentoReferencia
     };
@@ -269,7 +303,7 @@ export class Kardex implements OnInit {
           
           Swal.fire({
             title: '¡Éxito!',
-            text: 'Movimiento registrado correctamente en el Kardex.',
+            text: 'Ajuste manual registrado correctamente en el Kardex.',
             icon: 'success',
             confirmButtonColor: '#ed8936'
           }).then(() => {
@@ -280,7 +314,7 @@ export class Kardex implements OnInit {
         error: (err) => {
           Swal.close();
           console.error(err);
-          Swal.fire('Error', err.error?.message || 'No se pudo registrar la transacción. Revisa tu stock disponible.', 'error');
+          Swal.fire('Error', err.error?.message || 'No se pudo registrar la transacción.', 'error');
         }
       });
   }

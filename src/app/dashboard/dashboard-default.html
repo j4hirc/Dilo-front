@@ -18,11 +18,17 @@
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
                 Facturas
             </a>
+            
+            <!-- 🔥 NOMBRE CAMBIADO A ABASTECIMIENTO -->
+            <a routerLink="/dashboard/compras" routerLinkActive="active" class="menu-item" (click)="isSidebarOpen = false">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
+                Abastecimiento
+            </a>
+
             <a routerLink="/dashboard/clientes" routerLinkActive="active" class="menu-item" (click)="isSidebarOpen = false">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                 Clientes
             </a>
-            <!-- 🔥 NUEVO ENLACE: PROVEEDORES -->
             <a routerLink="/dashboard/proveedores" routerLinkActive="active" class="menu-item" (click)="isSidebarOpen = false">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
                 Proveedores
@@ -65,14 +71,14 @@
 
         <div class="sidebar-footer">
             <div class="user-info">
-                <div class="user-avatar-small" 
-                     [ngClass]="{'orange-bg': !usuarioLogueado?.fotoPerfil}" 
-                     [style.background-image]="usuarioLogueado?.fotoPerfil ? 'url(' + usuarioLogueado.fotoPerfil + ')' : 'none'" 
-                     style="background-size: cover; background-position: center;">
+                <!-- 🔥 FIX IMAGEN DE USUARIO: Uso de <img> directa -->
+                <div class="user-avatar-small" [ngClass]="{'orange-bg': !usuarioLogueado?.fotoPerfil}">
+                    <img *ngIf="usuarioLogueado?.fotoPerfil" [src]="usuarioLogueado.fotoPerfil" alt="Foto Perfil" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
                     <span *ngIf="!usuarioLogueado?.fotoPerfil">
                         {{ usuarioLogueado?.primerNombre ? usuarioLogueado.primerNombre.substring(0, 2).toUpperCase() : 'US' }}
                     </span>
                 </div>
+                
                 <div class="user-details">
                     <h4>{{ usuarioLogueado?.primerNombre || 'Mi Negocio' }}</h4>
                     <p>{{ usuarioLogueado?.email }}</p>
@@ -99,14 +105,12 @@
             
             <div class="header-actions">
                 
-                <!-- 🔥 NUEVO: SISTEMA DE NOTIFICACIONES / CADUCIDAD -->
                 <div class="notification-wrapper">
                     <button class="notification-btn" (click)="toggleNotificaciones()">
                         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
                         <span class="notification-badge" *ngIf="alertasCaducidad.length > 0">{{ alertasCaducidad.length }}</span>
                     </button>
 
-                    <!-- Dropdown Flotante -->
                     <div class="notification-dropdown" *ngIf="showNotificaciones">
                         <div class="dropdown-header">
                             <h4>Alertas de Vencimiento</h4>
@@ -134,10 +138,9 @@
                     </div>
                 </div>
 
-                <div class="user-avatar" 
-                     [ngClass]="{'orange-bg': !usuarioLogueado?.fotoPerfil}" 
-                     [style.background-image]="usuarioLogueado?.fotoPerfil ? 'url(' + usuarioLogueado.fotoPerfil + ')' : 'none'" 
-                     style="background-size: cover; background-position: center;">
+                <!-- 🔥 FIX IMAGEN DE USUARIO TOP: Uso de <img> directa -->
+                <div class="user-avatar" [ngClass]="{'orange-bg': !usuarioLogueado?.fotoPerfil}">
+                    <img *ngIf="usuarioLogueado?.fotoPerfil" [src]="usuarioLogueado.fotoPerfil" alt="Foto Perfil" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
                     <span *ngIf="!usuarioLogueado?.fotoPerfil">
                         {{ usuarioLogueado?.primerNombre ? usuarioLogueado.primerNombre.substring(0, 2).toUpperCase() : 'EC' }}
                     </span>

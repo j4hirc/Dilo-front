@@ -1,0 +1,188 @@
+/* =========================================
+   ESTILOS DE UNIRSE A NEGOCIO
+========================================= */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in-up {
+  animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.onboarding-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: #F8FAFC;
+  font-family: 'Inter', system-ui, sans-serif;
+  padding: 1.5rem;
+}
+
+.action-card {
+  background: #FFFFFF;
+  width: 100%;
+  max-width: 460px;
+  border-radius: 24px;
+  box-shadow: 0 10px 40px -10px rgba(15, 23, 42, 0.08);
+  border: 1px solid #E2E8F0;
+  padding: 2.5rem;
+}
+
+.card-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.welcome-icon {
+  width: 56px;
+  height: 56px;
+  background: #0F172A;
+  color: #FFFFFF;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  margin: 0 auto 1.25rem auto;
+  box-shadow: 0 8px 16px -4px rgba(15, 23, 42, 0.15);
+}
+
+.card-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #0F172A;
+  margin-bottom: 0.5rem;
+  letter-spacing: -0.02em;
+}
+
+.card-subtitle {
+  color: #64748B;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.formulario {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.grupo-input {
+  display: flex;
+  flex-direction: column;
+}
+
+.grupo-input label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #1E293B;
+  margin-bottom: 0.4rem;
+}
+
+.grupo-input input {
+  padding: 0.875rem 1rem;
+  border: 1px solid #CBD5E1;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  color: #0F172A;
+  background-color: #FFFFFF;
+  outline: none;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+
+.grupo-input input:focus {
+  border-color: #0F172A;
+  box-shadow: 0 0 0 4px rgba(15, 23, 42, 0.05);
+}
+
+/* SELECT PREMIUM */
+.select-premium {
+  width: 100%;
+  padding: 0.875rem 1rem;
+  border: 1px solid #CBD5E1;
+  border-radius: 12px;
+  background-color: #FFFFFF;
+  color: #0F172A;
+  font-size: 0.95rem;
+  font-weight: 500;
+  outline: none;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+
+.select-premium:focus {
+  border-color: #0F172A;
+  box-shadow: 0 0 0 4px rgba(15, 23, 42, 0.05);
+}
+
+/* VALIDACIONES */
+.input-error {
+  border-color: #EF4444 !important;
+  background-color: #FEF2F2 !important;
+}
+
+.mensaje-error {
+  color: #EF4444;
+  font-size: 0.75rem;
+  font-weight: 500;
+  margin-top: 0.4rem;
+}
+
+/* BOTÓN */
+.boton-primario {
+  background-color: #0F172A;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 12px;
+  padding: 1rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+  margin-top: 0.5rem;
+  font-family: inherit;
+}
+
+.boton-primario:hover:not(:disabled) {
+  background-color: #1E293B;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(15, 23, 42, 0.2);
+}
+
+.boton-primario:disabled {
+  background-color: #94A3B8;
+  cursor: not-allowed;
+}
+
+/* FOOTER */
+.card-footer {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px dashed #E2E8F0;
+  display: flex;
+  justify-content: center;
+}
+
+.enlace-regreso {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #64748B;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.enlace-regreso:hover {
+  color: #0F172A;
+}
+
+@media (max-width: 480px) {
+  .action-card { padding: 1.5rem; }
+}

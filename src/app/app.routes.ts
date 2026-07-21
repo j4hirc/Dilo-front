@@ -5,21 +5,30 @@ export const routes: Routes = [
   { path: 'login', loadComponent: () => import('./auth/login/login').then(m => m.Login) },
   { path: 'registro', loadComponent: () => import('./auth/registro/registro').then(m => m.Registro) },
 
+ 
+  { path: 'onboarding-business', loadComponent: () => import('./auth/onboarding-business/onboarding-business').then(m => m.OnboardingBusiness) },
+  { path: 'crear-negocio', loadComponent: () => import('./auth/onboarding-business/crearNegocio/crear-negocio').then(m => m.CrearNegocio) },
+  { path: 'unir-negocio', loadComponent: () => import('./auth/onboarding-business/unirNegocio/unir-negocio').then(m => m.UnirNegocio) },
+  { path: 'select-business', loadComponent: () => import('./auth/select-business/select-business').then(m => m.SelectBusiness) },
+  { path: 'select-role', loadComponent: () => import('./auth/select-role/select-role').then(m => m.SelectRole) },
+
   {
     path: 'dashboard',
     loadComponent: () => import('./dashboard/dashboard-default').then(m => m.DashboardDefault),
     children: [
       { path: 'propietario', loadComponent: () => import('./dashboard/propietario/propietario').then(m => m.Propietario) },
       { path: 'facturas', loadComponent: () => import('./dashboard/facturas/facturas').then(m => m.Facturas) },
+      
+      // 🔥 NUEVA RUTA DE COMPRAS
+      { path: 'compras', loadComponent: () => import('./dashboard/abastecimiento/compras').then(m => m.Compras) },
+      
       { path: 'clientes', loadComponent: () => import('./dashboard/clientes/clientes').then(m => m.Clientes) },
+      { path: 'proveedores', loadComponent: () => import('./dashboard/proveedores/proveedores').then(m => m.Proveedores) },
       { path: 'productos', loadComponent: () => import('./dashboard/productos/productos').then(m => m.Productos) },
       { path: 'categorias', loadComponent: () => import('./dashboard/categorias/categorias').then(m => m.Categorias) },
       { path: 'bodegas', loadComponent: () => import('./dashboard/bodegas/bodegas').then(m => m.Bodegas) },
       { path: 'inventario', loadComponent: () => import('./dashboard/inventario/inventario').then(m => m.Inventario) },
       { path: 'kardex', loadComponent: () => import('./dashboard/kardex/kardex').then(m => m.Kardex) },
-      
-      // 🔥 NUEVA RUTA DE PROVEEDORES
-      { path: 'proveedores', loadComponent: () => import('./dashboard/proveedores/proveedores').then(m => m.Proveedores) },
       
       { path: 'equipo', loadComponent: () => import('./dashboard/equipo/equipo').then(m => m.Equipo) },
       { path: 'configuracion', loadComponent: () => import('./dashboard/configuracion/configuracion').then(m => m.Configuracion) },
