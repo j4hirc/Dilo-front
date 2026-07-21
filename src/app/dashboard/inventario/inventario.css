@@ -164,3 +164,105 @@
     display: inline-block;
     white-space: nowrap;
 }
+
+
+/* =========================================
+   🔥 INSTRUCCIONES Y FILTROS AVANZADOS
+   ========================================= */
+
+/* Banner de Instrucciones */
+.info-banner {
+    background-color: #eff6ff;
+    border: 1px solid #bfdbfe;
+    padding: 12px 20px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: #1e3a8a;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.info-banner p {
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+/* Barra de Filtros Avanzada */
+.advanced-filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    padding: 16px 24px;
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.flex-grow {
+    flex: 1 1 280px;
+}
+
+.filter-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+}
+
+.custom-select-small {
+    padding: 8px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background-color: white;
+    font-size: 0.85rem;
+    color: #334155;
+    outline: none;
+    height: 38px;
+    min-width: 180px;
+    cursor: pointer;
+}
+
+.custom-select-small:focus {
+    border-color: #f97316;
+    box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
+}
+
+/* Botón de limpiar */
+.btn-clear-filters {
+    background: #fee2e2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+    height: 38px;
+    width: 38px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-clear-filters:hover {
+    background: #fca5a5;
+}
+
+@media (max-width: 768px) {
+    .filter-controls {
+        width: 100%;
+        justify-content: flex-start;
+    }
+    .custom-select-small {
+        flex: 1 1 100%;
+    }
+    .info-banner {
+        align-items: flex-start;
+    }
+    .info-banner svg {
+        min-width: 20px;
+        margin-top: 2px;
+    }
+}

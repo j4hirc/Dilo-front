@@ -49,6 +49,8 @@ export class Inventario implements OnInit {
     }
   }
 
+  
+
   cargarInventario(id: number) {
     this.isLoading = true;
     const rawToken = localStorage.getItem('dilo_token') || '';
@@ -97,6 +99,13 @@ export class Inventario implements OnInit {
     this.inventarioFiltrado = result;
     this.calcularTotales(); 
     this.cdr.detectChanges();
+  }
+
+  // 🔥 NUEVO: Limpia los filtros rápidamente
+  limpiarFiltros() {
+      this.searchTerm = '';
+      this.bodegaSeleccionada = '';
+      this.aplicarFiltros();
   }
 
   calcularTotales() {
