@@ -282,4 +282,12 @@ export class Productos implements OnInit {
       Swal.fire('Error del Servidor', 'Ocurrió un error al guardar el producto. Revisa los logs de Java.', 'error');
     }
   }
+
+
+
+  limpiarFiltros() {
+      this.searchTerm = '';
+      this.categoriaFiltro = '';
+      this.filtrarProductos();
+  }
 }

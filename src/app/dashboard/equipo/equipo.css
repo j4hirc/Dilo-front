@@ -1,406 +1,151 @@
 @import '../productos/productos.css';
 
-/* =========================================
-   CÓDIGO DE INVITACIÓN (Arriba a la derecha)
-   ========================================= */
-.code-container {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    background-color: #fff7ed;
-    border: 2px dashed var(--primary-orange, #ed8936);
-    padding: 10px 20px;
-    border-radius: 12px;
-    cursor: pointer;
-    transition: all 0.2s;
-    user-select: none;
-}
-
-.code-container:hover {
-    background-color: #ffedd5;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 10px rgba(237, 137, 54, 0.15);
-}
-
-.code-label {
-    font-size: 0.85rem;
-    color: #9a3412;
-    font-weight: 700;
-}
-
-.code-value {
-    font-size: 1.5rem;
-    font-weight: 900;
-    color: #c2410c;
-    letter-spacing: 3px;
-}
-
-.copy-icon { font-size: 1.3rem; }
-
-/* =========================================
-   TÍTULOS DE SECCIÓN
-   ========================================= */
-.section-title {
-    margin: 30px 0 15px 0;
-    border-bottom: 2px solid var(--border-color, #e2e8f0);
-    padding-bottom: 10px;
-}
-
-.section-title h3 {
-    margin: 0;
-    font-size: 1.25rem;
-    color: var(--text-main);
-    font-weight: 800;
-}
-
-.section-title span {
-    color: var(--primary-orange);
-    font-weight: 900;
-}
-
-.mb-4 { margin-bottom: 30px; }
-
-/* =========================================
-   GRID Y TARJETAS DEL EQUIPO
-   ========================================= */
-.team-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 20px;
-}
-
-.team-card {
-    border: 1px solid var(--border-color, #e2e8f0);
-    border-radius: 16px;
-    padding: 25px 20px;
-    display: flex;
-    align-items: center; /* Alineación centrada para las tarjetas pendientes */
-    position: relative;
-    background: #ffffff;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-    transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.team-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 15px rgba(0,0,0,0.05);
-}
-
-/* Tarjeta especial para pendientes (Color amarillento suave) */
-.pending-card {
-    border-color: #fef08a;
-    background-color: #fefce8;
-}
-
-.user-avatar-medium {
-    width: 55px;
-    height: 55px;
-    border-radius: 12px;
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.3rem;
-    font-weight: 700;
-    margin-right: 18px;
-    flex-shrink: 0;
-}
-
-.orange-bg { background: linear-gradient(135deg, var(--primary-orange), #f97316); }
-.gray-bg { background: linear-gradient(135deg, #94a3b8, #64748b); }
-
-.team-info {
-    flex: 1;
-    overflow: hidden;
-}
-
-.team-info h4 { 
-    margin: 0 0 3px 0; 
-    font-size: 1.1rem; 
-    color: var(--text-main); 
-    font-weight: 700;
-}
-
-.email-text {
-    margin: 0;
-    font-size: 0.85rem;
-    color: var(--text-muted);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.role-tag {
-    background-color: #fff7ed;
-    color: var(--primary-orange);
-    font-size: 0.75rem;
-    font-weight: 700;
-    padding: 5px 12px;
-    border-radius: 20px;
-    border: 1px solid #ffedd5;
-}
-
-.status-tag {
-    font-size: 0.75rem;
-    font-weight: 700;
-    padding: 5px 12px;
-    border-radius: 20px;
-}
-.status-yellow { background-color: #fef9c3; color: #ca8a04; border: 1px solid #fef08a;}
-
-.status-dot {
-    position: absolute;
-    top: 20px;
-    right: 20px;
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-}
-.active-dot { background-color: #22c55e; box-shadow: 0 0 0 4px #dcfce7; }
-.inactive-dot { background-color: #94a3b8; }
-
-/* =========================================
-   BOTONES DE ACEPTAR / RECHAZAR SOLICITUD
-   ========================================= */
-.request-actions {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-left: 15px;
-}
-
-.btn-icon-success, .btn-icon-danger {
-    background: white;
-    border: 2px solid;
-    border-radius: 50%;
-    width: 38px;
-    height: 38px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s;
-    font-size: 1.1rem;
-    font-weight: 900;
-}
-
-.btn-icon-success { border-color: #22c55e; color: #22c55e; }
-.btn-icon-success:hover { background-color: #22c55e; color: white; transform: scale(1.1); }
-
-.btn-icon-danger { border-color: #ef4444; color: #ef4444; }
-.btn-icon-danger:hover { background-color: #ef4444; color: white; transform: scale(1.1); }
-
-/* =========================================
-   BOTÓN DE DESACTIVAR (Para los activos)
-   ========================================= */
-.team-actions {
-    /* Eliminamos el position: absolute, bottom y right */
-    margin-left: 15px;
-    flex-shrink: 0; /* Evita que el botón se aplaste si el nombre es muy largo */
-}
-.btn-outline-danger {
-    background: transparent;
-    border: 1px solid #fee2e2;
-    color: #ef4444;
-    padding: 6px 12px;
-    border-radius: 8px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.btn-outline-danger:hover {
-    background-color: #fef2f2;
-    border-color: #ef4444;
-}
-
-/* RESPONSIVE */
-@media (max-width: 768px) {
-    .page-header {
-        flex-direction: column;
-        align-items: stretch;
-    }
-    .code-container {
-        justify-content: space-between;
-        margin-top: 15px;
-    }
-    .team-grid {
-        grid-template-columns: 1fr;
-    }
-    .request-actions {
-        flex-direction: row;
-    }
-    
-.team-card {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 15px;
-    }
-
-    .team-actions {
-        margin-left: 0;
-        width: 100%;
-    }
-
-    .btn-outline-danger {
-        width: 100%;
-        justify-content: center;
-    }
-}
-
-
-/* =========================================
-   BOTÓN PARA EDITAR ROL
-   ========================================= */
-.btn-edit-role {
-    background-color: #f8fafc; /* Fondo un poco más sutil */
-    border: 1px solid #cbd5e1;
-    color: #64748b;
-    border-radius: 6px;
-    width: 28px; /* Un pelín más grande para que el SVG respire */
-    height: 28px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s;
-    padding: 0;
-    flex-shrink: 0; /* Evita que se deforme el botón */
-}
-
-.btn-edit-role:hover {
-    background-color: var(--primary-orange);
-    color: white;
-    border-color: var(--primary-orange);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 6px rgba(237, 137, 54, 0.2);
-}
-
-@import '../productos/productos.css';
-
 /* Animación de entrada */
 .fade-in { animation: fadeIn 0.4s ease-in-out; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
 /* =========================================
-   CÓDIGO DE INVITACIÓN WIDGET
+   🔥 BANNER DE INSTRUCCIONES
+   ========================================= */
+.info-banner {
+    background-color: #eff6ff;
+    border: 1px solid #bfdbfe;
+    padding: 12px 20px;
+    border-radius: 12px;
+    margin-bottom: 25px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: #1e3a8a;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.info-banner p {
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+/* =========================================
+   🔥 CÓDIGO DE INVITACIÓN (WIDGET TIPO TOKEN SECRETO)
    ========================================= */
 .code-container {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: linear-gradient(135deg, #fff7ed, #ffedd5);
-    border: 2px dashed #fbd38d;
+    background: #0f172a; 
+    border: 1px solid #1e293b;
     padding: 12px 24px;
-    border-radius: 16px;
+    border-radius: 12px;
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     user-select: none;
-    min-width: 250px;
+    min-width: 260px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
 .code-container:hover {
-    transform: translateY(-3px) scale(1.02);
-    box-shadow: 0 10px 25px rgba(237, 137, 54, 0.15);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(249, 115, 22, 0.2);
     border-color: var(--primary-orange);
 }
 
 .code-info { display: flex; flex-direction: column; }
-.code-label { font-size: 0.7rem; color: #9a3412; font-weight: 800; letter-spacing: 0.5px; margin-bottom: 2px; }
-.code-value { font-size: 1.6rem; font-weight: 900; color: #c2410c; letter-spacing: 4px; line-height: 1; }
-.copy-icon-wrapper { background: white; padding: 10px; border-radius: 12px; color: var(--primary-orange); box-shadow: 0 4px 6px rgba(0,0,0,0.05); transition: all 0.2s; }
-.code-container:hover .copy-icon-wrapper { background: var(--primary-orange); color: white; }
+.code-label { font-size: 0.65rem; color: #94a3b8; font-weight: 700; letter-spacing: 1px; margin-bottom: 2px; }
+.code-value { font-size: 1.5rem; font-weight: 900; color: #f97316; letter-spacing: 5px; line-height: 1; font-family: monospace; }
+.copy-icon-wrapper { background: rgba(255,255,255,0.1); padding: 10px; border-radius: 10px; color: white; transition: all 0.2s; }
+.code-container:hover .copy-icon-wrapper { background: var(--primary-orange); color: white; transform: scale(1.05); }
 
 /* =========================================
-   TÍTULOS DE SECCIÓN
+   🔥 TÍTULOS DE SECCIÓN
    ========================================= */
 .section-title {
     margin: 35px 0 20px 0;
     display: flex;
     align-items: center;
 }
-.section-title h3 { margin: 0; font-size: 1.3rem; color: var(--text-main); font-weight: 800; display: flex; align-items: center; gap: 10px; }
-.badge-count { background-color: #fff7ed; color: var(--primary-orange); font-size: 0.9rem; padding: 4px 10px; border-radius: 20px; }
+.section-title h3 { margin: 0; font-size: 1.25rem; color: var(--text-main); font-weight: 800; display: flex; align-items: center; gap: 10px; }
+.badge-count { background-color: #fee2e2; color: #dc2626; font-size: 0.85rem; padding: 2px 10px; border-radius: 20px; font-weight: 800;}
 .mb-4 { margin-bottom: 30px; }
 
 /* =========================================
-   GRID Y TARJETAS DEL EQUIPO
+   🔥 GRID Y TARJETAS DEL EQUIPO
    ========================================= */
 .team-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-    gap: 24px;
+    /* Cambiamos a 290px para que se adapte mejor a tablets pequeñas antes de saltar a móvil */
+    grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+    gap: 20px;
 }
 
 .team-card {
-    border: 1px solid #f1f5f9;
-    border-radius: 20px;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
     padding: 24px;
     display: flex;
     align-items: center;
-    gap: 20px;
+    flex-wrap: wrap; /* 🔥 Permite que los elementos bajen si no caben */
+    gap: 15px;
     position: relative;
     background: #ffffff;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.02);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.02);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .team-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 15px 35px rgba(0,0,0,0.06);
-    border-color: #e2e8f0;
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.06);
+    border-color: #cbd5e1;
 }
 
-.pending-card { background: linear-gradient(to right, #ffffff, #fefce8); border-color: #fef08a; }
-.pending-card:hover { box-shadow: 0 15px 35px rgba(202, 138, 4, 0.08); }
+/* Tarjeta de pendientes (Fondo sutil crema) */
+.pending-card { background: #fefce8; border-color: #fef08a; }
+.pending-card:hover { box-shadow: 0 10px 25px rgba(202, 138, 4, 0.08); border-color: #fde047; }
 
 .user-avatar-medium {
-    width: 60px;
-    height: 60px;
-    border-radius: 16px;
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
     color: white;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.4rem;
+    font-size: 1.3rem;
     font-weight: 800;
     flex-shrink: 0;
     box-shadow: 0 4px 10px rgba(0,0,0,0.05);
 }
 
-.orange-bg { background: linear-gradient(135deg, var(--primary-orange), #f97316); }
-.gray-bg { background: linear-gradient(135deg, #94a3b8, #64748b); }
+.orange-bg { background: linear-gradient(135deg, var(--primary-orange), #ea580c); }
+.gray-bg { background: linear-gradient(135deg, #94a3b8, #475569); }
 
-.team-info { flex: 1; min-width: 0; }
-.team-info h4 { margin: 0 0 4px 0; font-size: 1.15rem; color: var(--text-main); font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.team-info { flex: 1; min-width: 150px; } /* 🔥 Mínimo ancho para que no se aplaste el texto */
+.team-info h4 { margin: 0 0 4px 0; font-size: 1.1rem; color: var(--text-main); font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .email-text { margin: 0; font-size: 0.85rem; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* ROLES */
 .role-container { margin-top: 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.role-tag { background-color: #f8fafc; color: #475569; font-size: 0.75rem; font-weight: 800; padding: 6px 14px; border-radius: 20px; border: 1px solid #e2e8f0; letter-spacing: 0.5px; }
+.role-tag { background-color: #f1f5f9; color: #334155; font-size: 0.75rem; font-weight: 700; padding: 4px 12px; border-radius: 20px; border: 1px solid #cbd5e1; letter-spacing: 0.5px; }
 
 /* =========================================
-   BOTONES Y ESTADOS
+   🔥 BOTONES Y ESTADOS
    ========================================= */
-.status-tag { font-size: 0.75rem; font-weight: 700; padding: 5px 12px; border-radius: 20px; }
+.status-tag { font-size: 0.7rem; font-weight: 800; padding: 4px 10px; border-radius: 20px; text-transform: uppercase;}
 .status-yellow { background-color: #fef9c3; color: #ca8a04; border: 1px solid #fef08a;}
 
-.status-dot { position: absolute; top: 24px; right: 24px; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; }
+.status-dot { position: absolute; top: 20px; right: 20px; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; z-index: 2; }
 .active-dot { background-color: #22c55e; box-shadow: 0 0 0 2px #dcfce7; }
 .inactive-dot { background-color: #94a3b8; }
 
-.team-actions, .request-actions { margin-left: auto; flex-shrink: 0; display: flex; gap: 10px; }
-.request-actions { flex-direction: column; }
+.team-actions, .request-actions { flex-shrink: 0; display: flex; gap: 8px; }
 
-/* Botones Soft-UI Pendientes */
+/* Botones de Solicitud (Horizontales) */
+.request-actions { flex-direction: row; align-items: center; margin-left: auto; }
+
 .btn-icon-success, .btn-icon-danger {
-    border-radius: 12px;
-    width: 40px;
-    height: 40px;
+    border-radius: 10px;
+    width: 42px;
+    height: 42px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -409,19 +154,19 @@
     border: none;
 }
 .btn-icon-success { background: #dcfce7; color: #16a34a; }
-.btn-icon-success:hover { background: #16a34a; color: white; transform: scale(1.05); box-shadow: 0 4px 10px rgba(22, 163, 74, 0.2); }
+.btn-icon-success:hover { background: #16a34a; color: white; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(22, 163, 74, 0.2); }
 
 .btn-icon-danger { background: #fee2e2; color: #dc2626; }
-.btn-icon-danger:hover { background: #dc2626; color: white; transform: scale(1.05); box-shadow: 0 4px 10px rgba(220, 38, 38, 0.2); }
+.btn-icon-danger:hover { background: #dc2626; color: white; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(220, 38, 38, 0.2); }
 
 /* Botón Editar Rol */
 .btn-edit-role {
     background-color: #ffffff;
     border: 1px solid #cbd5e1;
     color: #64748b;
-    border-radius: 50%;
-    width: 30px;
-    height: 30px;
+    border-radius: 8px;
+    width: 28px;
+    height: 28px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -429,35 +174,81 @@
     transition: all 0.2s;
     padding: 0;
 }
-.btn-edit-role:hover { background-color: var(--primary-orange); color: white; border-color: var(--primary-orange); transform: rotate(15deg); box-shadow: 0 4px 10px rgba(237, 137, 54, 0.2); }
+.btn-edit-role:hover { background-color: var(--primary-orange); color: white; border-color: var(--primary-orange); box-shadow: 0 4px 8px rgba(237, 137, 54, 0.2); }
 
 /* Botón Desactivar */
+.team-actions { margin-left: auto; }
 .btn-outline-danger {
     background: transparent;
-    border: 1px solid #fee2e2;
+    border: 1px solid #fecaca;
     color: #ef4444;
-    padding: 8px 16px;
-    border-radius: 10px;
-    font-size: 0.85rem;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 0.8rem;
     font-weight: 700;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     cursor: pointer;
     transition: all 0.2s;
 }
 .btn-outline-danger:hover { background-color: #fef2f2; border-color: #ef4444; }
 
-/* Empty State */
-.empty-state { grid-column: 1 / -1; text-align: center; padding: 60px 20px; color: #64748b; background: #f8fafc; border-radius: 20px; border: 1px dashed #cbd5e1; }
-.empty-icon { font-size: 3rem; margin-bottom: 10px; opacity: 0.5; }
+/* Empty State Profesional */
+.empty-state { grid-column: 1 / -1; text-align: center; padding: 50px 20px; color: #64748b; background: #f8fafc; border-radius: 16px; border: 1px dashed #cbd5e1; font-weight: 500;}
+.empty-icon { margin-bottom: 15px; }
 
-/* RESPONSIVE */
+/* =========================================
+   🔥 RESPONSIVE PERFECTO
+   ========================================= */
 @media (max-width: 768px) {
-    .page-header { flex-direction: column; align-items: stretch; gap: 20px; }
-    .code-container { min-width: 100%; }
-    .team-grid { grid-template-columns: 1fr; }
-    .team-card { flex-direction: column; align-items: flex-start; }
-    .team-actions, .request-actions { margin-left: 0; width: 100%; flex-direction: row; justify-content: flex-end; margin-top: 10px; }
-    .btn-outline-danger { width: 100%; justify-content: center; }
+    .page-header { 
+        flex-direction: column; 
+        align-items: flex-start; 
+        gap: 15px; 
+    }
+    
+    .code-container { 
+        width: 100%; 
+        box-sizing: border-box; 
+    }
+    
+    .info-banner { 
+        align-items: flex-start; 
+    }
+    
+    .info-banner svg { 
+        min-width: 20px; 
+        margin-top: 2px; 
+    }
+    
+    /* En tablets/móviles, forzamos a que los botones bajen ocupando el 100% de la tarjeta */
+    .team-actions, .request-actions { 
+        width: 100%; 
+        margin-left: 0; 
+        margin-top: 10px; 
+        padding-top: 15px; 
+        border-top: 1px solid #f1f5f9; /* Línea separadora sutil */
+        justify-content: flex-end; 
+    }
+
+    .btn-outline-danger { 
+        width: 100%; 
+        justify-content: center; 
+    }
+}
+
+@media (max-width: 480px) {
+    /* Ajustes extra para teléfonos muy pequeños (iPhone SE, etc) */
+    .code-value { font-size: 1.2rem; letter-spacing: 2px; }
+    .code-container { padding: 12px 16px; }
+    
+    .team-card { padding: 16px; }
+    
+    /* Hacemos que los botones de aceptar/rechazar sean grandes y fáciles de tocar */
+    .request-actions { justify-content: space-between; }
+    .btn-icon-success, .btn-icon-danger {
+        flex: 1; /* Ocupan 50% y 50% de la pantalla */
+        border-radius: 8px;
+    }
 }

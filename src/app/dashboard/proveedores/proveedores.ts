@@ -14,6 +14,10 @@ import Swal from 'sweetalert2';
 export class Proveedores implements OnInit {
   private http = inject(HttpClient);
   private cdr = inject(ChangeDetectorRef);
+  filtroEstado: string = '';
+
+
+  
 
   proveedores: any[] = [];
   proveedoresFiltrados: any[] = [];
@@ -82,16 +86,25 @@ cargarProveedores(id: number) {
   }
 
   aplicarFiltros() {
+    let result = this.proveedores;
+
+    // Filtro por Estado
+    if (this.filtroEstado === 'ACTIVO') {
+        result = result.filter(p => p.estado === true);
+    } else if (this.filtroEstado === 'INACTIVO') {
+        result = result.filter(p => p.estado === false);
+    }
+
+    // Filtro por Texto
     if (this.searchTerm.trim()) {
       const term = this.searchTerm.toLowerCase();
-      this.proveedoresFiltrados = this.proveedores.filter(p => 
+      result = result.filter(p => 
         (p.nombre && p.nombre.toLowerCase().includes(term)) ||
         (p.dni && p.dni.toLowerCase().includes(term))
       );
-    } else {
-      this.proveedoresFiltrados = [...this.proveedores];
     }
-    this.cdr.detectChanges();
+    
+    this.proveedoresFiltrados = result;
   }
 
   abrirModalNuevo() {

@@ -1,25 +1,39 @@
 <div class="page-header">
     <div class="header-titles">
         <h2>Catálogo de Productos</h2>
-        <p>Visualiza y gestiona el portafolio de productos y sus márgenes.</p>
+        <p>Visualiza y gestiona el portafolio de productos, costos y márgenes.</p>
     </div>
     <button class="btn-primary" (click)="abrirModalNuevo()">
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
         Nuevo Producto
     </button>
 </div>
 
+<!-- 🔥 BANNER INTUITIVO -->
+<div class="info-banner" *ngIf="!isLoading">
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+    <p><strong>Gestión de Catálogo:</strong> Crea y actualiza los productos que comercializas. Define si un producto controla caducidad e impuestos para automatizar el cálculo en tu facturación e inventario.</p>
+</div>
+
 <div class="card full-height-card">
-    <div class="filter-bar" *ngIf="!isLoading">
-        <div class="search-box">
-            <span class="search-icon">🔍</span>
+    
+    <!-- 🔥 BARRA DE FILTROS AVANZADA -->
+    <div class="advanced-filter-bar" *ngIf="!isLoading">
+        <div class="search-box flex-grow">
+            <span class="search-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            </span>
             <input type="text" placeholder="Buscar por nombre, código o marca..." [(ngModel)]="searchTerm" (input)="filtrarProductos()">
         </div>
-        <div class="category-filter">
-            <select [(ngModel)]="categoriaFiltro" (change)="filtrarProductos()">
-                <option value="">🏷️ Todas las categorías</option>
+        <div class="filter-controls">
+            <select [(ngModel)]="categoriaFiltro" (change)="filtrarProductos()" class="custom-select-small">
+                <option value="">Categoría: Todas</option>
                 <option *ngFor="let cat of categorias" [value]="cat.id">{{ cat.nombre }}</option>
             </select>
+            <!-- Botón Limpiar Filtros -->
+            <button class="btn-clear-filters" *ngIf="searchTerm || categoriaFiltro" (click)="limpiarFiltros()" title="Limpiar Filtros">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
         </div>
     </div>
 
@@ -43,35 +57,42 @@
                     </tr>
                 </thead>
                 <tbody>
+                    <!-- ESTADO VACÍO -->
                     <tr *ngIf="productosFiltrados.length === 0">
-                        <td colspan="7" style="text-align: center; padding: 40px; color: #64748b;">
-                            No se encontraron productos con esos filtros.
+                        <td colspan="7" style="text-align: center; padding: 50px; color: #64748b;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 15px;"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>
+                            <br>No se encontraron productos con esos filtros.
                         </td>
                     </tr>
                     <tr *ngFor="let prod of productosFiltrados">
-                        <td style="font-weight: 600; color: #64748b;">{{ prod.codigoPrincipal }}</td>
+                        <td style="font-weight: 700; color: #64748b; font-size: 0.95rem;">{{ prod.codigoPrincipal }}</td>
                         <td>
                             <div class="product-info-cell">
                                 <div class="product-img-thumb" [style.background-image]="prod.imagen ? 'url(' + prod.imagen + ')' : 'none'">
-                                    <span *ngIf="!prod.imagen">📦</span>
+                                    <span *ngIf="!prod.imagen">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                                    </span>
                                 </div>
                                 <div class="product-details">
                                     <span class="product-name">
                                         {{ prod.nombre }} 
-                                        <span *ngIf="prod.tieneCaducidad" title="Controla Caducidad" style="font-size: 0.85rem;">⏳</span>
                                     </span>
-                                    <span class="product-brand">Marca: {{ prod.marca }} | {{ prod.unidadMedida }}</span>
+                                    <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px;">
+                                        <span class="product-brand">{{ prod.marca }} | {{ prod.unidadMedida }}</span>
+                                        <span *ngIf="prod.tieneCaducidad" class="badge-caducidad" title="Controla Lotes y Caducidad">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                                            Lotes
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
                         </td>
                         <td><span class="tag tag-purple">{{ prod.categoriaNombre }}</span></td>
                         
-                        <!-- 🔥 NUEVO: Columna de Costo Promedio -->
                         <td style="text-align: right; font-weight: 600; color: #ea580c;">
                             ${{ prod.costoPromedioActual | number:'1.2-4' }}
                         </td>
                         
-                        <!-- Precio de Venta (PVP) -->
                         <td style="text-align: right; font-weight: 800; color: #0f172a; font-size: 1.05rem;">
                             ${{ prod.precioUnitario | number:'1.2-2' }}
                         </td>
@@ -81,9 +102,15 @@
                                 {{ prod.grabaIva ? 'Con IVA' : 'Sin IVA' }}
                             </span>
                         </td>
-                        <td class="action-cells" style="justify-content: center;">
-                            <button class="btn-icon text-blue" title="Editar" (click)="abrirModalEditar(prod)">✏️</button>
-                            <button class="btn-icon text-red" title="Eliminar" (click)="eliminarProducto(prod.id)">🗑️</button>
+                        
+                        <!-- ACCIONES -->
+                        <td class="action-cells" style="justify-content: center; gap: 8px;">
+                            <button class="btn-icon text-blue" title="Editar" (click)="abrirModalEditar(prod)">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                            </button>
+                            <button class="btn-icon text-red" title="Eliminar" (click)="eliminarProducto(prod.id)">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                            </button>
                         </td>
                     </tr>
                 </tbody>
@@ -97,78 +124,90 @@
     <div class="modal-content">
         <div class="modal-header">
             <h3>{{ isEditing ? 'Editar Producto' : 'Nuevo Producto' }}</h3>
-            <button class="close-btn" (click)="cerrarModal()">✕</button>
+            <button class="close-btn" (click)="cerrarModal()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
         </div>
         
-        <div class="modal-body modal-body-scrollable">
+        <div class="modal-body modal-body-scrollable" style="background-color: #f8fafc;">
             
             <div class="image-preview-container">
                 <div class="modal-image-preview" [style.background-image]="imagenActual ? 'url(' + imagenActual + ')' : 'none'">
-                    <span *ngIf="!imagenActual">📸</span>
+                    <span *ngIf="!imagenActual">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                    </span>
                 </div>
                 <div class="upload-btn-wrapper">
-                    <button class="btn-outline-small">Cambiar Foto</button>
+                    <button class="btn-outline-small">Subir Fotografía</button>
                     <input type="file" (change)="onFileSelected($event)" accept="image/png, image/jpeg, image/webp" title="Seleccionar nueva imagen">
                 </div>
             </div>
             
-            <div class="form-group">
-                <label>Nombre del Producto *</label>
-                <input type="text" [(ngModel)]="productoForm.nombre" placeholder="Ej: Teclado Mecánico RGB">
-            </div>
-            
-            <div class="form-row">
+            <div class="card-section" style="background: white; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 15px;">
                 <div class="form-group">
-                    <label>Código Principal</label>
-                    <input type="text" [(ngModel)]="productoForm.codigoPrincipal" placeholder="Ej: PROD-001">
+                    <label>Nombre del Producto *</label>
+                    <input type="text" [(ngModel)]="productoForm.nombre" placeholder="Ej: Teclado Mecánico RGB">
                 </div>
-                <div class="form-group">
-                    <label>Marca</label>
-                    <input type="text" [(ngModel)]="productoForm.marca" placeholder="Ej: Logitech">
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Código Principal</label>
+                        <input type="text" [(ngModel)]="productoForm.codigoPrincipal" placeholder="Ej: PROD-001">
+                    </div>
+                    <div class="form-group">
+                        <label>Marca</label>
+                        <input type="text" [(ngModel)]="productoForm.marca" placeholder="Ej: Logitech">
+                    </div>
                 </div>
-            </div>
 
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Precio Unitario ($) *</label>
-                    <input type="number" [(ngModel)]="productoForm.precioUnitario" min="0" step="0.01">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Precio Unitario (PVP) *</label>
+                        <input type="number" [(ngModel)]="productoForm.precioUnitario" min="0" step="0.01" placeholder="0.00">
+                    </div>
+                    <div class="form-group">
+                        <label>Categoría *</label>
+                        <select [(ngModel)]="productoForm.categoriaId" class="custom-select">
+                            <option [ngValue]="0" disabled>Selecciona una categoría</option>
+                            <option *ngFor="let cat of categorias" [ngValue]="cat.id">{{ cat.nombre }}</option>
+                        </select>
+                    </div>
                 </div>
+
                 <div class="form-group">
-                    <label>Categoría *</label>
-                    <select [(ngModel)]="productoForm.categoriaId" class="custom-select">
-                        <option [ngValue]="0" disabled>Selecciona una categoría</option>
-                        <option *ngFor="let cat of categorias" [ngValue]="cat.id">{{ cat.nombre }}</option>
+                    <label>Unidad de Medida *</label>
+                    <select [(ngModel)]="productoForm.unidadMedida" class="custom-select">
+                        <option value="UNIDADES">Unidades (Cajas, Botellas, Piezas)</option>
+                        <option value="LIBRAS">Libras (Peso)</option>
+                        <option value="KILOGRAMOS">Kilogramos (Peso)</option>
+                        <option value="LITROS">Litros (Volumen)</option>
                     </select>
                 </div>
             </div>
 
-            <div class="form-group">
-                <label>Unidad de Medida *</label>
-                <select [(ngModel)]="productoForm.unidadMedida" class="custom-select">
-                    <option value="UNIDADES">Unidades (Cajas, Botellas, Piezas)</option>
-                    <option value="LIBRAS">Libras (Peso)</option>
-                    <option value="KILOGRAMOS">Kilogramos (Peso)</option>
-                    <option value="LITROS">Litros (Volumen)</option>
-                </select>
-            </div>
-
-            <div class="form-row" style="margin-top: 5px; gap: 10px;">
-                <div class="form-group" style="flex: 1; flex-direction: row; align-items: center; gap: 10px; padding: 12px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 0;">
-                    <input type="checkbox" [(ngModel)]="productoForm.grabaIva" id="ivaCheck" style="width: 18px; height: 18px; cursor: pointer; margin: 0;">
-                    <label for="ivaCheck" style="margin: 0; cursor: pointer; color: #0f172a; font-weight: 600;">Graba IVA (15%)</label>
-                </div>
-                
-                <div class="form-group" style="flex: 1; flex-direction: row; align-items: center; gap: 10px; padding: 12px; background: #fffbeb; border-radius: 8px; border: 1px solid #fde68a; margin-bottom: 0;">
-                    <input type="checkbox" [(ngModel)]="productoForm.tieneCaducidad" id="caducidadCheck" style="width: 18px; height: 18px; cursor: pointer; margin: 0;">
-                    <label for="caducidadCheck" style="margin: 0; cursor: pointer; color: #92400e; font-weight: 600;">Tiene Caducidad</label>
+            <div class="card-section" style="background: white; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0;">
+                <h4 style="margin: 0 0 15px 0; font-size: 0.95rem; color: #0f172a;">Configuraciones Especiales</h4>
+                <div class="form-row" style="gap: 15px;">
+                    <div class="form-group" style="flex: 1; flex-direction: row; align-items: center; gap: 10px; padding: 12px 16px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 0;">
+                        <input type="checkbox" [(ngModel)]="productoForm.grabaIva" id="ivaCheck" style="width: 18px; height: 18px; cursor: pointer; margin: 0; accent-color: var(--primary-orange);">
+                        <label for="ivaCheck" style="margin: 0; cursor: pointer; color: #0f172a; font-weight: 700; font-size: 0.9rem;">Graba IVA</label>
+                    </div>
+                    
+                    <div class="form-group" style="flex: 1; flex-direction: row; align-items: center; gap: 10px; padding: 12px 16px; background: #fffbeb; border-radius: 8px; border: 1px solid #fde68a; margin-bottom: 0;">
+                        <input type="checkbox" [(ngModel)]="productoForm.tieneCaducidad" id="caducidadCheck" style="width: 18px; height: 18px; cursor: pointer; margin: 0; accent-color: #d97706;">
+                        <label for="caducidadCheck" style="margin: 0; cursor: pointer; color: #92400e; font-weight: 700; font-size: 0.9rem;">Tiene Caducidad</label>
+                    </div>
                 </div>
             </div>
 
         </div>
 
-        <div class="modal-footer">
+        <div class="modal-footer" style="background: white;">
             <button class="btn-secondary" (click)="cerrarModal()">Cancelar</button>
-            <button class="btn-primary" (click)="guardarProducto()">Guardar Datos</button>
+            <button class="btn-primary" (click)="guardarProducto()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                Guardar Producto
+            </button>
         </div>
     </div>
 </div>
