@@ -2,7 +2,7 @@ import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router'; // 🔥 Importamos el Router
+import { Router } from '@angular/router';
 import Swal from 'sweetalert2';
 
 @Component({
@@ -15,17 +15,15 @@ import Swal from 'sweetalert2';
 export class Configuracion implements OnInit {
   private http = inject(HttpClient);
   private cdr = inject(ChangeDetectorRef);
-  private router = inject(Router); // 🔥 Inyectamos el router para poder sacarlo al login
+  private router = inject(Router);
   
   isLoading = true;
   negocioId: number | null = null;
   private apiUrl = 'https://dilo-backend-mxlu.onrender.com/api/v1';
 
-  // Archivos y vista previa
   selectedFile: File | null = null;
   imagenActual: string | null = null; 
   
-  // DTO exacto al de tu backend (NegocioRequestDTO)
   negocioForm = {
     ruc: '',
     razonSocial: '',
@@ -36,23 +34,18 @@ export class Configuracion implements OnInit {
   };
 
   ngOnInit(): void {
-    // 🔥 BÚSQUEDA A PRUEBA DE BALAS EN LOCALSTORAGE
     const userStr = localStorage.getItem('usuario') || localStorage.getItem('dilo_user');
     const usuarioLogueado = userStr ? JSON.parse(userStr) : null;
     
-    console.log("👀 Revisando qué hay guardado en el navegador (Config):", usuarioLogueado);
-
-    // Buscamos el ID en cualquier llave posible
     this.negocioId = usuarioLogueado?.negocioId || usuarioLogueado?.selectedBusinessId || usuarioLogueado?.idNegocio;
     
     if (this.negocioId) {
       this.cargarNegocio(this.negocioId);
     } else {
-      console.error("🚨 CRÍTICO en Configuración: No hay negocioId en el localStorage.");
+      console.warn("Falta de integridad: No se detectó negocioId en el almacenamiento local.");
       this.isLoading = false;
       this.cdr.detectChanges();
 
-      // 🔥 ALERTA VISUAL PARA LIMPIAR LA SESIÓN ROTA
       Swal.fire({
         icon: 'warning',
         title: 'Sesión desactualizada',
@@ -90,7 +83,7 @@ export class Configuracion implements OnInit {
         this.cdr.detectChanges();
       },
       error: (err) => {
-        console.error('Error al cargar datos del negocio:', err);
+        console.error('Error al cargar la información del negocio:', err);
         this.isLoading = false;
         this.cdr.detectChanges();
       }
@@ -117,7 +110,7 @@ export class Configuracion implements OnInit {
     }
 
     if (!this.negocioForm.ruc || !this.negocioForm.razonSocial || !this.negocioForm.nombreComercial || !this.negocioForm.direccion) {
-      Swal.fire('Campos Incompletos', 'Por favor, llena todos los campos obligatorios (*).', 'warning');
+      Swal.fire('Campos Incompletos', 'Por favor, completa todos los campos obligatorios (*).', 'warning');
       return;
     }
 
@@ -135,10 +128,8 @@ export class Configuracion implements OnInit {
       metodoCosteo: this.negocioForm.metodoCosteo 
     };
 
-    // Empaquetar como lo espera @RequestPart("datos")
     formData.append('datos', new Blob([JSON.stringify(requestDTO)], { type: 'application/json' }));
     
-    // Si eligió un logo nuevo, lo mandamos
     if (this.selectedFile) {
       formData.append('imagen', this.selectedFile);
     }
@@ -155,12 +146,11 @@ export class Configuracion implements OnInit {
         error: (err) => {
           Swal.close();
           console.error(err);
-          Swal.fire('Error', 'Hubo un problema al actualizar el negocio.', 'error');
+          Swal.fire('Error', 'Hubo un problema al actualizar la configuración.', 'error');
         }
       });
   }
 
-  // 🔥 MÉTODO PARA LIMPIAR SESIÓN ROTA
   cerrarSesion() {
     localStorage.removeItem('dilo_token');
     localStorage.removeItem('dilo_user');

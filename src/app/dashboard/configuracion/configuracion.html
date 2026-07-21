@@ -1,13 +1,19 @@
 <div class="page-header">
     <div class="header-titles">
         <h2>Configuración del Negocio</h2>
-        <p>Actualiza la información fiscal, preferencias contables y logo de tu empresa.</p>
+        <p>Actualiza la información fiscal, preferencias contables y la identidad visual de tu empresa.</p>
     </div>
+</div>
+
+<!-- 🔥 BANNER INTUITIVO -->
+<div class="info-banner" *ngIf="!isLoading">
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+    <p><strong>Ajustes Generales:</strong> Los datos registrados aquí aparecerán en tus comprobantes y reportes. Recuerda que el <strong>Método de Costeo</strong> define cómo el sistema calcula el valor de tu inventario y tus márgenes de ganancia.</p>
 </div>
 
 <div *ngIf="isLoading" class="loading-container" style="background: white; border-radius: 16px; margin-top: 20px;">
     <div class="spinner"></div>
-    <p>Cargando información...</p>
+    <p>Cargando información del negocio...</p>
 </div>
 
 <div class="card full-height-card" *ngIf="!isLoading">
@@ -16,13 +22,15 @@
         <!-- 🔥 SECCIÓN DEL LOGO -->
         <div class="logo-section">
             <div class="business-image-preview" [style.background-image]="imagenActual ? 'url(' + imagenActual + ')' : 'none'">
-                <span *ngIf="!imagenActual">🏪</span>
+                <span *ngIf="!imagenActual">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                </span>
             </div>
             <div class="upload-btn-wrapper">
                 <button class="btn-outline-small">Subir Nuevo Logo</button>
                 <input type="file" (change)="onFileSelected($event)" accept="image/png, image/jpeg, image/webp" title="Seleccionar nueva imagen">
             </div>
-            <p class="help-text text-center mt-2">Formatos: JPG, PNG, WEBP. Max 2MB.</p>
+            <p class="help-text text-center mt-2">Formatos permitidos: JPG, PNG, WEBP. Tamaño máximo: 2MB.</p>
         </div>
 
         <!-- 🔥 FORMULARIO FISCAL -->
@@ -47,14 +55,14 @@
                 <input type="text" [(ngModel)]="negocioForm.direccion" placeholder="Ej: Calle Principal 123 y Secundaria">
             </div>
             
-            <!-- 🔥 NUEVO: MÉTODO DE COSTEO -->
+            <!-- 🔥 MÉTODO DE COSTEO MEJORADO -->
             <div class="form-group" style="grid-column: 1 / -1;">
-                <label style="color: #ea580c; font-weight: 700;">Método de Valoración de Inventario (Costeo) *</label>
-                <p style="font-size: 0.8rem; color: #64748b; margin-top: 0; margin-bottom: 8px;">Este método define cómo el sistema calculará el costo de tu mercadería al vender.</p>
-                <select [(ngModel)]="negocioForm.metodoCosteo" class="custom-select" style="border: 1px solid #fed7aa; background-color: #fffbeb;">
-                    <option value="PROMEDIO">📊 Promedio Ponderado (Recomendado)</option>
-                    <option value="FIFO">➡️ FIFO (Primeras Entradas, Primeras Salidas)</option>
-                    <option value="LIFO">⬅️ LIFO (Últimas Entradas, Primeras Salidas)</option>
+                <label style="color: #ea580c; font-weight: 800;">Método de Valoración de Inventario (Costeo) *</label>
+                <p style="font-size: 0.85rem; color: #64748b; margin-top: 0; margin-bottom: 12px; line-height: 1.4;">Este método es estrictamente contable y se aplicará automáticamente a todas las salidas de bodega (ventas o egresos).</p>
+                <select [(ngModel)]="negocioForm.metodoCosteo" class="custom-select highlight-select">
+                    <option value="PROMEDIO">Promedio Ponderado (Recomendado por NIIF)</option>
+                    <option value="FIFO">FIFO (Primeras Entradas, Primeras Salidas)</option>
+                    <option value="LIFO">LIFO (Últimas Entradas, Primeras Salidas)</option>
                 </select>
             </div>
         </div>
@@ -70,8 +78,8 @@
     <!-- 🔥 BOTÓN DE GUARDAR -->
     <div class="card-footer">
         <button class="btn-primary btn-large" (click)="guardarCambios()">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-            Guardar Cambios
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+            Guardar Configuración
         </button>
     </div>
 </div>
