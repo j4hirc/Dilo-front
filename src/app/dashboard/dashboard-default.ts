@@ -29,7 +29,9 @@ export class DashboardDefault implements OnInit {
   alertasCaducidad: any[] = [];
   showNotificaciones = false;
   showUserMenu = false;
-  private apiUrl = 'https://dilo-backend-mxlu.onrender.com/api/v1';
+
+  // 1. Usamos la URL del backend desde el archivo dinámico
+  private apiUrl = environment.apiUrl;
 
   // =========================================
   // 🔥 CONTEXTO REAL DEL NEGOCIO (para la IA)
@@ -43,10 +45,9 @@ export class DashboardDefault implements OnInit {
   isChatOpen = false;
   isChatLoading = false;
   nuevoMensaje = '';
-  // Se agregó 'safeHtml' para evitar el bucle infinito en Angular
   chatMensajes: { role: string, text: string, safeHtml?: SafeHtml }[] = [];
  
-  // 🔑 Llave de GroqCloud
+  // 2. Usamos la API Key de Groq desde el archivo dinámico
   private groqApiKey = environment.groqApiKey;
 
   ngOnInit() {
