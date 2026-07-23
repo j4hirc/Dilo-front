@@ -1,17 +1,22 @@
 <div class="page-header">
     <div class="header-titles">
-        <h2>Historial de Facturas</h2>
-        <p>Visualiza y descarga los comprobantes de tus ventas.</p>
+        <h2>
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 8px; color: #ed8936;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+            Historial de Facturas
+        </h2>
+        <p>Visualiza, emite y descarga los comprobantes de tus ventas.</p>
     </div>
+    <button class="btn-primary" (click)="abrirModalNuevo()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        Nueva Factura Manual
+    </button>
 </div>
 
-<div class="card full-height-card">
+<div class="card full-height-card premium-card">
     <div class="card-body">
-
-        <!-- 🔥 NUEVO SPINNER DE CARGA -->
         <div *ngIf="isLoading" class="loading-container">
             <div class="spinner"></div>
-            <p>Conectando con el servidor para cargar las facturas...</p>
+            <p>Sincronizando con el servidor...</p>
         </div>
 
         <div class="table-responsive" *ngIf="!isLoading">
@@ -20,38 +25,185 @@
                     <tr>
                         <th>Número</th>
                         <th>Cliente</th>
-                        <th>Tipo de Pago</th>
-                        <th>Monto</th>
-                        <th>Estado</th>
+                        <th>Método</th>
+                        <th>Monto Total</th>
+                        <th>Estado SRI</th>
                         <th style="text-align: center;">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr *ngIf="facturas.length === 0">
-                        <td colspan="6" style="text-align: center; padding: 40px; color: #64748b;">
-                            No hay facturas registradas en el sistema.
+                        <td colspan="6" class="empty-state">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+                            <p>No hay facturas registradas</p>
+                            <span>Comienza emitiendo una nueva factura manual.</span>
                         </td>
                     </tr>
                     <tr *ngFor="let fac of facturas">
-                        <td style="font-weight: 600; color: #0f172a;">{{ fac.numero }}</td>
-                        <td>{{ fac.cliente }}</td>
-                        <td><span class="tag tag-gray">{{ fac.tipo }}</span></td>
-                        <td style="font-weight: 600;">${{ fac.monto | number:'1.2-2' }}</td>
+                        <td class="td-bold">{{ fac.numero }}</td>
+                        <td class="td-muted">{{ fac.cliente }}</td>
+                        <td><span class="tag-modern">{{ fac.tipo }}</span></td>
+                        <td class="td-price">${{ fac.monto | number:'1.2-2' }}</td>
                         <td>
-                            <span class="status" [ngClass]="{
-  'status-yellow': fac.estado === 'PENDIENTE',
-  'status-red': fac.estado === 'ANULADA' || fac.estado === 'ERROR_SRI' 
-}">
-                                {{ fac.estado }}
-                            </span>
+                            <span class="status-modern" [ngClass]="{
+                                's-yellow': fac.estado === 'PENDIENTE' || fac.estado === 'CREADA',
+                                's-green': fac.estado === 'AUTORIZADA',
+                                's-red': fac.estado === 'ANULADA' || fac.estado === 'ERROR_SRI' 
+                            }">{{ fac.estado }}</span>
                         </td>
-                        <td class="action-cells" style="justify-content: center;">
-                            <!-- 🔥 PASAMOS 'fac' COMPLETO, NO SOLO EL NÚMERO -->
-                            <button class="btn-icon" title="Descargar PDF" (click)="descargarPDF(fac)">⬇️</button>
+                        <td class="action-cells">
+                            <button class="btn-action-icon" title="Imprimir PDF" (click)="descargarPDF(fac)">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                            </button>
                         </td>
                     </tr>
                 </tbody>
             </table>
+        </div>
+    </div>
+</div>
+
+<!-- =========================================
+   🔥 MODAL PUNTO DE VENTA (SaaS Premium)
+   ========================================= -->
+<div class="modal-overlay" *ngIf="showModal">
+    <div class="modal-content" style="max-width: 980px;">
+        <div class="modal-header">
+            <h3>Punto de Venta (POS)</h3>
+            <button class="close-btn" (click)="cerrarModal()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        </div>
+
+        <div class="modal-body modal-grid-layout">
+            
+            <!-- COLUMNA IZQUIERDA: CONTROLES -->
+            <div class="modal-col">
+                <div class="section-badge">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                    Cliente y Pago
+                </div>
+
+                <div class="form-group mt-2">
+                    <label>Cliente a Facturar *</label>
+                    <select [(ngModel)]="nuevaFactura.clienteId" class="custom-select modern-input">
+                        <option [ngValue]="null" disabled>Buscar en el directorio...</option>
+                        <option *ngFor="let cli of clientesList" [ngValue]="cli.id">{{ cli.nombreCompleto || cli.razonSocial || cli.primerNombre }} ({{ cli.identificacion }})</option>
+                    </select>
+                </div>
+
+                <div class="form-row mt-3">
+                    <div class="form-group w-50">
+                        <label>Método de Pago *</label>
+                        <select [(ngModel)]="nuevaFactura.metodoPago" class="custom-select modern-input">
+                            <!-- 🔥 Emojis removidos para un look más corporativo -->
+                            <option value="EFECTIVO">Efectivo</option>
+                            <option value="TRANSFERENCIA">Transferencia</option>
+                            <option value="TARJETA_CREDITO">Tarjeta de Crédito</option>
+                        </select>
+                    </div>
+                    <div class="form-group w-50" *ngIf="nuevaFactura.metodoPago === 'TARJETA_CREDITO'">
+                        <label>Meses (Cuotas)</label>
+                        <input type="number" [(ngModel)]="nuevaFactura.numeroCuotas" min="0" class="modern-input" placeholder="Ej. 3">
+                    </div>
+                </div>
+
+                <div class="section-badge mt-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>
+                    Buscador de Productos
+                </div>
+                
+                <div class="add-product-box mt-2 shadow-sm">
+                    <div class="form-row">
+                        <div class="form-group w-50">
+                            <label>Bodega de Origen *</label>
+                            <select [(ngModel)]="itemTemp.bodegaId" class="custom-select modern-input">
+                                <option [ngValue]="null" disabled>Seleccionar bodega</option>
+                                <option *ngFor="let bod of bodegasList" [ngValue]="bod.id">{{ bod.nombre }}</option>
+                            </select>
+                        </div>
+                        <div class="form-group w-50">
+                            <label>Cantidad *</label>
+                            <div style="position: relative;">
+                                <input type="number" [(ngModel)]="itemTemp.cantidad" min="1" class="modern-input text-center">
+                                
+                                <small *ngIf="stockDisponible !== null" 
+                                       style="position: absolute; right: 5px; bottom: -20px; font-size: 0.75rem; font-weight: 700;"
+                                       [style.color]="stockDisponible > 0 ? '#059669' : '#dc2626'">
+                                    Disp: {{ stockDisponible }} unid.
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-top: 24px;">
+                        <label>Producto *</label>
+                        <div class="input-with-button">
+                            <select [(ngModel)]="itemTemp.productoId" class="custom-select modern-input" style="flex: 1;">
+                                <option [ngValue]="null" disabled>Escanear o buscar...</option>
+                                <option *ngFor="let prod of productosList" [ngValue]="prod.id">
+                                    {{ prod.nombre }} - Costo: ${{ prod.costoPromedioActual > 0 ? prod.costoPromedioActual : prod.precioUnitario }}
+                                </option>
+                            </select>
+                            <button class="btn-primary" style="padding: 0 20px; height: 44px; margin-top: 0; border-radius: 8px;" (click)="agregarAlCarrito()">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                Agregar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- COLUMNA DERECHA: CARRITO -->
+            <div class="modal-col cart-col shadow-sm">
+                <div class="cart-header">
+                    <h4>Resumen del Ticket</h4>
+                    <span class="badge">{{ nuevaFactura.detalles.length }} items</span>
+                </div>
+
+                <div class="cart-items-container">
+                    <div class="empty-cart-premium" *ngIf="nuevaFactura.detalles.length === 0">
+                        <div class="icon-circle">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+                        </div>
+                        <p>Ticket Vacío</p>
+                        <span>Agrega productos para cobrar.</span>
+                    </div>
+
+                    <div class="cart-item-ticket" *ngFor="let d of nuevaFactura.detalles; let i = index">
+                        <div class="ticket-info">
+                            <p class="t-name">{{ d.productoNombre }}</p>
+                            <p class="t-qty">{{ d.cantidad }} un. x ${{ d.precioUnitario | number:'1.2-2' }}</p>
+                        </div>
+                        <div class="ticket-price">
+                            <strong>${{ d.subtotal | number:'1.2-2' }}</strong>
+                            <button class="delete-icon" (click)="eliminarDelCarrito(i)" title="Quitar item">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="cart-footer">
+                    <div class="cart-warning-subtle">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                        El stock se descontará del Kardex.
+                    </div>
+                    <div class="cart-total-box" [ngClass]="{'active': nuevaFactura.detalles.length > 0}">
+                        <span>A COBRAR</span>
+                        <span class="cart-total-amount">${{ totalCarrito | number:'1.2-2' }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn-outline-secondary" (click)="cerrarModal()" [disabled]="isSaving">Cerrar</button>
+            <button class="btn-primary btn-large" (click)="guardarFactura()" [disabled]="isSaving || nuevaFactura.detalles.length === 0">
+                <svg *ngIf="!isSaving" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 8px;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                <div class="spinner-small" *ngIf="isSaving"></div>
+                {{ isSaving ? 'Procesando SRI...' : 'Emitir Factura y PDF' }}
+            </button>
         </div>
     </div>
 </div>

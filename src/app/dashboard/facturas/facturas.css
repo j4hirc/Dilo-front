@@ -1,144 +1,404 @@
+@import '../productos/productos.css';
+
+/* =========================================
+   🔥 CABECERA PRINCIPAL
+   ========================================= */
 .page-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-end;
-    margin-bottom: 25px;
+    margin-bottom: 30px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #e2e8f0;
+    gap: 15px;
 }
 
 .header-titles h2 {
-    font-size: 1.6rem;
-    color: var(--text-main);
-    margin: 0 0 5px 0;
+    display: flex;
+    align-items: center;
+    font-size: 1.8rem;
+    color: #0f172a;
+    margin: 0 0 8px 0;
     font-weight: 800;
+    letter-spacing: -0.5px;
 }
 
 .header-titles p {
-    color: var(--text-muted);
+    color: #64748b;
     margin: 0;
-    font-size: 0.95rem;
+    font-size: 1.05rem;
 }
 
-.btn-primary {
-    background-color: var(--primary-orange);
-    color: white;
+/* =========================================
+   🔥 DISEÑO DE TARJETA (MAIN VIEW)
+   ========================================= */
+.premium-card {
+    background: #ffffff;
     border: none;
-    padding: 10px 20px;
-    border-radius: 8px;
-    font-weight: 600;
-    font-size: 0.95rem;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-
-.btn-primary:hover {
-    background-color: var(--primary-orange-hover);
-}
-
-.card {
-    background: var(--card-bg);
     border-radius: 16px;
-    border: 1px solid var(--border-color);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
     overflow: hidden;
 }
 
-.card-body {
-    padding: 0;
-}
-
+/* Contenedor responsive para la tabla */
 .table-responsive {
     width: 100%;
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch; /* Scroll suave en iOS */
 }
 
+/* =========================================
+   🔥 TABLA DE DATOS MODERNA
+   ========================================= */
 .data-table {
     width: 100%;
-    border-collapse: collapse;
-    text-align: left;
+    border-collapse: separate;
+    border-spacing: 0;
+    min-width: 800px; /* Asegura que la tabla no se aplaste en móviles */
 }
 
 .data-table th {
     background-color: #f8fafc;
-    padding: 15px 20px;
-    font-size: 0.85rem;
-    font-weight: 700;
     color: #475569;
+    font-size: 0.75rem;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-    border-bottom: 1px solid var(--border-color);
+    letter-spacing: 0.05em;
+    padding: 16px 20px;
+    border-bottom: 1px solid #e2e8f0;
+    text-align: left;
+    white-space: nowrap;
 }
 
 .data-table td {
-    padding: 15px 20px;
-    font-size: 0.9rem;
-    color: var(--text-muted);
+    padding: 18px 20px;
     border-bottom: 1px solid #f1f5f9;
     vertical-align: middle;
+    color: #334155;
+    transition: background-color 0.2s;
 }
 
-.data-table tbody tr:hover {
-    background-color: #f8fafc;
-}
+.data-table tbody tr { transition: all 0.2s; }
+.data-table tbody tr:hover { background-color: #f8fafc; }
 
-.tag {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.75rem;
-    padding: 4px 10px;
+/* Textos de la tabla */
+.td-bold { font-weight: 700; color: #0f172a; }
+.td-muted { color: #64748b; font-weight: 500; }
+.td-price { font-weight: 800; color: #0f172a; font-size: 1.05rem; }
+
+/* Estados (Píldoras) */
+.status-modern {
+    display: inline-block;
+    padding: 6px 12px;
     border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+.s-yellow { background-color: #fef9c3; color: #a16207; border: 1px solid #fde047; }
+.s-green { background-color: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
+.s-red { background-color: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+
+.tag-modern {
+    background-color: #f1f5f9;
+    color: #475569;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 0.8rem;
     font-weight: 600;
+    border: 1px solid #e2e8f0;
+    white-space: nowrap;
 }
 
-.tag-gray { background-color: #f1f5f9; color: #64748b; }
-
-.status { font-size: 0.75rem; font-weight: 600; padding: 4px 10px; border-radius: 12px; }
-.status-green { background-color: #dcfce7; color: #166534; }
-.status-yellow { background-color: #fef9c3; color: #ca8a04; }
-.status-red { background-color: #fee2e2; color: #b91c1c; }
-
-.action-cells {
-    display: flex;
-    gap: 10px;
-}
-
-.btn-icon {
-    background: none;
+/* Acciones */
+.action-cells { text-align: center; }
+.btn-action-icon {
+    background: transparent;
     border: none;
+    color: #94a3b8;
+    padding: 8px;
+    border-radius: 8px;
     cursor: pointer;
-    font-size: 1.1rem;
-    opacity: 0.7;
-    transition: opacity 0.2s;
+    transition: all 0.2s;
+}
+.btn-action-icon:hover {
+    background-color: #f1f5f9;
+    color: var(--primary-orange);
+    transform: scale(1.05);
 }
 
-.btn-icon:hover {
-    opacity: 1;
+/* Empty State de la Tabla */
+.empty-state {
+    text-align: center;
+    padding: 60px 20px !important;
 }
+.empty-state svg { margin-bottom: 15px; opacity: 0.7; }
+.empty-state p { font-size: 1.1rem; color: #0f172a; font-weight: 700; margin: 0 0 5px 0; }
+.empty-state span { font-size: 0.95rem; color: #64748b; }
 
-
-.loading-container {
+/* =========================================
+   🔥 DISEÑO DEL MODAL (PUNTO DE VENTA)
+   ========================================= */
+.modal-overlay {
+    /* Fondo oscuro desenfocado */
+    background-color: rgba(15, 23, 42, 0.65);
+    backdrop-filter: blur(4px);
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 60px 20px;
-    color: var(--text-muted);
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    z-index: 1000;
+    padding: 20px; /* Margen global para evitar que toque los bordes */
 }
 
-.spinner {
-    width: 45px;
-    height: 45px;
-    border: 4px solid var(--border-color);
-    border-top-color: var(--primary-orange); /* Color naranja Dilo */
-    border-radius: 50%;
-    animation: spin 1s cubic-bezier(0.55, 0.15, 0.45, 0.85) infinite;
-    margin-bottom: 15px;
+.modal-content {
+    background: white;
+    border-radius: 16px;
+    width: 100%;
+    max-height: 90vh; /* Nunca debe ser más alto que la pantalla */
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    overflow: hidden;
 }
 
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+.modal-grid-layout {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 30px;
+    background-color: #f8fafc;
+    padding: 30px;
+    overflow-y: auto; /* Permite scroll interno si es muy alto */
+}
+
+.modal-col { display: flex; flex-direction: column; }
+
+/* Inputs Modernos */
+.form-row { display: flex; gap: 15px; width: 100%; align-items: flex-end;}
+.w-50 { flex: 1; min-width: 0; } /* Flex 1 maneja el 50% de forma fluida */
+
+.modern-input {
+    background-color: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 0.95rem;
+    color: #0f172a;
+    transition: all 0.2s;
+    width: 100%;
+    box-sizing: border-box;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+}
+.modern-input:focus {
+    border-color: var(--primary-orange);
+    box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.1);
+    outline: none;
+}
+
+/* Utilidades */
+.mt-2 { margin-top: 10px; }
+.mt-3 { margin-top: 15px; }
+.mt-4 { margin-top: 25px; }
+.text-center { text-align: center; }
+.shadow-sm { box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+
+/* Títulos Secciones Modal */
+.section-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background-color: #e0e7ff; 
+    color: #3730a3;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 10px;
+}
+.section-badge svg { color: #4338ca; }
+
+.input-with-button { display: flex; gap: 12px; align-items: center; width: 100%; }
+.add-product-box { background: white; border: 1px solid #e2e8f0; padding: 20px; border-radius: 12px; }
+
+/* =========================================
+   🔥 CARRITO (TICKET LATERAL)
+   ========================================= */
+.cart-col {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.cart-header {
+    background: #0f172a;
+    color: white;
+    padding: 18px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.cart-header h4 { margin: 0; font-size: 1.1rem; font-weight: 600; }
+.cart-header .badge { background: #334155; padding: 4px 12px; border-radius: 12px; font-size: 0.8rem; font-weight: 700; }
+
+.cart-items-container {
+    flex: 1; /* Ocupa el espacio restante */
+    overflow-y: auto;
+    padding: 20px;
+    background-color: #f8fafc;
+    min-height: 280px;
+}
+
+/* Vacío */
+.empty-cart-premium {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    height: 100%; color: #64748b; text-align: center; padding: 40px 0;
+}
+.empty-cart-premium .icon-circle {
+    width: 65px; height: 65px; background: #e2e8f0; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; margin-bottom: 15px;
+}
+.empty-cart-premium p { margin: 0; font-weight: 700; font-size: 1.05rem; color: #334155; }
+.empty-cart-premium span { font-size: 0.9rem; margin-top: 5px; }
+
+/* Items */
+.cart-item-ticket {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 14px 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.cart-item-ticket:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+
+.ticket-info { display: flex; flex-direction: column; gap: 6px; }
+.t-name { margin: 0; font-weight: 700; color: #0f172a; font-size: 0.95rem; }
+.t-qty { margin: 0; font-size: 0.85rem; color: #64748b; font-weight: 600;}
+
+.ticket-price { display: flex; align-items: center; gap: 15px; }
+.ticket-price strong { font-size: 1.15rem; color: #0f172a; }
+
+.delete-icon {
+    background: #fef2f2; color: #ef4444; border: none;
+    width: 30px; height: 30px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: all 0.2s;
+}
+.delete-icon:hover { background: #ef4444; color: white; transform: scale(1.1); }
+
+/* Footer Carrito */
+.cart-footer { padding: 20px; background: white; border-top: 1px dashed #cbd5e1; }
+.cart-warning-subtle { display: flex; align-items: center; gap: 8px; color: #64748b; font-size: 0.85rem; margin-bottom: 15px; font-weight: 500; line-height: 1.3;}
+
+.cart-total-box {
+    display: flex; justify-content: space-between; align-items: center;
+    background: #f1f5f9; color: #64748b;
+    padding: 16px 20px; border-radius: 12px; transition: all 0.3s;
+}
+.cart-total-box.active {
+    background: linear-gradient(135deg, #0f172a, #1e293b); color: white;
+    box-shadow: 0 6px 15px rgba(0,0,0,0.15);
+}
+.cart-total-box span:first-child { font-size: 1rem; font-weight: 700; letter-spacing: 0.5px;}
+.cart-total-amount { font-size: 1.8rem; font-weight: 800; color: inherit;}
+.cart-total-box.active .cart-total-amount { color: var(--primary-orange); }
+
+/* =========================================
+   🔥 BOTONES GLOBALES
+   ========================================= */
+.btn-primary {
+    background-color: var(--primary-orange, #ed8936);
+    color: white; border: none; padding: 12px 24px; border-radius: 8px;
+    font-weight: 600; font-size: 1rem; display: inline-flex; align-items: center; justify-content: center;
+    gap: 8px; cursor: pointer; transition: all 0.2s;
+}
+.btn-primary:hover:not(:disabled) { background-color: #ea580c; transform: translateY(-1px); box-shadow: 0 4px 10px rgba(234, 88, 12, 0.3); }
+.btn-primary:disabled { background-color: #fdba74; cursor: not-allowed; }
+
+.btn-large { padding: 14px 30px; font-size: 1.05rem; border-radius: 10px; }
+.btn-outline-secondary {
+    background: white; border: 1px solid #cbd5e1; color: #475569;
+    padding: 14px 28px; border-radius: 10px; font-weight: 600; cursor: pointer; transition: all 0.2s;
+}
+.btn-outline-secondary:hover:not(:disabled) { background: #f8fafc; color: #0f172a; border-color: #94a3b8; }
+
+.spinner-small {
+    width: 20px; height: 20px;
+    border: 3px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%;
+    animation: spin 1s linear infinite; margin-right: 10px;
+}
+
+/* =========================================
+   🔥 RESPONSIVE ESTILO SAAS (Móviles y Tablets)
+   ========================================= */
+@media (max-width: 1024px) {
+    /* En tablets, la columna izquierda toma menos espacio para no aplastar el carrito */
+    .modal-grid-layout { grid-template-columns: 1fr 1fr; gap: 20px; padding: 20px; }
+}
+
+@media (max-width: 768px) {
+    /* La cabecera se apila verticalmente */
+    .page-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .btn-primary { width: 100%; justify-content: center; } /* Botón ancho táctil */
+
+    /* El modal de la factura ocupa toda la pantalla en móviles (Diseño Bottom Sheet) */
+    .modal-overlay { padding: 0; align-items: flex-end; }
+    .modal-content { 
+        border-radius: 20px 20px 0 0; 
+        max-height: 95vh;
+        width: 100%;
+    }
+    
+    /* El Grid pasa a 1 sola columna: Formulario arriba, Carrito abajo */
+    .modal-grid-layout { 
+        grid-template-columns: 1fr; 
+        gap: 20px; 
+        padding: 20px; 
+    }
+    
+    /* Formulario: Inputs en fila pasan a ser bloques */
+    .form-row { flex-direction: column; gap: 15px; }
+    .w-50 { width: 100%; }
+    
+    /* Botón Agregar debajo del input */
+    .input-with-button { flex-direction: column; align-items: stretch; }
+    .input-with-button select { margin-bottom: 0; }
+    
+    /* Carrito: Limitar altura para que el modal no sea infinito */
+    .cart-col { border-radius: 12px; }
+    .cart-items-container { min-height: 150px; max-height: 250px; }
+    
+    /* Footer del Modal: Botones apilados (Guardar grande, Cancelar abajo) */
+    .modal-footer {
+        flex-direction: column-reverse;
+        padding: 20px;
+        gap: 12px;
+    }
+    .modal-footer button { width: 100%; margin: 0; }
+}
+
+@media (max-width: 480px) {
+    .header-titles h2 { font-size: 1.5rem; }
+    .header-titles p { font-size: 0.95rem; line-height: 1.4; }
+    
+    /* Ajustes mínimos en el Ticket para que quepa en iPhones pequeños */
+    .ticket-price strong { font-size: 1rem; }
+    .cart-total-amount { font-size: 1.4rem; }
+    .delete-icon { width: 26px; height: 26px; }
 }
