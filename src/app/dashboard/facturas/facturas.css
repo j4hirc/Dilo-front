@@ -402,3 +402,7 @@
     .cart-total-amount { font-size: 1.4rem; }
     .delete-icon { width: 26px; height: 26px; }
 }
+
+.dropdown-item:hover {
+    background-color: #f1f5f9 !important;
+}

@@ -30,6 +30,11 @@ export class Facturas implements OnInit {
   bodegasList: any[] = [];
   inventarioList: any[] = [];
 
+  terminoBusquedaCliente: string = '';
+  clientesFiltrados: any[] = [];
+  mostrarDropdownClientes = false;
+  clienteSeleccionadoInfo: any = null;
+
   nuevaFactura = {
     clienteId: null,
     metodoPago: 'EFECTIVO',
@@ -106,11 +111,15 @@ export class Facturas implements OnInit {
     });
   }
 
-  abrirModalNuevo() {
+ abrirModalNuevo() {
     this.showModal = true;
     this.cargarCatalogos();
     this.nuevaFactura = { clienteId: null, metodoPago: 'EFECTIVO', numeroCuotas: 0, detalles: [] };
     this.itemTemp = { productoId: null, bodegaId: null, cantidad: 1, productoNombre: '' };
+    
+    this.terminoBusquedaCliente = '';
+    this.clienteSeleccionadoInfo = null;
+    this.mostrarDropdownClientes = false;
   }
 
   cerrarModal() {
@@ -128,11 +137,53 @@ export class Facturas implements OnInit {
 
     forkJoin([reqClientes, reqProductos, reqBodegas, reqInventario]).subscribe(([clientes, productos, bodegas, inventario]) => {
       this.clientesList = Array.isArray(clientes) ? clientes : [];
+      // Inicializamos la lista filtrada con todos los clientes al cargar
+      this.clientesFiltrados = [...this.clientesList];
+      
       this.productosList = Array.isArray(productos) ? productos : [];
       this.bodegasList = Array.isArray(bodegas) ? bodegas : [];
       this.inventarioList = Array.isArray(inventario) ? inventario : [];
       this.cdr.detectChanges();
     });
+  }
+
+  filtrarClientes() {
+    if (!this.terminoBusquedaCliente.trim()) {
+      this.clientesFiltrados = [...this.clientesList];
+    } else {
+      const termino = this.terminoBusquedaCliente.toLowerCase();
+      // 🔥 CORRECCIÓN: Agregadas las variables alternativas para buscar
+      this.clientesFiltrados = this.clientesList.filter(cli => 
+        (cli.nombreCompleto?.toLowerCase().includes(termino)) ||
+        (cli.razonSocial?.toLowerCase().includes(termino)) ||
+        (cli.primerNombre?.toLowerCase().includes(termino)) ||
+        (cli.identificacion?.toLowerCase().includes(termino)) ||
+        (cli.dni?.toLowerCase().includes(termino)) ||
+        (cli.ruc?.toLowerCase().includes(termino)) ||
+        (cli.correo?.toLowerCase().includes(termino)) ||
+        (cli.email?.toLowerCase().includes(termino))
+      );
+    }
+  }
+
+  seleccionarCliente(cliente: any) {
+    this.nuevaFactura.clienteId = cliente.id;
+    this.clienteSeleccionadoInfo = cliente;
+    this.terminoBusquedaCliente = cliente.nombreCompleto || cliente.razonSocial || cliente.primerNombre;
+    this.mostrarDropdownClientes = false;
+  }
+
+  limpiarClienteSeleccionado() {
+    this.nuevaFactura.clienteId = null;
+    this.clienteSeleccionadoInfo = null;
+    this.terminoBusquedaCliente = '';
+    this.clientesFiltrados = [...this.clientesList];
+    
+    // Pequeño timeout para que Angular renderice el input antes de hacerle focus
+    setTimeout(() => {
+        const input = document.getElementById('buscadorCliente');
+        if (input) input.focus();
+    }, 50);
   }
 
   agregarAlCarrito() {
@@ -403,5 +454,11 @@ export class Facturas implements OnInit {
     ventana?.document.close();
     ventana?.focus();
     setTimeout(() => { ventana?.print(); ventana?.close(); }, 800);
+  }
+
+  ocultarDropdown() {
+    setTimeout(() => {
+      this.mostrarDropdownClientes = false;
+    }, 200);
   }
 }
