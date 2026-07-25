@@ -29,6 +29,7 @@ export const routes: Routes = [
       { path: 'bodegas', loadComponent: () => import('./dashboard/bodegas/bodegas').then(m => m.Bodegas) },
       { path: 'inventario', loadComponent: () => import('./dashboard/inventario/inventario').then(m => m.Inventario) },
       { path: 'kardex', loadComponent: () => import('./dashboard/kardex/kardex').then(m => m.Kardex) },
+      { path: 'cuentas-cobrar', loadComponent: () => import('./dashboard/cuentas-por-cobrar/cuentas-por-cobrar').then(m => m.CuentasPorCobrar) },
       
       { path: 'equipo', loadComponent: () => import('./dashboard/equipo/equipo').then(m => m.Equipo) },
       { path: 'configuracion', loadComponent: () => import('./dashboard/configuracion/configuracion').then(m => m.Configuracion) },

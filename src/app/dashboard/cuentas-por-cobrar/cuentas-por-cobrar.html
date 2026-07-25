@@ -1,0 +1,195 @@
+<div class="page-header fade-in">
+    <div class="header-titles">
+        <h2>
+            <div class="icon-wrapper purple-glow">
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg>
+            </div>
+            Cuentas por Cobrar
+        </h2>
+        <p>Administra las deudas de tus clientes y registra los abonos.</p>
+    </div>
+</div>
+
+<!-- 🔥 TARJETAS DE RESUMEN -->
+<section class="stats-grid fade-in">
+    <div class="stat-card">
+        <div class="stat-icon-wrapper bg-orange">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+        </div>
+        <div class="stat-info">
+            <h3>${{ totalPorCobrar | number:'1.2-2' }}</h3>
+            <p>Saldo Total Pendiente</p>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon-wrapper bg-green">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+        </div>
+        <div class="stat-info">
+            <h3>${{ totalAbonado | number:'1.2-2' }}</h3>
+            <p>Total Recuperado (Abonos)</p>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon-wrapper bg-red">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+        </div>
+        <div class="stat-info">
+            <h3 style="color: #dc2626;">{{ cuentasVencidas }}</h3>
+            <p>Facturas Vencidas</p>
+        </div>
+    </div>
+</section>
+
+<!-- 🔥 TABLA DE CUENTAS -->
+<div class="card premium-card fade-in mt-4">
+    <div class="card-body">
+        <div *ngIf="isLoading" class="loading-container">
+            <div class="spinner"></div>
+            <p>Cargando deudores...</p>
+        </div>
+
+        <div class="table-responsive" *ngIf="!isLoading">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Factura</th>
+                        <th>Cliente</th>
+                        <th>Vencimiento Global</th>
+                        <th>Monto Total</th>
+                        <th>Saldo Pendiente</th>
+                        <th>Estado</th>
+                        <th style="text-align: center;">Cuotas</th>
+                        <th style="text-align: center;">Acción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngIf="cuentas.length === 0">
+                        <td colspan="8" class="empty-state">
+                            <div class="empty-icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                            </div>
+                            <p>¡Felicidades!</p>
+                            <span>No tienes cuentas pendientes por cobrar.</span>
+                        </td>
+                    </tr>
+                    
+                    <!-- ITERACIÓN DE CUENTAS -->
+                    <ng-container *ngFor="let c of cuentas">
+                        <tr class="table-row-hover">
+                            <td class="td-bold">#{{ c.numeroFactura }}</td>
+                            <td class="td-muted">{{ c.clienteNombre }}</td>
+                            <td>{{ c.fechaVencimiento | date:'dd/MM/yyyy' }}</td>
+                            <td class="td-muted">${{ c.montoTotal | number:'1.2-2' }}</td>
+                            <td class="td-price" [ngStyle]="{'color': c.saldoPendiente > 0 ? '#ea580c' : '#16a34a'}">
+                                ${{ c.saldoPendiente | number:'1.2-2' }}
+                            </td>
+                            <td>
+                                <span class="status-modern" [ngClass]="{
+                                    's-yellow': c.estado === 'PENDIENTE',
+                                    's-red': c.estado === 'VENCIDA',
+                                    's-green': c.estado === 'PAGADA'
+                                }">{{ c.estado }}</span>
+                            </td>
+                            <td style="text-align: center;">
+                                <button class="btn-toggle-cuotas" (click)="toggleCuotas(c)" title="Ver cuotas">
+                                    {{ c.showCuotas ? 'Ocultar' : 'Ver (' + (c.cuotas?.length || 0) + ')' }}
+                                </button>
+                            </td>
+                            <td class="action-cells">
+                                <button class="btn-primary-small" *ngIf="c.saldoPendiente > 0" (click)="abrirModalPago(c)">
+                                    Abonar
+                                </button>
+                                <span *ngIf="c.saldoPendiente <= 0" style="color: #94a3b8; font-size: 0.85rem; font-weight: 700;">Completado</span>
+                            </td>
+                        </tr>
+
+                        <!-- FILA DESPLEGABLE CON EL DETALLE DE LAS CUOTAS -->
+                        <tr *ngIf="c.showCuotas" class="cuotas-dropdown-row">
+                            <td colspan="8" style="background: #f8fafc; padding: 15px 30px;">
+                                <div class="cuotas-container">
+                                    <h4 style="margin: 0 0 10px 0; font-size: 0.9rem; color: #475569; text-transform: uppercase; font-weight: 800;">Desglose de Cuotas</h4>
+                                    <table class="sub-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Nº Cuota</th>
+                                                <th>Vencimiento</th>
+                                                <th>Monto Cuota</th>
+                                                <th>Saldo Pendiente</th>
+                                                <th>Estado</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr *ngFor="let cuota of c.cuotas">
+                                                <td>Cuota #{{ cuota.numeroCuota }}</td>
+                                                <td>{{ cuota.fechaVencimiento | date:'dd/MM/yyyy' }}</td>
+                                                <td>${{ cuota.montoCuota | number:'1.2-2' }}</td>
+                                                <td>${{ cuota.saldoPendienteCuota | number:'1.2-2' }}</td>
+                                                <td>
+                                                    <span class="status-modern" [ngClass]="{
+                                                        's-yellow': cuota.estado === 'PENDIENTE',
+                                                        's-green': cuota.estado === 'PAGADA'
+                                                    }">{{ cuota.estado }}</span>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </td>
+                        </tr>
+                    </ng-container>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- =========================================
+   🔥 MODAL REGISTRO DE PAGO
+   ========================================= -->
+<div class="modal-overlay fade-in" *ngIf="showModalPago">
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
+            <h3>Registrar Abono</h3>
+            <button class="close-btn" (click)="cerrarModal()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        </div>
+
+        <div class="modal-body" style="padding: 30px;">
+            <div class="invoice-summary-box mb-4">
+                <div class="summary-row">
+                    <span>Factura:</span>
+                    <strong>#{{ cuentaSeleccionada?.numeroFactura }}</strong>
+                </div>
+                <div class="summary-row">
+                    <span>Cliente:</span>
+                    <strong>{{ cuentaSeleccionada?.clienteNombre }}</strong>
+                </div>
+                <div class="summary-row highlight">
+                    <span>Saldo Pendiente Actual:</span>
+                    <strong>${{ cuentaSeleccionada?.saldoPendiente | number:'1.2-2' }}</strong>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Monto a Abonar ($) <span class="required">*</span></label>
+                <input type="number" class="modern-input amount-input" [(ngModel)]="montoAbono" min="0.01" [max]="cuentaSeleccionada?.saldoPendiente" placeholder="0.00">
+            </div>
+            
+            <div class="balance-preview mt-3" *ngIf="montoAbono && montoAbono > 0 && montoAbono <= cuentaSeleccionada?.saldoPendiente">
+                Nuevo saldo tras el pago: <strong>${{ (cuentaSeleccionada?.saldoPendiente - montoAbono) | number:'1.2-2' }}</strong>
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn-outline-secondary" (click)="cerrarModal()" [disabled]="isSaving">Cancelar</button>
+            <button class="btn-primary" (click)="registrarPago()" [disabled]="isSaving || !montoAbono || montoAbono <= 0 || montoAbono > cuentaSeleccionada?.saldoPendiente">
+                <div class="spinner-small" *ngIf="isSaving"></div>
+                {{ isSaving ? 'Guardando...' : 'Confirmar Pago' }}
+            </button>
+        </div>
+    </div>
+</div>
