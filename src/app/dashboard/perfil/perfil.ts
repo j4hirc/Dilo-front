@@ -115,10 +115,19 @@ export class Perfil implements OnInit {
 
   // Guarda la nueva contraseña
   guardarPassword() {
+    // 1. Validar que no estén vacíos
     if (!this.passwordData.newPassword || !this.passwordData.confirmPassword) {
       Swal.fire('Atención', 'Ambos campos son obligatorios.', 'warning');
       return;
     }
+
+    // 🔥 2. Nueva validación: Mínimo 8 caracteres
+    if (this.passwordData.newPassword.length < 8) {
+      Swal.fire('Atención', 'La contraseña debe tener al menos 8 caracteres.', 'warning');
+      return;
+    }
+
+    // 3. Validar que coincidan
     if (this.passwordData.newPassword !== this.passwordData.confirmPassword) {
       Swal.fire('Error', 'Las contraseñas no coinciden.', 'error');
       return;
