@@ -21,7 +21,6 @@ export class UnirNegocio {
 
   isLoading = false;
 
-  // Rol por defecto: 3 (Vendedor)
   joinForm: FormGroup = this.fb.group({
     codigoInvitacion: ['', [Validators.required, Validators.minLength(6)]],
     idRol: ['3', [Validators.required]]
@@ -54,11 +53,10 @@ export class UnirNegocio {
       headers = headers.set('Authorization', `Bearer ${token}`);
     }
 
-    this.http.post(`${this.apiUrl}/unirse`, payload, { headers }).subscribe({
+   this.http.post(`${this.apiUrl}/unirse`, payload, { headers }).subscribe({
       next: (response: any) => {
         this.isLoading = false;
         
-        // Limpiamos los datos temporales del negocio ya que aún no está aprobado
         localStorage.removeItem('negocioId');
 
         Swal.fire({
@@ -68,18 +66,32 @@ export class UnirNegocio {
           confirmButtonColor: '#0F172A',
           confirmButtonText: 'Entendido'
         }).then(() => {
-          // Lo mandamos de regreso al login / inicio
           this.router.navigate(['/login']); 
         });
       },
       error: (err) => {
         this.isLoading = false;
-        Swal.fire({
-          icon: 'error',
-          title: 'Error al unirse',
-          text: err.error?.message || 'Verifica el código de invitación e intenta nuevamente.',
-          confirmButtonColor: '#0F172A'
-        });
+        
+        // 🔥 Extracción blindada del mensaje de error (evita fallos de lectura de JSON)
+        const mensajeError = err.error?.message || (typeof err.error === 'string' ? err.error : 'Verifica el código de invitación e intenta nuevamente.');
+        const msgLower = mensajeError.toLowerCase();
+
+        // 🔥 VALIDACIÓN VISUAL SI ESTÁ INACTIVO O RECHAZADO
+        if (msgLower.includes('revocado') || msgLower.includes('rechazada') || msgLower.includes('perteneces')) {
+          Swal.fire({
+            icon: 'warning',
+            title: 'Acción no permitida',
+            text: mensajeError,
+            confirmButtonColor: '#0F172A'
+          });
+        } else {
+          Swal.fire({
+            icon: 'error',
+            title: 'Error al unirse',
+            text: mensajeError,
+            confirmButtonColor: '#0F172A'
+          });
+        }
       }
     });
   }

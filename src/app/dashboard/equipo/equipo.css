@@ -252,3 +252,22 @@
         border-radius: 8px;
     }
 }
+
+.btn-outline-success {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: transparent;
+    color: #22c55e;
+    border: 1px solid #22c55e;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-outline-success:hover {
+    background: #f0fdf4;
+}
