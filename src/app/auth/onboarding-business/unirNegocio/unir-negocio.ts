@@ -33,12 +33,20 @@ export class UnirNegocio implements OnInit {
     
     if (!token || !usuarioStr) {
       this.router.navigate(['/login']);
-      return; // Detenemos la ejecución aquí
+      return; 
     }
 
-    // 🔥 2. VALIDACIÓN: SI YA TIENE NEGOCIO, LO SACAMOS AL DASHBOARD
+    // 🔥 2. VALIDACIÓN BLINDADA DEL NEGOCIO
     const usuario = JSON.parse(usuarioStr);
-    if (usuario.tieneNegocio || usuario.idNegocio) {
+    
+    // Imprimimos en consola para que veas la estructura exacta que tiene tu objeto
+    console.log("🔍 Datos del usuario en localStorage:", usuario);
+
+    // Buscamos la propiedad en todas sus posibles variantes (incluyendo 'negocioId' que usamos al crear)
+    const tieneUnNegocio = usuario.tieneNegocio || usuario.idNegocio || usuario.negocioId || usuario.negocio !== null;
+
+    if (tieneUnNegocio) {
+      console.log("⛔ El usuario ya tiene negocio. Expulsando al dashboard...");
       this.router.navigate(['/dashboard']); 
       return;
     }
