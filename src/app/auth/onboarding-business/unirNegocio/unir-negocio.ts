@@ -27,12 +27,20 @@ export class UnirNegocio implements OnInit {
   });
 
   ngOnInit() {
-    // 🔥 VALIDACIÓN DE SEGURIDAD AL CARGAR EL COMPONENTE
+    // 🔥 1. VALIDACIÓN DE SEGURIDAD (TOKEN Y SESIÓN)
     const token = localStorage.getItem('dilo_token');
     const usuarioStr = localStorage.getItem('dilo_user') || localStorage.getItem('usuario');
     
     if (!token || !usuarioStr) {
       this.router.navigate(['/login']);
+      return; // Detenemos la ejecución aquí
+    }
+
+    // 🔥 2. VALIDACIÓN: SI YA TIENE NEGOCIO, LO SACAMOS AL DASHBOARD
+    const usuario = JSON.parse(usuarioStr);
+    if (usuario.tieneNegocio || usuario.idNegocio) {
+      this.router.navigate(['/dashboard']); 
+      return;
     }
   }
 
