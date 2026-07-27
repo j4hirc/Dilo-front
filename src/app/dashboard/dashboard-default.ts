@@ -79,7 +79,12 @@ export class DashboardDefault implements OnInit {
 
     this.http.get<any>(`${this.apiUrl}/negocios/${this.negocioId}`, { headers })
       .subscribe({
-        next: (data) => this.negocioNombre = data.nombreComercial || data.razonSocial || 'Mi Empresa',
+        next: (data) => {
+          // 🔥 CORRECCIÓN AL ERROR NG0100
+          setTimeout(() => {
+            this.negocioNombre = data.nombreComercial || data.razonSocial || 'Mi Empresa';
+          });
+        },
         error: (err) => console.error(err)
       });
   }
@@ -91,7 +96,12 @@ export class DashboardDefault implements OnInit {
 
     this.http.get<any[]>(`${this.apiUrl}/negocios/${this.negocioId}/dashboard/alertas-caducidad?dias=30`, { headers })
       .subscribe({
-        next: (data) => this.alertasCaducidad = data || [],
+        next: (data) => {
+          // 🔥 CORRECCIÓN AL ERROR NG0100
+          setTimeout(() => {
+            this.alertasCaducidad = data || [];
+          });
+        },
         error: (err) => console.error(err)
       });
   }
@@ -133,15 +143,18 @@ export class DashboardDefault implements OnInit {
 
     forkJoin([reqProductos, reqCategorias, reqClientes, reqProveedores, reqInventario, reqFacturas])
       .subscribe(([productos, categorias, clientes, proveedores, inventario, facturas]) => {
-        this.contextoNegocioTexto = this.construirResumenDelNegocio(
-          Array.isArray(productos) ? productos : [],
-          Array.isArray(categorias) ? categorias : [],
-          Array.isArray(clientes) ? clientes : [],
-          Array.isArray(proveedores) ? proveedores : [],
-          Array.isArray(inventario) ? inventario : [],
-          Array.isArray(facturas) ? facturas : []
-        );
-        this.contextoNegocioListo = true;
+        // 🔥 CORRECCIÓN AL ERROR NG0100
+        setTimeout(() => {
+          this.contextoNegocioTexto = this.construirResumenDelNegocio(
+            Array.isArray(productos) ? productos : [],
+            Array.isArray(categorias) ? categorias : [],
+            Array.isArray(clientes) ? clientes : [],
+            Array.isArray(proveedores) ? proveedores : [],
+            Array.isArray(inventario) ? inventario : [],
+            Array.isArray(facturas) ? facturas : []
+          );
+          this.contextoNegocioListo = true;
+        });
       });
   }
 

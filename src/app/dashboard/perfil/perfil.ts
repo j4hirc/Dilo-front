@@ -1,13 +1,13 @@
 import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { FormsModule } from '@angular/forms'; // 🔥 VITAL PARA LOS INPUTS
+import { FormsModule } from '@angular/forms'; 
 import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-perfil',
   standalone: true,
-  imports: [CommonModule, FormsModule], // 🔥 AGREGADO AQUÍ
+  imports: [CommonModule, FormsModule], 
   templateUrl: './perfil.html',
   styleUrls: ['./perfil.css'],
 })
@@ -19,11 +19,22 @@ export class Perfil implements OnInit {
   isLoading = true;
   private apiUrl = 'https://dilo-backend-mxlu.onrender.com/api/v1';
 
-  // Variables para la edición
+  // Variables para la edición del perfil
   isEditing = false;
   editData: any = {};
   selectedFile: File | null = null;
   previewUrl: string | null = null;
+
+  // Variables para cambiar contraseña
+  isChangingPassword = false;
+  passwordData = {
+    newPassword: '',
+    confirmPassword: ''
+  };
+
+  // 🔥 Variables para mostrar/ocultar contraseñas (el ojito)
+  showNewPassword = false;
+  showConfirmPassword = false;
 
   ngOnInit(): void {
     this.cargarMiPerfil();
@@ -56,11 +67,9 @@ export class Perfil implements OnInit {
     });
   }
 
-  // 🔥 ACTIVA/DESACTIVA EL MODO EDICIÓN
   toggleEdit() {
     this.isEditing = !this.isEditing;
     if (this.isEditing) {
-      // Clonar los datos para no afectar la vista si el usuario cancela
       this.editData = {
         primerNombre: this.usuario.primerNombre,
         segundoNombre: this.usuario.segundoNombre,
@@ -75,19 +84,69 @@ export class Perfil implements OnInit {
     }
   }
 
-  // 🔥 DETECTA CUANDO SE ELIGE UNA FOTO NUEVA
   onFileSelected(event: any) {
     const file = event.target.files[0];
     if (file) {
       this.selectedFile = file;
-      // Crear previsualización
       const reader = new FileReader();
       reader.onload = (e: any) => this.previewUrl = e.target.result;
       reader.readAsDataURL(file);
     }
   }
 
-  // 🔥 GUARDA LOS CAMBIOS EN SPRING BOOT
+  // Activa o desactiva el formulario de contraseña
+  toggleChangePassword() {
+    this.isChangingPassword = !this.isChangingPassword;
+    if (!this.isChangingPassword) {
+      this.passwordData = { newPassword: '', confirmPassword: '' };
+      this.showNewPassword = false;
+      this.showConfirmPassword = false;
+    }
+  }
+
+  // 🔥 Lógica de los botones del ojito
+  togglePasswordVisibility(field: 'new' | 'confirm') {
+    if (field === 'new') {
+      this.showNewPassword = !this.showNewPassword;
+    } else {
+      this.showConfirmPassword = !this.showConfirmPassword;
+    }
+  }
+
+  // Guarda la nueva contraseña
+  guardarPassword() {
+    if (!this.passwordData.newPassword || !this.passwordData.confirmPassword) {
+      Swal.fire('Atención', 'Ambos campos son obligatorios.', 'warning');
+      return;
+    }
+    if (this.passwordData.newPassword !== this.passwordData.confirmPassword) {
+      Swal.fire('Error', 'Las contraseñas no coinciden.', 'error');
+      return;
+    }
+
+    this.isLoading = true;
+    const rawToken = localStorage.getItem('dilo_token') || '';
+    const cleanToken = rawToken.replace(/['"]+/g, ''); 
+    const headers = new HttpHeaders().set('Authorization', `Bearer ${cleanToken}`);
+
+    this.http.put<any>(`${this.apiUrl}/usuarios/me/password`, this.passwordData, { headers }).subscribe({
+      next: (res) => {
+        this.isLoading = false;
+        this.toggleChangePassword();
+        this.cdr.detectChanges();
+        Swal.fire('¡Éxito!', 'Tu contraseña ha sido actualizada correctamente.', 'success');
+      },
+      error: (err) => {
+        console.error('Error al cambiar contraseña:', err);
+        this.isLoading = false;
+        this.cdr.detectChanges();
+        const mensajeError = err.error ? err.error : 'No se pudo actualizar la contraseña.';
+        Swal.fire('Error', typeof mensajeError === 'string' ? mensajeError : 'Verifica tus datos.', 'error');
+      }
+    });
+  }
+
+  // Guarda los cambios normales del perfil
   guardarCambios() {
     this.isLoading = true;
     const rawToken = localStorage.getItem('dilo_token') || '';
@@ -95,12 +154,9 @@ export class Perfil implements OnInit {
     const headers = new HttpHeaders().set('Authorization', `Bearer ${cleanToken}`);
 
     const formData = new FormData();
-    
-    // Convertimos los datos a un Blob tipo JSON (Lo que pide tu backend)
     const jsonBlob = new Blob([JSON.stringify(this.editData)], { type: 'application/json' });
     formData.append('datos', jsonBlob);
 
-    // Si hay foto nueva, la adjuntamos
     if (this.selectedFile) {
       formData.append('foto', this.selectedFile);
     }
@@ -108,7 +164,6 @@ export class Perfil implements OnInit {
     this.http.put<any>(`${this.apiUrl}/usuarios/me`, formData, { headers }).subscribe({
       next: (data) => {
         this.usuario = data;
-        // Actualizamos localstorage
         const userLocalStr = localStorage.getItem('usuario');
         if (userLocalStr) {
             const userLocal = JSON.parse(userLocalStr);

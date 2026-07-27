@@ -317,3 +317,155 @@
     background-color: #dd6b20; /* Naranja más oscuro */
     box-shadow: 0 6px 15px rgba(237, 137, 54, 0.3);
 }
+
+.password-section {
+    margin-top: 30px;
+    text-align: left;
+}
+
+.divider {
+    border: 0;
+    height: 1px;
+    background: #e2e8f0;
+    margin-bottom: 25px;
+}
+
+.btn-outline {
+    background: transparent;
+    color: var(--text-main);
+    border: 1px solid #cbd5e1;
+    padding: 10px 20px;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-outline:hover {
+    background: #f8fafc;
+    border-color: #94a3b8;
+}
+
+.password-form {
+    background: #f8fafc;
+    padding: 25px;
+    border-radius: 16px;
+    border: 1px solid #e2e8f0;
+}
+
+.password-form h4 {
+    margin: 0 0 5px 0;
+    color: var(--text-main);
+    font-size: 1.2rem;
+}
+
+.text-muted {
+    color: #64748b;
+    font-size: 0.9rem;
+    margin-top: 0;
+    margin-bottom: 20px;
+}
+
+.password-inputs {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 15px;
+    max-width: 400px;
+}
+
+.password-form {
+    background: #ffffff; /* Fondo blanco en lugar de gris para que destaque más */
+    padding: 30px;
+    border-radius: 16px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.03); /* Sombra suave */
+    margin-top: 15px;
+}
+
+.password-header {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.password-icon {
+    width: 45px;
+    height: 45px;
+    background-color: #fff7ed;
+    color: var(--primary-orange);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.password-form h4 {
+    margin: 0;
+    color: var(--text-main);
+    font-size: 1.25rem;
+    font-weight: 800;
+}
+
+.text-muted {
+    color: #64748b;
+    font-size: 0.9rem;
+    margin: 4px 0 0 0;
+}
+
+/* Contenedor de los inputs y el ojo */
+.password-inputs {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    max-width: 450px;
+}
+
+.password-input-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+/* Ajuste específico para que el texto no se monte sobre el icono */
+.custom-input-icon {
+    padding-right: 50px !important; 
+    height: 48px; /* Inputs un poco más altos para que se vean modernos */
+}
+
+/* El botón del ojo */
+.btn-eye {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+}
+
+.btn-eye:hover {
+    color: var(--primary-orange);
+    background-color: #f1f5f9;
+}
+
+.btn-eye:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(237, 137, 54, 0.2);
+}
+
+.password-form .edit-actions-footer {
+    border-top: none; /* Quitamos la línea de arriba en esta sección */
+    padding-top: 10px;
+    justify-content: flex-start; /* Alineamos los botones a la izquierda */
+}
