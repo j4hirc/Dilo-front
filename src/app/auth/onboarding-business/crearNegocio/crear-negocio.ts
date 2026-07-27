@@ -1,8 +1,8 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { HttpClient, HttpHeaders } from '@angular/common/http'; // 🔥 Importamos HttpHeaders
+import { HttpClient, HttpHeaders } from '@angular/common/http'; 
 import Swal from 'sweetalert2';
 
 @Component({
@@ -12,12 +12,11 @@ import Swal from 'sweetalert2';
   templateUrl: './crear-negocio.html',
   styleUrls: ['./crear-negocio.css']
 })
-export class CrearNegocio {
+export class CrearNegocio implements OnInit {
   private fb = inject(FormBuilder);
   private http = inject(HttpClient);
   private router = inject(Router);
 
-  // 🔥 RUTA REAL DE PRODUCCIÓN (RENDER)
   private apiUrl = 'https://dilo-backend-mxlu.onrender.com/api/v1/negocios';
 
   isLoading = false;
@@ -32,6 +31,16 @@ export class CrearNegocio {
     metodoCosteo: ['PROMEDIO', Validators.required],
     obligadoContabilidad: [false]
   });
+
+  ngOnInit() {
+    // 🔥 VALIDACIÓN DE SEGURIDAD AL CARGAR EL COMPONENTE
+    const token = localStorage.getItem('dilo_token');
+    const usuarioStr = localStorage.getItem('dilo_user') || localStorage.getItem('usuario');
+    
+    if (!token || !usuarioStr) {
+      this.router.navigate(['/login']);
+    }
+  }
 
   onFileSelected(event: any) {
     const file = event.target.files[0];
@@ -77,16 +86,10 @@ export class CrearNegocio {
     this.http.post<any>(this.apiUrl, formData, { headers }).subscribe({
       next: (response) => {
         this.isLoading = false;
-        
-        // 🔥 VAMOS A VER QUÉ NOS MANDA REALMENTE SPRING BOOT EN LA CONSOLA
         console.log("🚀 Respuesta exacta del backend al crear negocio:", response);
 
-        // =================================================================
-        // 🔥 LA MAGIA BLINDADA: Atrapamos el ID sin importar cómo se llame
-        // =================================================================
         const idGenerado = response.id || response.idNegocio || response.negocioId || response.Id;
         
-        // Actualizamos la sesión en 'usuario'
         const userStr = localStorage.getItem('usuario');
         if (userStr) {
           const usuarioObj = JSON.parse(userStr);
@@ -94,14 +97,12 @@ export class CrearNegocio {
           localStorage.setItem('usuario', JSON.stringify(usuarioObj));
         }
 
-        // Actualizamos la sesión en 'dilo_user' (por si acaso el Auth usa esta)
         const diloUserStr = localStorage.getItem('dilo_user');
         if (diloUserStr) {
           const diloUserObj = JSON.parse(diloUserStr);
           diloUserObj.negocioId = idGenerado; 
           localStorage.setItem('dilo_user', JSON.stringify(diloUserObj));
         }
-        // =================================================================
 
         Swal.fire({
           icon: 'success',

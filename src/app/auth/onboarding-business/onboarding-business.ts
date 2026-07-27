@@ -1,6 +1,6 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { Router, RouterModule } from '@angular/router';
-import Swal from 'sweetalert2'; // 🔥 Importamos SweetAlert2
+import Swal from 'sweetalert2'; 
 
 @Component({
   selector: 'app-onboarding-business',
@@ -13,21 +13,25 @@ export class OnboardingBusiness implements OnInit {
   private router = inject(Router);
 
   ngOnInit() {
-    this.verificarNegocio();
+    this.verificarSesionYNegocio();
   }
 
-  verificarNegocio() {
-    // Obtenemos los datos del usuario logueado
+  verificarSesionYNegocio() {
+    const token = localStorage.getItem('dilo_token');
     const usuarioStr = localStorage.getItem('dilo_user') || localStorage.getItem('usuario');
     
-    if (usuarioStr) {
-      const usuario = JSON.parse(usuarioStr);
-      
-      // ⚠️ Cambia 'tieneNegocio' o 'idNegocio' por la propiedad real que devuelve tu backend
-      if (usuario.tieneNegocio || usuario.idNegocio) {
-        // Lo sacamos obligatoriamente a la vista principal
-        this.router.navigate(['/dashboard']); // Ajusta esta ruta a donde debe ir
-      }
+    // 1. Validar que exista el token y los datos del usuario
+    if (!token || !usuarioStr) {
+      this.router.navigate(['/login']);
+      return; // Detenemos la ejecución
+    }
+
+    // 2. Si está logueado, verificamos si ya tiene negocio
+    const usuario = JSON.parse(usuarioStr);
+    
+    if (usuario.tieneNegocio || usuario.idNegocio) {
+      // Lo sacamos obligatoriamente a la vista principal
+      this.router.navigate(['/dashboard']); 
     }
   }
 
@@ -52,4 +56,4 @@ export class OnboardingBusiness implements OnInit {
       }
     });
   }
-} 
+}

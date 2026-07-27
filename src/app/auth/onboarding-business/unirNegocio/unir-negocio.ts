@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
@@ -12,7 +12,7 @@ import Swal from 'sweetalert2';
   templateUrl: './unir-negocio.html',
   styleUrls: ['./unir-negocio.css'] 
 })
-export class UnirNegocio {
+export class UnirNegocio implements OnInit {
   private fb = inject(FormBuilder);
   private http = inject(HttpClient);
   private router = inject(Router);
@@ -25,6 +25,16 @@ export class UnirNegocio {
     codigoInvitacion: ['', [Validators.required, Validators.minLength(6)]],
     idRol: ['3', [Validators.required]]
   });
+
+  ngOnInit() {
+    // 🔥 VALIDACIÓN DE SEGURIDAD AL CARGAR EL COMPONENTE
+    const token = localStorage.getItem('dilo_token');
+    const usuarioStr = localStorage.getItem('dilo_user') || localStorage.getItem('usuario');
+    
+    if (!token || !usuarioStr) {
+      this.router.navigate(['/login']);
+    }
+  }
 
   onSubmit() {
     if (this.joinForm.invalid) {
@@ -72,11 +82,9 @@ export class UnirNegocio {
       error: (err) => {
         this.isLoading = false;
         
-        // 🔥 Extracción blindada del mensaje de error (evita fallos de lectura de JSON)
         const mensajeError = err.error?.message || (typeof err.error === 'string' ? err.error : 'Verifica el código de invitación e intenta nuevamente.');
         const msgLower = mensajeError.toLowerCase();
 
-        // 🔥 VALIDACIÓN VISUAL SI ESTÁ INACTIVO O RECHAZADO
         if (msgLower.includes('revocado') || msgLower.includes('rechazada') || msgLower.includes('perteneces')) {
           Swal.fire({
             icon: 'warning',
