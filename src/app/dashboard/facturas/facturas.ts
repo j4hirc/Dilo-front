@@ -6,10 +6,10 @@ import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import Swal from 'sweetalert2';
 
-// 🔥 ESTADOS AMPLIADOS DEL ASISTENTE DE VOZ
+// 🔥 ESTADOS DEL ASISTENTE
 enum VoiceStep {
   OFF = 'OFF',
-  INICIANDO = 'INICIANDO', 
+  ESCUCHA_LIBRE = 'ESCUCHA_LIBRE', // Nuevo modo: Entiende oraciones completas
   CLIENTE = 'CLIENTE',
   ELEGIR_CLIENTE = 'ELEGIR_CLIENTE',
   BODEGA = 'BODEGA',
@@ -65,15 +65,13 @@ export class Facturas implements OnInit, OnDestroy {
   };
 
   // =========================================
-  // 🔥 VARIABLES DEL ASISTENTE DE VOZ (ZOE)
+  // 🔥 VARIABLES DE ZOE (VOZ)
   // =========================================
   voiceState: VoiceStep = VoiceStep.OFF;
   voiceMessage: string = ''; 
   userTranscript: string = ''; 
   isListening: boolean = false;
   private recognition: any;
-  
-  // Opciones temporales para que el usuario elija
   opcionesVoz: any[] = [];
   tipoOpciones: 'CLIENTE' | 'BODEGA' | 'PRODUCTO' | null = null;
 
@@ -103,9 +101,7 @@ export class Facturas implements OnInit, OnDestroy {
 
     this.initSpeechRecognition();
     window.speechSynthesis.getVoices();
-    window.speechSynthesis.onvoiceschanged = () => {
-        window.speechSynthesis.getVoices();
-    };
+    window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
   }
 
   ngOnDestroy(): void {
@@ -138,9 +134,6 @@ export class Facturas implements OnInit, OnDestroy {
       },
       error: (err) => {
         this.isLoading = false;
-        if (err.status === 401) {
-            Swal.fire({ icon: 'warning', title: 'Sesión expirada', text: 'Tu token caducó. Cierra sesión y vuelve a entrar.' });
-        }
       }
     });
   }
@@ -159,14 +152,9 @@ export class Facturas implements OnInit, OnDestroy {
     this.tipoOpciones = null;
 
     if (porVoz) {
-      this.voiceState = VoiceStep.INICIANDO;
-      this.voiceMessage = 'Conectando con Zoe...';
-      
       window.speechSynthesis.resume();
       window.speechSynthesis.cancel();
-      this.cdr.detectChanges();
-      
-      setTimeout(() => this.iniciarFacturaPorVoz(), 600);
+      this.iniciarFacturaPorVoz();
     } else {
       this.voiceState = VoiceStep.OFF;
     }
@@ -197,7 +185,7 @@ export class Facturas implements OnInit, OnDestroy {
   }
 
   // =======================================================
-  // 🔥 LÓGICA DE ZOE (ASISTENTE DE VOZ BLINDADO)
+  // 🔥 LÓGICA DE ZOE (ASISTENTE NLP MAGICO)
   // =======================================================
 
   initSpeechRecognition() {
@@ -228,9 +216,8 @@ export class Facturas implements OnInit, OnDestroy {
     this.recognition.onerror = (event: any) => {
       this.isListening = false;
       this.cdr.detectChanges();
-
       if (event.error === 'no-speech') {
-        this.hablar("Mmm... sigo aquí. ¿Me decías algo?", () => this.escuchar());
+        this.hablar("Sigo aquí. Dime, ¿qué deseas facturar?", () => this.escuchar());
       } else if (event.error === 'not-allowed') {
         Swal.fire('Micrófono bloqueado', 'Permite el acceso al micrófono.', 'error');
         this.cancelarAsistenteVoz();
@@ -251,9 +238,8 @@ export class Facturas implements OnInit, OnDestroy {
       this.cancelarAsistenteVoz();
       return;
     }
-    
-    this.voiceState = VoiceStep.CLIENTE;
-    this.hablar("¡Hola! Soy Zoe. ¿A qué cliente le vamos a facturar?", () => this.escuchar());
+    this.voiceState = VoiceStep.ESCUCHA_LIBRE;
+    this.hablar("¡Hola! Soy Zoe. Dime qué quieres facturar. Por ejemplo: Facturar a Carlos tres celulares en efectivo.", () => this.escuchar());
   }
 
   cancelarAsistenteVoz() {
@@ -277,7 +263,7 @@ export class Facturas implements OnInit, OnDestroy {
         const utterance = new SpeechSynthesisUtterance(texto);
         utterance.lang = 'es-ES';
         utterance.rate = 1.0; 
-        utterance.pitch = 1.3; 
+        utterance.pitch = 1.1; // 🔥 Tono ajustado: 1.1 suena a mujer natural, no robótica ni ardilla.
 
         let voices = window.speechSynthesis.getVoices();
         let spanishVoices = voices.filter(v => v.lang.startsWith('es'));
@@ -292,10 +278,10 @@ export class Facturas implements OnInit, OnDestroy {
 
         utterance.onend = () => {
           setTimeout(() => {
-              if (callback && this.voiceState !== VoiceStep.OFF && this.voiceState !== VoiceStep.INICIANDO) {
+              if (callback && this.voiceState !== VoiceStep.OFF) {
                 callback();
               }
-          }, 350); 
+          }, 300); 
         };
 
         utterance.onerror = () => {
@@ -307,23 +293,111 @@ export class Facturas implements OnInit, OnDestroy {
   }
 
   private escuchar() {
-    if (this.voiceState === VoiceStep.OFF || this.voiceState === VoiceStep.INICIANDO) return;
+    if (this.voiceState === VoiceStep.OFF) return;
     this.isListening = true;
     this.userTranscript = ''; 
     this.cdr.detectChanges();
-    try {
-      this.recognition.start();
-    } catch (e) {
-      // Ignorar
+    try { this.recognition.start(); } catch (e) {}
+  }
+
+  // 🔥 MAGIA: Extractor de entidades locales (Rellena el formulario en vivo)
+  private analizarOracionCompleta(transcript: string) {
+    let detectoAlgo = false;
+
+    // 1. MÉTODO DE PAGO
+    if (transcript.includes('efectivo')) { this.nuevaFactura.metodoPago = 'EFECTIVO'; detectoAlgo = true; }
+    else if (transcript.includes('transferencia')) { this.nuevaFactura.metodoPago = 'TRANSFERENCIA'; detectoAlgo = true; }
+    else if (transcript.includes('tarjeta') || transcript.includes('crédito') || transcript.includes('credito')) { this.nuevaFactura.metodoPago = 'TARJETA_CREDITO'; detectoAlgo = true; }
+
+    // 2. CLIENTE
+    if (!this.nuevaFactura.clienteId) {
+      for (const cli of this.clientesList) {
+        const nombre = (cli.nombreCompleto || cli.primerNombre || '').toLowerCase();
+        if (nombre && transcript.includes(nombre)) {
+          this.seleccionarCliente(cli);
+          detectoAlgo = true;
+          break;
+        }
+      }
+    }
+
+    // 3. BODEGA
+    if (!this.itemTemp.bodegaId) {
+      if (this.bodegasList.length === 1) {
+        this.itemTemp.bodegaId = this.bodegasList[0].id;
+      } else {
+        for (const bod of this.bodegasList) {
+          if (transcript.includes(bod.nombre.toLowerCase())) {
+            this.itemTemp.bodegaId = bod.id;
+            detectoAlgo = true;
+            break;
+          }
+        }
+      }
+    }
+
+    // 4. PRODUCTO
+    if (!this.itemTemp.productoId) {
+      for (const prod of this.productosList) {
+        const prodName = (prod.nombre || '').toLowerCase();
+        if (prodName && transcript.includes(prodName)) {
+          this.itemTemp.productoId = prod.id;
+          detectoAlgo = true;
+          break;
+        }
+      }
+    }
+
+    // 5. CANTIDAD
+    const cant = this.textoANumero(transcript);
+    if (cant > 0) {
+      this.itemTemp.cantidad = cant;
+      detectoAlgo = true;
+    }
+
+    this.cdr.detectChanges(); // Ver la magia en pantalla en tiempo real
+
+    // Si dijo de todo un poco pero no tiene sentido
+    if (!detectoAlgo) {
+      this.voiceState = VoiceStep.CLIENTE;
+      this.hablar("Perdón, me confundí un poco. Vamos paso a paso. ¿A qué cliente le vamos a facturar?", () => this.escuchar());
+      return;
+    }
+
+    this.evaluarFaltantes();
+  }
+
+  // Mueve la máquina de estados según lo que falte
+  private evaluarFaltantes() {
+    this.cdr.detectChanges();
+
+    if (!this.nuevaFactura.clienteId) {
+        this.voiceState = VoiceStep.CLIENTE;
+        this.hablar("¡Anotado! Pero, ¿a qué cliente le vamos a facturar?", () => this.escuchar());
+    } 
+    else if (!this.itemTemp.bodegaId) {
+        this.voiceState = VoiceStep.BODEGA;
+        this.hablar(`Tengo al cliente. ¿De qué bodega saco los productos?`, () => this.escuchar());
+    } 
+    else if (!this.itemTemp.productoId) {
+        this.voiceState = VoiceStep.PRODUCTO;
+        this.hablar(`¿Qué producto deseas agregar?`, () => this.escuchar());
+    } 
+    else if (!this.itemTemp.cantidad || this.itemTemp.cantidad <= 0) {
+        this.voiceState = VoiceStep.CANTIDAD;
+        this.hablar(`¿Cuántas unidades van a ser?`, () => this.escuchar());
+    } 
+    else {
+        // Tiene todo lleno: Agrega automáticamente y pregunta por más
+        this.agregarAlCarrito(); 
+        this.voiceState = VoiceStep.OTRO_PRODUCTO;
+        this.hablar(`¡Producto agregado al carrito! ¿Deseas añadir algo más o emitimos la factura?`, () => this.escuchar());
     }
   }
 
-  // 🔥 UTILIDAD PARA EXTRAER LA OPCIÓN (ej: "uno", "el primero")
   private extraerIndice(texto: string, maxOpciones: number): number {
     const num = this.textoANumero(texto);
-    if (num > 0 && num <= maxOpciones) {
-      return num - 1; // Índices empiezan en 0
-    }
+    if (num > 0 && num <= maxOpciones) return num - 1; 
     if (texto.includes('primer') || texto.includes('1')) return 0;
     if (texto.includes('segund') || texto.includes('2')) return 1;
     if (texto.includes('tercer') || texto.includes('3')) return 2;
@@ -333,177 +407,128 @@ export class Facturas implements OnInit, OnDestroy {
   }
 
   private procesarComandoVoz(transcript: string) {
-    const headers = this.getAuthHeaders();
-
     switch (this.voiceState) {
       
-      // ===========================
-      // CLIENTE
-      // ===========================
+      case VoiceStep.ESCUCHA_LIBRE:
+        this.analizarOracionCompleta(transcript);
+        break;
+
       case VoiceStep.CLIENTE:
-        this.http.get<any[]>(`${this.apiUrl}/negocios/${this.negocioId}/clientes/buscar-voz?q=${transcript}`, { headers })
-          .subscribe({
-            next: (res) => {
-              if (res.length === 1) {
-                this.seleccionarCliente(res[0]);
-                this.pasoABodega();
-              } else if (res.length > 1) {
-                // 🔥 SI HAY VARIOS: Mostramos lista
-                this.opcionesVoz = res.slice(0, 5); // Máximo 5 para no saturar
-                this.tipoOpciones = 'CLIENTE';
-                this.voiceState = VoiceStep.ELEGIR_CLIENTE;
-                this.hablar(`Encontré a estas personas. ¿Cuál número eliges?`, () => this.escuchar());
-              } else {
-                this.hablar("¡Ay, lo siento! No logré encontrar a ese cliente. ¿Podrías repetirme su nombre?", () => this.escuchar());
-              }
-            },
-            error: () => this.hablar("Tuve un problema de red al buscar el cliente. ¿Me lo repites?", () => this.escuchar())
-          });
+        // Buscamos localmente para mayor velocidad y exactitud
+        const clientesEncontrados = this.clientesList.filter(cli => 
+            (cli.nombreCompleto?.toLowerCase().includes(transcript)) ||
+            (cli.primerNombre?.toLowerCase().includes(transcript))
+        );
+
+        if (clientesEncontrados.length === 1) {
+          this.seleccionarCliente(clientesEncontrados[0]);
+          this.evaluarFaltantes();
+        } else if (clientesEncontrados.length > 1) {
+          this.opcionesVoz = clientesEncontrados.slice(0, 5);
+          this.tipoOpciones = 'CLIENTE';
+          this.voiceState = VoiceStep.ELEGIR_CLIENTE;
+          this.hablar(`Encontré a estas personas. ¿Qué número eliges?`, () => this.escuchar());
+        } else {
+          this.hablar("No logré encontrar a ese cliente. ¿Podrías repetirme su nombre?", () => this.escuchar());
+        }
         break;
 
       case VoiceStep.ELEGIR_CLIENTE:
         const indexCli = this.extraerIndice(transcript, this.opcionesVoz.length);
         if (indexCli !== -1) {
-          const cliSelec = this.opcionesVoz[indexCli];
-          this.seleccionarCliente(cliSelec);
+          this.seleccionarCliente(this.opcionesVoz[indexCli]);
           this.opcionesVoz = [];
           this.tipoOpciones = null;
-          this.pasoABodega();
+          this.evaluarFaltantes();
         } else {
-          this.hablar("Perdona, no entendí cuál opción. Dime el número, por ejemplo, uno o dos.", () => this.escuchar());
+          this.hablar("Dime el número de la lista, por ejemplo, uno o dos.", () => this.escuchar());
         }
         break;
 
-      // ===========================
-      // BODEGA
-      // ===========================
       case VoiceStep.BODEGA:
-        const bodegasEncontradas = this.bodegasList.filter(b => 
-          b.nombre.toLowerCase().includes(transcript) || transcript.includes(b.nombre.toLowerCase())
-        );
-
+        const bodegasEncontradas = this.bodegasList.filter(b => b.nombre.toLowerCase().includes(transcript));
         if (bodegasEncontradas.length === 1) {
           this.itemTemp.bodegaId = bodegasEncontradas[0].id;
-          this.voiceState = VoiceStep.PRODUCTO;
-          this.hablar(`¡Excelente! Bodega ${bodegasEncontradas[0].nombre} lista. ¿Qué producto te gustaría agregar?`, () => this.escuchar());
+          this.evaluarFaltantes();
         } else if (bodegasEncontradas.length > 1) {
           this.opcionesVoz = bodegasEncontradas.slice(0, 5);
           this.tipoOpciones = 'BODEGA';
           this.voiceState = VoiceStep.ELEGIR_BODEGA;
-          this.hablar("Encontré varias bodegas parecidas. ¿Me dices el número de la correcta?", () => this.escuchar());
+          this.hablar("Encontré varias bodegas. ¿Me dices el número de la correcta?", () => this.escuchar());
         } else {
-          if (this.bodegasList.length === 1) {
-             this.itemTemp.bodegaId = this.bodegasList[0].id;
-             this.voiceState = VoiceStep.PRODUCTO;
-             this.hablar(`Usaremos tu bodega principal. Dime, ¿qué producto buscamos?`, () => this.escuchar());
-          } else {
-             this.hablar("¡Ups! No encontré esa bodega. ¿Me repites el nombre, porfa?", () => this.escuchar());
-          }
+          this.hablar("No encontré esa bodega. ¿Me repites el nombre?", () => this.escuchar());
         }
         break;
 
       case VoiceStep.ELEGIR_BODEGA:
         const indexBod = this.extraerIndice(transcript, this.opcionesVoz.length);
         if (indexBod !== -1) {
-          const bodSelec = this.opcionesVoz[indexBod];
-          this.itemTemp.bodegaId = bodSelec.id;
+          this.itemTemp.bodegaId = this.opcionesVoz[indexBod].id;
           this.opcionesVoz = [];
           this.tipoOpciones = null;
-          this.voiceState = VoiceStep.PRODUCTO;
-          this.hablar(`Lista la bodega ${bodSelec.nombre}. ¿Qué producto buscamos?`, () => this.escuchar());
+          this.evaluarFaltantes();
         } else {
-          this.hablar("No capté la opción. Dime el número exacto, por favor.", () => this.escuchar());
+          this.hablar("No capté la opción. Dime el número, por favor.", () => this.escuchar());
         }
         break;
 
-      // ===========================
-      // PRODUCTO
-      // ===========================
       case VoiceStep.PRODUCTO:
-        this.http.get<any[]>(`${this.apiUrl}/negocios/${this.negocioId}/productos/buscar-voz?q=${transcript}`, { headers })
-          .subscribe({
-            next: (res) => {
-              if (res.length === 1) {
-                this.itemTemp.productoId = res[0].id;
-                this.voiceState = VoiceStep.CANTIDAD;
-                this.hablar(`¡Lo tengo! Es ${res[0].nombre}. ¿Cuántas unidades vas a facturar?`, () => this.escuchar());
-              } else if (res.length > 1) {
-                this.opcionesVoz = res.slice(0, 5);
-                this.tipoOpciones = 'PRODUCTO';
-                this.voiceState = VoiceStep.ELEGIR_PRODUCTO;
-                this.hablar(`Tengo estas opciones en pantalla. ¿Cuál número deseas?`, () => this.escuchar());
-              } else {
-                this.hablar("No logré encontrar ese producto en tu catálogo. ¿Buscamos otro?", () => this.escuchar());
-              }
-            },
-            error: () => this.hablar("Tuve un fallo de conexión. ¿Me repites el producto?", () => this.escuchar())
-          });
+        const productosBuscados = this.productosList.filter(p => p.nombre.toLowerCase().includes(transcript));
+        if (productosBuscados.length === 1) {
+          this.itemTemp.productoId = productosBuscados[0].id;
+          this.evaluarFaltantes();
+        } else if (productosBuscados.length > 1) {
+          this.opcionesVoz = productosBuscados.slice(0, 5);
+          this.tipoOpciones = 'PRODUCTO';
+          this.voiceState = VoiceStep.ELEGIR_PRODUCTO;
+          this.hablar(`Tengo estas opciones en pantalla. ¿Qué número deseas?`, () => this.escuchar());
+        } else {
+          this.hablar("No logré encontrar ese producto. ¿Buscamos otro?", () => this.escuchar());
+        }
         break;
 
       case VoiceStep.ELEGIR_PRODUCTO:
         const indexProd = this.extraerIndice(transcript, this.opcionesVoz.length);
         if (indexProd !== -1) {
-          const prodSelec = this.opcionesVoz[indexProd];
-          this.itemTemp.productoId = prodSelec.id;
+          this.itemTemp.productoId = this.opcionesVoz[indexProd].id;
           this.opcionesVoz = [];
           this.tipoOpciones = null;
-          this.voiceState = VoiceStep.CANTIDAD;
-          this.hablar(`Elegiste ${prodSelec.nombre}. ¿Cuántas unidades quieres?`, () => this.escuchar());
+          this.evaluarFaltantes();
         } else {
-          this.hablar("Mmm... no te entendí. ¿Qué número de la lista quieres?", () => this.escuchar());
+          this.hablar("Mmm... ¿Qué número de la lista quieres?", () => this.escuchar());
         }
         break;
 
-      // ===========================
-      // CANTIDAD Y CONFIRMAR
-      // ===========================
       case VoiceStep.CANTIDAD:
         const cantidadNumerica = this.textoANumero(transcript);
         if (cantidadNumerica > 0) {
           this.itemTemp.cantidad = cantidadNumerica;
-          this.agregarAlCarrito(); 
-          
-          this.voiceState = VoiceStep.OTRO_PRODUCTO;
-          this.hablar(`¡Anotado! Llevamos ${cantidadNumerica}. ¿Te gustaría añadir algo más a la factura? Dime sí o no.`, () => this.escuchar());
+          this.evaluarFaltantes(); // Esto lo agregará al carrito
         } else {
-          this.hablar("Perdona, no capté la cantidad. ¿Me podrías decir un número exacto, como uno o cinco?", () => this.escuchar());
+          this.hablar("Perdona, no capté la cantidad. Dime un número como uno, dos o diez.", () => this.escuchar());
         }
         break;
 
       case VoiceStep.OTRO_PRODUCTO:
-        if (transcript.includes('si') || transcript.includes('sí') || transcript.includes('claro') || transcript.includes('mas')) {
+        if (transcript.includes('si') || transcript.includes('sí') || transcript.includes('claro') || transcript.includes('mas') || transcript.includes('agregar')) {
           this.voiceState = VoiceStep.PRODUCTO;
           this.hablar("¡Con gusto! Dime, ¿qué otro producto buscamos?", () => this.escuchar());
         } else {
           this.voiceState = VoiceStep.CONFIRMAR;
-          this.hablar(`¡Perfecto! El total de esta venta es de ${this.totalCarrito.toFixed(2)} dólares. ¿Deseas que emita la factura en este momento?`, () => this.escuchar());
+          this.hablar(`Perfecto. El total a pagar es ${this.totalCarrito.toFixed(2)} dólares. ¿Emitimos la factura?`, () => this.escuchar());
         }
         break;
 
       case VoiceStep.CONFIRMAR:
         if (transcript.includes('si') || transcript.includes('sí') || transcript.includes('emite') || transcript.includes('dale')) {
           this.voiceState = VoiceStep.OFF;
-          this.hablar("¡Manos a la obra! Generando tu factura. ¡Mucho éxito en tus ventas!");
+          this.hablar("¡Factura en camino! Éxito en tu venta.");
           this.guardarFactura();
         } else {
           this.voiceState = VoiceStep.OFF;
-          this.hablar("¡No hay problema! Te dejo la factura en pantalla para que la revises con calma.");
+          this.hablar("De acuerdo, te dejo la factura en pantalla.");
         }
         break;
-    }
-  }
-
-  // Utilidad centralizada para pasar de Cliente -> Bodega
-  private pasoABodega() {
-    this.voiceState = VoiceStep.BODEGA;
-    
-    // Si solo hay una bodega en el negocio, evitamos preguntarle al usuario (Optimización UX)
-    if (this.bodegasList.length === 1) {
-        this.itemTemp.bodegaId = this.bodegasList[0].id;
-        this.voiceState = VoiceStep.PRODUCTO;
-        this.hablar(`¡Súper! Seleccioné al cliente. Usaremos tu bodega principal. Dime, ¿qué producto buscamos?`, () => this.escuchar());
-    } else {
-        this.hablar(`¡Súper! Seleccioné al cliente. Ahora dime, ¿De qué bodega sacamos los productos?`, () => this.escuchar());
     }
   }
 

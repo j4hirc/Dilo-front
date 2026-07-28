@@ -7,7 +7,6 @@
         <p>Visualiza, emite y descarga los comprobantes de tus ventas.</p>
     </div>
     <div style="display: flex; gap: 12px;">
-        <!-- 🔥 BOTÓN DE ZOE (Premium) -->
         <button class="btn-voice-premium" (click)="abrirModalNuevo(true)">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line></svg>
             Zoe: Voz Inteligente
@@ -70,63 +69,6 @@
     </div>
 </div>
 
-<!-- 🔥 OVERLAY ASISTENTE DE VOZ (EXTRAÍDO AFUERA DEL MODAL PARA EVITAR BUGS) -->
-<!-- REEMPLAZA EL BLOQUE DE "voice-assistant-overlay" CON ESTE: -->
-<div class="voice-assistant-overlay fade-in" *ngIf="voiceState !== 'OFF'">
-    <div class="voice-card">
-        
-        <button class="close-voice-btn" (click)="cancelarAsistenteVoz()" title="Detener a Zoe">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-        </button>
-
-        <!-- Micrófono Animado -->
-        <div class="mic-container" [ngClass]="{'is-listening': isListening}">
-            <div class="mic-ring" *ngIf="isListening"></div>
-            <div class="mic-ring delay" *ngIf="isListening"></div>
-            <div class="mic-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line></svg>
-            </div>
-        </div>
-
-        <div class="voice-dialogues">
-            <div class="bot-message" *ngIf="voiceMessage">
-                <span class="bot-avatar">✨</span>
-                <p><strong>Zoe:</strong> {{ voiceMessage }}</p>
-            </div>
-
-            <!-- 🔥 NUEVO: LISTA DE OPCIONES PARA EL USUARIO -->
-            <div class="voice-options-list fade-in" *ngIf="opcionesVoz.length > 0">
-                <p class="voice-options-title">Di el número de tu opción:</p>
-                <div class="voice-option-item" *ngFor="let opt of opcionesVoz; let i = index">
-                    <span class="voice-opt-number">{{ i + 1 }}</span>
-                    
-                    <span class="voice-opt-text" *ngIf="tipoOpciones === 'CLIENTE'">
-                        {{ opt.nombreCompleto || opt.razonSocial || opt.primerNombre }} 
-                        <small style="color: #94a3b8; font-size: 0.8rem; display: block;">CI: {{ opt.identificacion || opt.ruc || 'N/A' }}</small>
-                    </span>
-                    
-                    <span class="voice-opt-text" *ngIf="tipoOpciones === 'BODEGA'">
-                        {{ opt.nombre }}
-                    </span>
-                    
-                    <span class="voice-opt-text" *ngIf="tipoOpciones === 'PRODUCTO'">
-                        {{ opt.nombre }} 
-                        <small style="color: #059669; font-weight: bold; font-size: 0.8rem; display: block;">${{ opt.precioUnitario || opt.costoPromedioActual }}</small>
-                    </span>
-                </div>
-            </div>
-            
-            <div class="user-message" *ngIf="userTranscript && opcionesVoz.length === 0">
-                <p>"{{ userTranscript }}"</p>
-            </div>
-
-            <div class="listening-indicator" *ngIf="isListening && !userTranscript">
-                Zoe te está escuchando...
-            </div>
-        </div>
-    </div>
-</div>
-
 <!-- =========================================
    🔥 MODAL PUNTO DE VENTA (SaaS Premium)
    ========================================= -->
@@ -150,7 +92,6 @@
 
                 <div class="form-group mt-2">
                     <label>Cliente a Facturar *</label>
-                    
                     <div class="search-dropdown-container" *ngIf="!clienteSeleccionadoInfo" style="position: relative;">
                         <input type="text" 
                                id="buscadorCliente"
@@ -166,11 +107,9 @@
 
                         <!-- Lista de resultados -->
                         <div class="dropdown-list shadow-sm" *ngIf="mostrarDropdownClientes" style="position: absolute; top: 100%; left: 0; right: 0; z-index: 50; background: white; border: 1px solid #e2e8f0; border-radius: 8px; margin-top: 4px; max-height: 250px; overflow-y: auto;">
-                            
                             <div class="dropdown-item" *ngIf="clientesFiltrados.length === 0" style="padding: 12px 15px; color: #64748b; font-size: 14px; text-align: center;">
                                 No se encontraron clientes.
                             </div>
-
                             <div class="dropdown-item" 
                                  *ngFor="let cli of clientesFiltrados" 
                                  (click)="seleccionarCliente(cli)"
@@ -183,38 +122,31 @@
                                         <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: text-top; margin-right: 2px;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
                                         {{ cli.identificacion || cli.dni || cli.ruc || 'Sin cédula' }}
                                     </span>
-                                    <span>
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: text-top; margin-right: 2px;"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
-                                        {{ cli.correo || cli.email || 'Sin correo' }}
-                                    </span>
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     <!-- TARJETA DEL CLIENTE SELECCIONADO -->
-                    <div class="selected-client-card" *ngIf="clienteSeleccionadoInfo" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div class="selected-client-card" *ngIf="clienteSeleccionadoInfo" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: flex-start; transition: all 0.3s ease;">
                         <div>
                             <div style="font-weight: 700; color: #0f172a; font-size: 15px; margin-bottom: 4px;">
                                 {{ clienteSeleccionadoInfo.nombreCompleto || clienteSeleccionadoInfo.razonSocial || clienteSeleccionadoInfo.primerNombre }}
                             </div>
                             <div style="display: flex; flex-direction: column; gap: 3px; font-size: 13px; color: #475569;">
                                 <span><strong>CI/RUC:</strong> {{ clienteSeleccionadoInfo.identificacion || clienteSeleccionadoInfo.dni || clienteSeleccionadoInfo.ruc || 'N/A' }}</span>
-                                <span><strong>Correo:</strong> {{ clienteSeleccionadoInfo.correo || clienteSeleccionadoInfo.email || 'N/A' }}</span>
-                                <span *ngIf="clienteSeleccionadoInfo.telefono"><strong>Tel:</strong> {{ clienteSeleccionadoInfo.telefono }}</span>
                             </div>
                         </div>
                         <button class="btn-action-icon" (click)="limpiarClienteSeleccionado()" title="Cambiar cliente" style="background: white; border: 1px solid #e2e8f0; padding: 6px; border-radius: 6px; cursor: pointer; color: #ef4444;">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                         </button>
                     </div>
-
                 </div>
 
                 <div class="form-row mt-3">
                     <div class="form-group w-50">
                         <label>Método de Pago *</label>
-                        <select [(ngModel)]="nuevaFactura.metodoPago" class="custom-select modern-input">
+                        <select [(ngModel)]="nuevaFactura.metodoPago" class="custom-select modern-input" style="transition: all 0.3s ease;">
                             <option value="EFECTIVO">Efectivo</option>
                             <option value="TRANSFERENCIA">Transferencia</option>
                             <option value="TARJETA_CREDITO">Tarjeta de Crédito</option>
@@ -235,7 +167,7 @@
                     <div class="form-row">
                         <div class="form-group w-50">
                             <label>Bodega de Origen *</label>
-                            <select [(ngModel)]="itemTemp.bodegaId" class="custom-select modern-input">
+                            <select [(ngModel)]="itemTemp.bodegaId" class="custom-select modern-input" style="transition: all 0.3s ease;">
                                 <option [ngValue]="null" disabled>Seleccionar bodega</option>
                                 <option *ngFor="let bod of bodegasList" [ngValue]="bod.id">{{ bod.nombre }}</option>
                             </select>
@@ -243,13 +175,7 @@
                         <div class="form-group w-50">
                             <label>Cantidad *</label>
                             <div style="position: relative;">
-                                <input type="number" [(ngModel)]="itemTemp.cantidad" min="1" class="modern-input text-center">
-                                
-                                <small *ngIf="stockDisponible !== null" 
-                                       style="position: absolute; right: 5px; bottom: -20px; font-size: 0.75rem; font-weight: 700;"
-                                       [style.color]="stockDisponible > 0 ? '#059669' : '#dc2626'">
-                                    Disp: {{ stockDisponible }} unid.
-                                </small>
+                                <input type="number" [(ngModel)]="itemTemp.cantidad" min="1" class="modern-input text-center" style="transition: all 0.3s ease;">
                             </div>
                         </div>
                     </div>
@@ -257,7 +183,7 @@
                     <div class="form-group" style="margin-top: 24px;">
                         <label>Producto *</label>
                         <div class="input-with-button">
-                            <select [(ngModel)]="itemTemp.productoId" class="custom-select modern-input" style="flex: 1;">
+                            <select [(ngModel)]="itemTemp.productoId" class="custom-select modern-input" style="flex: 1; transition: all 0.3s ease;">
                                 <option [ngValue]="null" disabled>Escanear o buscar...</option>
                                 <option *ngFor="let prod of productosList" [ngValue]="prod.id">
                                     {{ prod.nombre }} - Costo: ${{ prod.costoPromedioActual > 0 ? prod.costoPromedioActual : prod.precioUnitario }}
@@ -303,10 +229,6 @@
                 </div>
 
                 <div class="cart-footer">
-                    <div class="cart-warning-subtle">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-                        El stock se descontará del Kardex.
-                    </div>
                     <div class="cart-total-box" [ngClass]="{'active': nuevaFactura.detalles.length > 0}">
                         <span>A COBRAR</span>
                         <span class="cart-total-amount">${{ totalCarrito | number:'1.2-2' }}</span>
@@ -322,6 +244,50 @@
                 <div class="spinner-small" *ngIf="isSaving"></div>
                 {{ isSaving ? 'Procesando SRI...' : 'Emitir Factura y PDF' }}
             </button>
+        </div>
+    </div>
+</div>
+
+<!-- 🔥 NUEVO WIDGET ZOE: FLOTANTE NO BLOQUEANTE -->
+<div class="zoe-widget-container fade-in" *ngIf="voiceState !== 'OFF'">
+    <div class="zoe-widget">
+        
+        <button class="close-zoe-btn" (click)="cancelarAsistenteVoz()" title="Detener a Zoe">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+
+        <div class="zoe-header">
+            <div class="mic-container-small" [ngClass]="{'is-listening': isListening}">
+                <div class="mic-ring-small" *ngIf="isListening"></div>
+                <div class="mic-icon-small">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line></svg>
+                </div>
+            </div>
+            <div>
+                <h4 style="margin: 0; font-size: 1rem; color: #0f172a;">Zoe Activa ✨</h4>
+                <span class="listening-indicator" *ngIf="isListening" style="font-size: 0.75rem;">Te escucho...</span>
+            </div>
+        </div>
+
+        <div class="zoe-body">
+            <div class="bot-message" *ngIf="voiceMessage">
+                <p>{{ voiceMessage }}</p>
+            </div>
+
+            <!-- Lista de opciones en el widget flotante -->
+            <div class="voice-options-list fade-in" *ngIf="opcionesVoz.length > 0">
+                <p class="voice-options-title">Di el número:</p>
+                <div class="voice-option-item" *ngFor="let opt of opcionesVoz; let i = index">
+                    <span class="voice-opt-number">{{ i + 1 }}</span>
+                    <span class="voice-opt-text" *ngIf="tipoOpciones === 'CLIENTE'">{{ opt.nombreCompleto || opt.primerNombre }}</span>
+                    <span class="voice-opt-text" *ngIf="tipoOpciones === 'BODEGA'">{{ opt.nombre }}</span>
+                    <span class="voice-opt-text" *ngIf="tipoOpciones === 'PRODUCTO'">{{ opt.nombre }}</span>
+                </div>
+            </div>
+            
+            <div class="user-message" *ngIf="userTranscript && opcionesVoz.length === 0">
+                <p>"{{ userTranscript }}"</p>
+            </div>
         </div>
     </div>
 </div>
