@@ -397,7 +397,7 @@ export class Facturas implements OnInit, OnDestroy {
       max_tokens: 350
     };
 
-    this.http.post<any>('https://api.groq.com/openai/v1/chat/completions', payload, { headers })
+    this.http.post<any>('[https://api.groq.com/openai/v1/chat/completions](https://api.groq.com/openai/v1/chat/completions)', payload, { headers })
       .subscribe({
         next: (res) => {
           this.isThinking = false;
@@ -574,6 +574,7 @@ export class Facturas implements OnInit, OnDestroy {
   // 🔥 MÉTODOS DEL COMPONENTE (FACTURA NORMAL Y SILENCIOSO)
   // =======================================================
 
+  // 🔥 CORRECCIÓN 4: BÚSQUEDA DE CLIENTES AMPLIADA
   filtrarClientes() {
     if (!this.terminoBusquedaCliente.trim()) {
       this.clientesFiltrados = [...this.clientesList];
@@ -581,7 +582,13 @@ export class Facturas implements OnInit, OnDestroy {
       const termino = this.limpiarTexto(this.terminoBusquedaCliente);
       this.clientesFiltrados = this.clientesList.filter(cli => 
         this.limpiarTexto(cli.nombreCompleto).includes(termino) ||
-        this.limpiarTexto(cli.identificacion).includes(termino)
+        this.limpiarTexto(cli.razonSocial).includes(termino) ||
+        this.limpiarTexto(cli.primerNombre).includes(termino) ||
+        this.limpiarTexto(cli.identificacion).includes(termino) ||
+        this.limpiarTexto(cli.dni).includes(termino) ||
+        this.limpiarTexto(cli.ruc).includes(termino) ||
+        this.limpiarTexto(cli.correo).includes(termino) ||
+        this.limpiarTexto(cli.email).includes(termino)
       );
     }
   }
@@ -720,7 +727,7 @@ export class Facturas implements OnInit, OnDestroy {
       <head>
           <title>Factura_${fac.numero}</title>
           <style>
-              @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+              @import url('[https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap](https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap)');
               body { font-family: 'Inter', sans-serif; color: #1e293b; margin: 0; padding: 0; background-color: #f8fafc; }
               .invoice-container { max-width: 800px; margin: 0 auto; background: #fff; padding: 50px; box-sizing: border-box; }
               .top-bar { height: 8px; background: linear-gradient(90deg, #ed8936, #ea580c); width: 100%; margin-bottom: 30px; border-radius: 4px; }
