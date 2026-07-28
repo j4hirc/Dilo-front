@@ -59,7 +59,7 @@ export class Facturas implements OnInit, OnDestroy {
     productoNombre: '' 
   };
 
-  // 🔥 VARIABLES DE ZOE (VOZ)
+  // 🔥 VARIABLES DE ZOE
   voiceState: VoiceStep = VoiceStep.OFF;
   voiceMessage: string = ''; 
   userTranscript: string = ''; 
@@ -98,8 +98,11 @@ export class Facturas implements OnInit, OnDestroy {
     }
 
     this.initSpeechRecognition();
-    window.speechSynthesis.getVoices();
-    window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+    
+    // Forzar la carga de voces en Chrome
+    window.speechSynthesis.onvoiceschanged = () => {
+        window.speechSynthesis.getVoices();
+    };
   }
 
   ngOnDestroy(): void {
@@ -181,7 +184,7 @@ export class Facturas implements OnInit, OnDestroy {
   }
 
   // =======================================================
-  // 🔥 LÓGICA DE BÚSQUEDA INTELIGENTE UNIVERSAL (NUEVOS DTOS)
+  // 🔥 LÓGICA DE BÚSQUEDA UNIVERSAL (MANUAL Y VOZ)
   // =======================================================
   private limpiarTexto(texto: any): string {
     if (texto == null) return '';
@@ -192,7 +195,6 @@ export class Facturas implements OnInit, OnDestroy {
     const txt = this.limpiarTexto(textoBuscado);
     if (!txt) return [...this.clientesList];
     
-    // 1. Coincidencia Exacta (DNI, Email, Nombres)
     let exact = this.clientesList.filter(cli => 
         this.limpiarTexto(cli.nombreCompleto) === txt ||
         this.limpiarTexto(cli.primerNombre) === txt ||
@@ -202,7 +204,6 @@ export class Facturas implements OnInit, OnDestroy {
     );
     if (exact.length > 0) return exact;
 
-    // 2. Coincidencia Parcial
     let partial = this.clientesList.filter(cli => {
         const nom = this.limpiarTexto(cli.nombreCompleto || `${cli.primerNombre || ''} ${cli.apellidoPaterno || ''}`);
         const doc = this.limpiarTexto(cli.dni || '');
@@ -213,7 +214,6 @@ export class Facturas implements OnInit, OnDestroy {
     });
     if (partial.length > 0) return partial;
 
-    // 3. Fragmentos
     const palabras = txt.split(' ').filter(p => p.length > 2);
     if (palabras.length === 0) return [];
     
@@ -292,7 +292,14 @@ export class Facturas implements OnInit, OnDestroy {
   iniciarFacturaPorVoz() {
     if (!this.recognition) return;
     this.voiceState = VoiceStep.ESCUCHA_LIBRE;
-    this.voiceMessage = "Te escucho. Dicta el nombre del cliente y los productos que deseas facturar.";
+    
+    // Si ya elegimos al cliente manualmente, Zoe entra directo a pedir productos
+    if (this.nuevaFactura.clienteId) {
+        this.voiceMessage = "Te escucho. Dime los productos que deseas facturar.";
+    } else {
+        this.voiceMessage = "Te escucho. Dicta el cliente y los productos que deseas facturar.";
+    }
+    
     this.cdr.detectChanges();
     this.escuchar();
   }
@@ -318,11 +325,22 @@ export class Facturas implements OnInit, OnDestroy {
 
         const utterance = new SpeechSynthesisUtterance(texto);
         utterance.lang = 'es-ES';
-        utterance.rate = 1.05; 
+        utterance.rate = 1.0; // Velocidad normal para que suene humana
+        utterance.pitch = 1.1; // Un poco más agudo para quitar lo robótico
         
         let voices = window.speechSynthesis.getVoices();
-        let femaleVoice = voices.find(v => v.lang.startsWith('es') && (v.name.includes('Google español') || v.name.includes('Sabina'))) || voices.find(v => v.lang.startsWith('es'));
-        if (femaleVoice) utterance.voice = femaleVoice;
+        
+        // 🔥 FORZAR VOZ FEMENINA: Buscamos por nombre las mejores voces latinas/españolas
+        let femaleVoice = voices.find(v => v.lang.startsWith('es') && v.name.includes('Google español')) || 
+                          voices.find(v => v.lang.startsWith('es') && v.name.includes('Sabina')) ||
+                          voices.find(v => v.lang.startsWith('es') && v.name.includes('Paulina')) ||
+                          voices.find(v => v.lang.startsWith('es') && v.name.includes('Helena')) ||
+                          voices.find(v => v.lang.startsWith('es') && v.name.includes('Microsoft') && v.name.includes('Desktop')) ||
+                          voices.find(v => v.lang.startsWith('es'));
+                          
+        if (femaleVoice) {
+            utterance.voice = femaleVoice;
+        }
 
         utterance.onend = () => { setTimeout(() => { if (callback && this.voiceState !== VoiceStep.OFF) callback(); }, 200); };
         utterance.onerror = () => { if (callback && this.voiceState !== VoiceStep.OFF) setTimeout(() => callback(), 400); };
@@ -360,7 +378,7 @@ export class Facturas implements OnInit, OnDestroy {
           this.hablar("Emitiendo comprobante.", () => this.guardarFactura());
        } else if (transcript.includes('espera') || transcript.includes('pausa') || transcript.includes('cancela')) {
           this.voiceState = VoiceStep.OFF;
-          this.hablar("Factura pausada. Puedes continuar manualmente.");
+          this.hablar("Factura pausada. Puedes continuar de forma manual.");
        } else {
           this.voiceState = VoiceStep.ESCUCHA_LIBRE;
           this.analizarConGroq(transcript);
@@ -377,15 +395,16 @@ export class Facturas implements OnInit, OnDestroy {
       'Content-Type': 'application/json'
     });
 
+    // 🔥 SEGURO ANTI-BUCLE: Le decimos a Groq que ignore el cliente si ya existe
+    const instruccionCliente = this.nuevaFactura.clienteId 
+      ? `"cliente": null (IGNORAR ESTE CAMPO, EL CLIENTE YA ESTÁ SELECCIONADO EN EL SISTEMA),` 
+      : `"cliente": "Nombre exacto, DNI o email del cliente" (O null si el usuario no lo menciona),`;
+
     const promptSystem = `
       Eres el asistente de un punto de venta.
-      
-      ESTADO ACTUAL:
-      - Cliente ya seleccionado en el sistema: ${this.nuevaFactura.clienteId ? 'SÍ (Devuelve null en "cliente")' : 'NO'}
-
       Debes responder ÚNICAMENTE con un JSON:
       {
-         "cliente": "Nombre exacto, DNI o email" (O null si ya está seleccionado),
+         ${instruccionCliente}
          "metodoPago": "EFECTIVO" | "TRANSFERENCIA" | "TARJETA_CREDITO" | null,
          "cuotas": numero_entero_o_null,
          "items": [
@@ -460,7 +479,7 @@ export class Facturas implements OnInit, OnDestroy {
         }
     }
 
-    // 3. Procesar Cliente (Solo si hace falta)
+    // 3. Procesar Cliente (Solo si hace falta y si Groq lo devolvió)
     if (datos.cliente && !this.nuevaFactura.clienteId) {
         nombreCliBuscado = datos.cliente;
         const matchesCli = this.buscarClientesUniversales(datos.cliente);
@@ -478,13 +497,13 @@ export class Facturas implements OnInit, OnDestroy {
 
     // 4. Pausas Inteligentes por falta de datos
     if (requiereDesambiguacionCli) {
-        this.iniciarDesambiguacion('CLIENTE', requiereDesambiguacionCli, `Encontré varios clientes. Di el número: ${requiereDesambiguacionCli.slice(0,4).map((m, i) => (i+1) + '. ' + (m.nombreCompleto || m.primerNombre)).join(', ')}.`);
+        this.iniciarDesambiguacion('CLIENTE', requiereDesambiguacionCli, `Encontré varios clientes parecidos. Di el número del correcto: ${requiereDesambiguacionCli.slice(0,4).map((m, i) => (i+1) + '. ' + (m.nombreCompleto || m.primerNombre)).join(', ')}.`);
         return;
     }
 
     if (requiereDesambiguacionProd) {
         this.itemTemp.cantidad = cantTemp;
-        this.iniciarDesambiguacion('PRODUCTO', requiereDesambiguacionProd, `Encontré varios productos. Di el número: ${requiereDesambiguacionProd.slice(0,4).map((m, i) => (i+1) + '. ' + m.nombre).join(', ')}.`);
+        this.iniciarDesambiguacion('PRODUCTO', requiereDesambiguacionProd, `Encontré varios productos. Di el número del que deseas: ${requiereDesambiguacionProd.slice(0,4).map((m, i) => (i+1) + '. ' + m.nombre).join(', ')}.`);
         return;
     }
 
@@ -493,9 +512,9 @@ export class Facturas implements OnInit, OnDestroy {
 
     this.voiceState = VoiceStep.ESCUCHA_LIBRE;
 
-    // 🔥 Nuevo Seguro Anti-Bucle
+    // 🔥 MENSALES NATURALES (SIN BUCLES)
     if (falloCliente) {
-        this.hablar(`No encontré a ${nombreCliBuscado} en la base de datos. Por favor, dímelo otra vez por su nombre o cédula.`, () => this.escuchar());
+        this.hablar(`No encontré a ${nombreCliBuscado} en tu base de datos. Por favor, dímelo otra vez por su nombre, cédula o correo.`, () => this.escuchar());
     }
     else if (faltaCliente && faltaItems) {
         this.hablar("No logré identificar los datos. Intenta nuevamente.", () => this.escuchar());
