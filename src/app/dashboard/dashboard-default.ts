@@ -8,7 +8,6 @@ import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 
-
 @Component({
   selector: 'app-dashboard-default',
   standalone: true,
@@ -52,6 +51,15 @@ export class DashboardDefault implements OnInit {
   private groqApiKey = environment.groqApiKey;
 
   ngOnInit() {
+    // 🔥 1. VALIDACIÓN FÍSICA: ¿Hay token y usuario en localStorage?
+    const token = localStorage.getItem('dilo_token');
+    const userStr = localStorage.getItem('usuario') || localStorage.getItem('dilo_user');
+
+    if (!token || !userStr) {
+      this.cerrarSesionForzada(); // Lo expulsamos inmediatamente
+      return; 
+    }
+
     // Inicializamos el primer mensaje aquí para poder usar el 'sanitizer'
     const textoBienvenida = '¡Hola! 👋 Soy **Zoe**, tu asistente virtual. ¿En qué módulo del sistema te puedo ayudar hoy?';
     this.chatMensajes = [
@@ -62,15 +70,24 @@ export class DashboardDefault implements OnInit {
       }
     ];
 
-    const userStr = localStorage.getItem('usuario');
-    this.usuarioLogueado = userStr ? JSON.parse(userStr) : null;
-    this.negocioId = this.usuarioLogueado?.negocioId;
+    this.usuarioLogueado = JSON.parse(userStr);
+    
+    // 🔥 Aseguramos la lectura del negocioId usando múltiples variantes (por si acaso)
+    this.negocioId = this.usuarioLogueado?.negocioId || this.usuarioLogueado?.idNegocio;
 
     if (this.negocioId) {
        this.cargarDatosNegocio();
        this.cargarAlertasCaducidad();
        this.cargarContextoNegocioParaIA();
     }
+  }
+
+  // 🔥 MÉTODO NUEVO: Limpia todo y redirige al login
+  cerrarSesionForzada() {
+    localStorage.removeItem('dilo_token');
+    localStorage.removeItem('usuario');
+    localStorage.removeItem('dilo_user');
+    this.router.navigate(['/login']);
   }
 
   cargarDatosNegocio() {
@@ -81,12 +98,17 @@ export class DashboardDefault implements OnInit {
     this.http.get<any>(`${this.apiUrl}/negocios/${this.negocioId}`, { headers })
       .subscribe({
         next: (data) => {
-          // 🔥 CORRECCIÓN AL ERROR NG0100
           setTimeout(() => {
             this.negocioNombre = data.nombreComercial || data.razonSocial || 'Mi Empresa';
           });
         },
-        error: (err) => console.error(err)
+        error: (err) => {
+          console.error(err);
+          // 🔥 2. VALIDACIÓN DE EXPIRACIÓN: Si el backend dice "No autorizado" (401 o 403)
+          if (err.status === 401 || err.status === 403) {
+            this.cerrarSesionForzada();
+          }
+        }
       });
   }
 
@@ -98,12 +120,17 @@ export class DashboardDefault implements OnInit {
     this.http.get<any[]>(`${this.apiUrl}/negocios/${this.negocioId}/dashboard/alertas-caducidad?dias=30`, { headers })
       .subscribe({
         next: (data) => {
-          // 🔥 CORRECCIÓN AL ERROR NG0100
           setTimeout(() => {
             this.alertasCaducidad = data || [];
           });
         },
-        error: (err) => console.error(err)
+        error: (err) => {
+          console.error(err);
+          // 🔥 También lo validamos aquí por seguridad
+          if (err.status === 401 || err.status === 403) {
+            this.cerrarSesionForzada();
+          }
+        }
       });
   }
 
@@ -121,10 +148,9 @@ export class DashboardDefault implements OnInit {
     this.isSidebarOpen = !this.isSidebarOpen;
   }
 
+  // Ahora reutiliza el método nuevo
   cerrarSesion() {
-    localStorage.removeItem('dilo_token');
-    localStorage.removeItem('usuario');
-    this.router.navigate(['/login']);
+    this.cerrarSesionForzada();
   }
 
   cargarContextoNegocioParaIA() {
@@ -144,7 +170,6 @@ export class DashboardDefault implements OnInit {
 
     forkJoin([reqProductos, reqCategorias, reqClientes, reqProveedores, reqInventario, reqFacturas])
       .subscribe(([productos, categorias, clientes, proveedores, inventario, facturas]) => {
-        // 🔥 CORRECCIÓN AL ERROR NG0100
         setTimeout(() => {
           this.contextoNegocioTexto = this.construirResumenDelNegocio(
             Array.isArray(productos) ? productos : [],
@@ -242,7 +267,6 @@ export class DashboardDefault implements OnInit {
     if (!this.nuevoMensaje.trim() || this.isChatLoading) return;
 
     const textoUsuario = this.nuevoMensaje;
-    // Guardamos el mensaje de texto Y el HTML ya procesado
     this.chatMensajes.push({ 
       role: 'user', 
       text: textoUsuario, 
@@ -323,7 +347,6 @@ export class DashboardDefault implements OnInit {
       .subscribe({
         next: (res) => {
           const respuestaBot = res.choices[0].message.content;
-          // Guardamos texto puro y HTML seguro
           this.chatMensajes.push({ 
             role: 'assistant', 
             text: respuestaBot,
