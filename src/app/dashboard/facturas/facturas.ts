@@ -333,7 +333,7 @@ export class Facturas implements OnInit, OnDestroy {
   // =======================================================
   private limpiarTexto(texto: any): string {
     if (texto == null) return '';
-    return String(texto).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
+    return String(texto).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
   }
 
   private encontrarMejorCoincidencia(textoBuscado: string, lista: any[], campoBusqueda: string): any {
@@ -397,7 +397,8 @@ export class Facturas implements OnInit, OnDestroy {
       max_tokens: 350
     };
 
-    this.http.post<any>('[https://api.groq.com/openai/v1/chat/completions](https://api.groq.com/openai/v1/chat/completions)', payload, { headers })
+    // 🔥 CORRECCIÓN AQUÍ: URL limpia sin sintaxis markdown 
+    this.http.post<any>('https://api.groq.com/openai/v1/chat/completions', payload, { headers })
       .subscribe({
         next: (res) => {
           this.isThinking = false;
@@ -574,7 +575,6 @@ export class Facturas implements OnInit, OnDestroy {
   // 🔥 MÉTODOS DEL COMPONENTE (FACTURA NORMAL Y SILENCIOSO)
   // =======================================================
 
-  // 🔥 CORRECCIÓN 4: BÚSQUEDA DE CLIENTES AMPLIADA
   filtrarClientes() {
     if (!this.terminoBusquedaCliente.trim()) {
       this.clientesFiltrados = [...this.clientesList];
@@ -599,7 +599,6 @@ export class Facturas implements OnInit, OnDestroy {
     this.clienteSeleccionadoInfo = cliente;
     this.terminoBusquedaCliente = cliente.nombreCompleto || cliente.razonSocial || cliente.primerNombre || '';
     
-    // Forzamos el cierre del menú y le decimos a Angular que refresque la vista
     this.mostrarDropdownClientes = false;
     this.cdr.detectChanges(); 
   }
@@ -730,7 +729,7 @@ export class Facturas implements OnInit, OnDestroy {
       <head>
           <title>Factura_${fac.numero}</title>
           <style>
-              @import url('[https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap](https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap)');
+              @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
               body { font-family: 'Inter', sans-serif; color: #1e293b; margin: 0; padding: 0; background-color: #f8fafc; }
               .invoice-container { max-width: 800px; margin: 0 auto; background: #fff; padding: 50px; box-sizing: border-box; }
               .top-bar { height: 8px; background: linear-gradient(90deg, #ed8936, #ea580c); width: 100%; margin-bottom: 30px; border-radius: 4px; }
