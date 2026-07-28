@@ -164,6 +164,12 @@ export class Facturas implements OnInit, OnDestroy {
     this.cancelarAsistenteVoz();
   }
 
+  verificarCuotas() {
+    if (this.nuevaFactura.metodoPago !== 'TARJETA_CREDITO') {
+      this.nuevaFactura.numeroCuotas = 0;
+    }
+  }
+
   cargarCatalogos() {
     if (!this.negocioId) return;
     const headers = this.getAuthHeaders();
@@ -236,9 +242,8 @@ export class Facturas implements OnInit, OnDestroy {
       return;
     }
     
-    // 🔥 Ya NO habla al principio, empieza a escuchar directamente
     this.voiceState = VoiceStep.ESCUCHA_LIBRE;
-    this.voiceMessage = "Te escucho. Dicta el cliente y los productos...";
+    this.voiceMessage = "Te escucho. Dicta el cliente, productos y método de pago...";
     this.cdr.detectChanges();
     this.escuchar();
   }
@@ -268,7 +273,6 @@ export class Facturas implements OnInit, OnDestroy {
         
         let voices = window.speechSynthesis.getVoices();
         
-        // 🔥 FORZAMOS LA MEJOR VOZ FEMENINA
         let femaleVoice = voices.find(v => v.lang.startsWith('es') && (v.name.includes('Google español') || v.name.includes('Sabina') || v.name.includes('Microsoft'))) ||
                           voices.find(v => v.lang.startsWith('es') && v.name.includes('Google')) || 
                           voices.find(v => v.lang.startsWith('es'));
@@ -302,7 +306,7 @@ export class Facturas implements OnInit, OnDestroy {
   }
 
   private procesarComandoVoz(transcript: string) {
-    const comandosAceptacion = ['si', 'sí', 'emite', 'dale', 'confirmo', 'listo', 'ok', 'todo bien', 'factura'];
+    const comandosAceptacion = ['si', 'sí', 'emite', 'dale', 'confirmo', 'listo', 'ok', 'todo bien', 'factura', 'guarda'];
     const esComandoPositivo = comandosAceptacion.some(cmd => transcript.includes(cmd));
 
     if (this.voiceState === VoiceStep.ESCUCHA_LIBRE) {
@@ -326,7 +330,7 @@ export class Facturas implements OnInit, OnDestroy {
           this.voiceState = VoiceStep.OFF;
           this.hablar("Factura pausada. Puedes continuar manualmente.");
        } else {
-          // Si te preguntó si faltaba algo y le dices "agregame dos panes", vuelve a analizar
+          // Si agrega más cosas
           this.voiceState = VoiceStep.ESCUCHA_LIBRE;
           this.analizarConGroq(transcript);
        }
@@ -345,11 +349,9 @@ export class Facturas implements OnInit, OnDestroy {
     if (!textoBuscado) return null;
     const textoLimpio = this.limpiarTexto(textoBuscado);
     
-    // 1. Prioriza coincidencia exacta
     let match = lista.find(item => this.limpiarTexto(item[campoBusqueda]) === textoLimpio);
     if (match) return match;
     
-    // 2. Coincidencia de dos vías (Lo dicho incluye lo de la BD o viceversa)
     match = lista.find(item => {
         const nombreBD = this.limpiarTexto(item[campoBusqueda]);
         return nombreBD.includes(textoLimpio) || textoLimpio.includes(nombreBD);
@@ -359,7 +361,7 @@ export class Facturas implements OnInit, OnDestroy {
   }
 
   // =======================================================
-  // 🔥 CONEXIÓN A GROQ MULTIPRODUCTO
+  // 🔥 CONEXIÓN A GROQ: ACTUALIZADO PARA METODO DE PAGO Y CUOTAS
   // =======================================================
   private analizarConGroq(fraseUsuario: string) {
     this.isThinking = true;
@@ -374,23 +376,26 @@ export class Facturas implements OnInit, OnDestroy {
     const listaNombresCli = this.clientesList.map(c => c.nombreCompleto || c.primerNombre).join(', ');
     const listaNombresBod = this.bodegasList.map(b => b.nombre).join(', ');
 
-    // 🔥 Mejoramos el prompt para aceptar ARREGLOS de productos
+    // 🔥 PROMPT MEJORADO PARA CUOTAS Y PAGOS
     const promptSystem = `
-      Eres el asistente de un punto de venta. Analiza la frase del usuario y extrae los datos requeridos.
-      Debes responder ÚNICAMENTE con un JSON válido usando la siguiente estructura (omite texto adicional):
+      Eres el asistente de un punto de venta. Analiza la frase del usuario y extrae los datos.
+      Debes responder ÚNICAMENTE con un JSON válido usando esta estructura exacta (omite texto adicional):
       {
          "cliente": "Nombre exacto o null",
          "bodega": "Nombre o null",
          "metodoPago": "EFECTIVO" | "TRANSFERENCIA" | "TARJETA_CREDITO" | null,
+         "cuotas": numero_entero_o_0,
          "items": [
             { "producto": "Nombre exacto", "cantidad": numero_entero }
          ]
       }
-      Bases de datos:
+      Reglas Estrictas:
+      - metodoPago: Si menciona "efectivo", devuelve "EFECTIVO". Si dice "transferencia" o "depósito", devuelve "TRANSFERENCIA". Si dice "tarjeta", "crédito" o "diferido", devuelve "TARJETA_CREDITO".
+      - cuotas: Si dice "a 3 meses", "diferido a 6", "6 cuotas", extrae solo el número (ej: 3). Si no menciona meses/cuotas, pon 0.
+      Bases de datos disponibles:
       - Productos: [${listaNombresProd}]
       - Clientes: [${listaNombresCli}]
       - Bodegas: [${listaNombresBod}]
-      Si el usuario dicta varios productos, agrega todos al arreglo 'items'. Si no menciona cantidad, asume 1.
     `;
 
     const payload = {
@@ -447,8 +452,17 @@ export class Facturas implements OnInit, OnDestroy {
     }
     if (bodegaDefaultId) this.itemTemp.bodegaId = bodegaDefaultId;
 
-    // 3. Asignar Método de pago
-    if (datos.metodoPago) this.nuevaFactura.metodoPago = datos.metodoPago;
+    // 3. Asignar Método de pago y Cuotas
+    if (datos.metodoPago) {
+        this.nuevaFactura.metodoPago = datos.metodoPago;
+    }
+    if (datos.cuotas > 0) {
+        this.nuevaFactura.numeroCuotas = datos.cuotas;
+        // Si menciona cuotas pero no dijo "tarjeta", asumimos que es Tarjeta de Crédito inteligentemente
+        if (!datos.metodoPago || datos.metodoPago === 'EFECTIVO') {
+            this.nuevaFactura.metodoPago = 'TARJETA_CREDITO';
+        }
+    }
 
     // 4. Agregar Productos en bloque
     const items = datos.items || [];
@@ -464,7 +478,6 @@ export class Facturas implements OnInit, OnDestroy {
             let cant = item.cantidad || 1;
             const stock = this.obtenerStock(matchProd.id, bodegaDefaultId);
             
-            // Limitamos la cantidad si pide más del stock
             if (stock !== null && cant > stock) cant = stock; 
 
             if (cant > 0) {
@@ -488,30 +501,35 @@ export class Facturas implements OnInit, OnDestroy {
     const faltaCliente = !this.nuevaFactura.clienteId;
     const faltaItems = this.nuevaFactura.detalles.length === 0;
 
-    // Si falló en detectar tanto productos como cliente
     if (faltaCliente && faltaItems) {
         this.voiceState = VoiceStep.ESCUCHA_LIBRE;
-        this.hablar("No logré identificar clientes ni productos. Intenta mencionarlos nuevamente.", () => this.escuchar());
+        this.hablar("Intenta mencionar el cliente o los productos nuevamente.", () => this.escuchar());
     } 
-    // Si faltó el cliente pero sí agregó productos
     else if (faltaCliente) {
         this.voiceState = VoiceStep.ESCUCHA_LIBRE;
         const msg = algoAgregado 
-          ? `Agregué ${nombresAgregados.join(', ')}. Pero me falta el cliente. ¿A quién le facturamos?` 
+          ? `Agregado. Pero me falta el cliente. ¿A quién le facturamos?` 
           : "Me falta el cliente. ¿A quién le facturamos?";
         this.hablar(msg, () => this.escuchar());
     } 
-    // Si tiene cliente pero no agregó ningún producto
     else if (faltaItems) {
         this.voiceState = VoiceStep.ESCUCHA_LIBRE;
         this.hablar(`Listo con el cliente. ¿Qué productos agregamos a la factura?`, () => this.escuchar());
     } 
-    // ¡Toda la factura está lista!
     else {
         this.voiceState = VoiceStep.CONFIRMAR;
+        let msjAdicional = "";
+        
+        // Si extrajo un método de pago por voz, se lo decimos para que esté seguro
+        if (this.nuevaFactura.metodoPago === 'TRANSFERENCIA') {
+            msjAdicional = " por transferencia";
+        } else if (this.nuevaFactura.metodoPago === 'TARJETA_CREDITO') {
+            msjAdicional = this.nuevaFactura.numeroCuotas > 0 ? ` con tarjeta a ${this.nuevaFactura.numeroCuotas} meses` : " con tarjeta";
+        }
+
         let msj = algoAgregado
-            ? `Listo. El total a pagar es $${this.totalCarrito.toFixed(2)}. ¿Falta algo más o emito la factura?`
-            : `Llevas $${this.totalCarrito.toFixed(2)}. ¿Deseas agregar otro producto o emitimos?`;
+            ? `Listo. El total es $${this.totalCarrito.toFixed(2)}${msjAdicional}. ¿Falta algo más o emito la factura?`
+            : `Llevas $${this.totalCarrito.toFixed(2)}${msjAdicional}. ¿Deseas agregar otro producto o emitimos?`;
         
         this.hablar(msj, () => this.escuchar());
     }
@@ -627,7 +645,6 @@ export class Facturas implements OnInit, OnDestroy {
       subtotal: precio * this.itemTemp.cantidad
     });
 
-    // Mantiene la bodega elegida para el siguiente producto por rapidez
     this.itemTemp = { productoId: null, bodegaId: this.itemTemp.bodegaId, cantidad: 1, productoNombre: '' }; 
     this.cdr.detectChanges();
   }
