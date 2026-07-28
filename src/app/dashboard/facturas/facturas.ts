@@ -7,6 +7,7 @@ import { catchError } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import Swal from 'sweetalert2';
 
+// 🔥 ESTADOS SIMPLIFICADOS PARA ZOE
 enum VoiceStep {
   OFF = 'OFF',
   INICIANDO = 'INICIANDO', 
@@ -59,7 +60,9 @@ export class Facturas implements OnInit, OnDestroy {
     productoNombre: '' 
   };
 
-  // 🔥 VARIABLES DE ZOE
+  // =========================================
+  // 🔥 VARIABLES DE ZOE (VOZ)
+  // =========================================
   voiceState: VoiceStep = VoiceStep.OFF;
   voiceMessage: string = ''; 
   userTranscript: string = ''; 
@@ -181,90 +184,7 @@ export class Facturas implements OnInit, OnDestroy {
   }
 
   // =======================================================
-  // 🔥 LÓGICA DE BÚSQUEDA AVANZADA (UNIFICADA)
-  // =======================================================
-  private limpiarTexto(texto: any): string {
-    if (texto == null) return '';
-    return String(texto).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
-  }
-
-  private buscarClientes(textoBuscado: string): any[] {
-    const txt = this.limpiarTexto(textoBuscado);
-    if (!txt) return [...this.clientesList];
-    
-    // 1. Coincidencia exacta
-    let exact = this.clientesList.filter(cli => 
-        this.limpiarTexto(cli.nombreCompleto) === txt ||
-        this.limpiarTexto(cli.razonSocial) === txt ||
-        this.limpiarTexto(cli.primerNombre) === txt ||
-        this.limpiarTexto(cli.identificacion) === txt ||
-        this.limpiarTexto(cli.dni) === txt ||
-        this.limpiarTexto(cli.ruc) === txt ||
-        this.limpiarTexto(cli.correo) === txt ||
-        this.limpiarTexto(cli.email) === txt
-    );
-    if (exact.length > 0) return exact;
-
-    // 2. Coincidencia parcial
-    let partial = this.clientesList.filter(cli => {
-        const nom = this.limpiarTexto(cli.nombreCompleto || cli.razonSocial || cli.primerNombre || '');
-        const doc = this.limpiarTexto(cli.identificacion || cli.dni || cli.ruc || '');
-        const corr = this.limpiarTexto(cli.correo || cli.email || '');
-        return nom.includes(txt) || txt.includes(nom) ||
-               (doc && (doc.includes(txt) || txt.includes(doc))) ||
-               (corr && (corr.includes(txt) || txt.includes(corr)));
-    });
-    if (partial.length > 0) return partial;
-
-    // 3. Coincidencia por fragmentos/palabras
-    const palabras = txt.split(' ').filter(p => p.length > 2);
-    if (palabras.length === 0) return [];
-    
-    return this.clientesList.filter(cli => {
-        const nom = this.limpiarTexto(cli.nombreCompleto || cli.razonSocial || cli.primerNombre || '');
-        return palabras.every(pal => nom.includes(pal));
-    });
-  }
-
-  private buscarProductos(textoBuscado: string): any[] {
-    const txt = this.limpiarTexto(textoBuscado);
-    let exact = this.productosList.filter(p => this.limpiarTexto(p.nombre) === txt);
-    if (exact.length > 0) return exact;
-
-    let partial = this.productosList.filter(p => this.limpiarTexto(p.nombre).includes(txt));
-    if (partial.length > 0) return partial;
-
-    const palabras = txt.split(' ');
-    return this.productosList.filter(p => {
-        const nom = this.limpiarTexto(p.nombre);
-        return palabras.every(pal => nom.includes(pal));
-    });
-  }
-
-  // Búsqueda Manual del HTML
-  filtrarClientes() {
-    this.clientesFiltrados = this.buscarClientes(this.terminoBusquedaCliente);
-  }
-
-  seleccionarCliente(cliente: any) {
-    if (!cliente) return;
-    this.nuevaFactura.clienteId = cliente.id;
-    this.clienteSeleccionadoInfo = cliente;
-    this.terminoBusquedaCliente = cliente.nombreCompleto || cliente.razonSocial || cliente.primerNombre || '';
-    
-    this.mostrarDropdownClientes = false;
-    this.cdr.detectChanges(); 
-  }
-
-  limpiarClienteSeleccionado() {
-    this.nuevaFactura.clienteId = null;
-    this.clienteSeleccionadoInfo = null;
-    this.terminoBusquedaCliente = '';
-    this.clientesFiltrados = [...this.clientesList];
-  }
-
-  // =======================================================
-  // 🔥 LÓGICA DE ZOE Y NLP CON GROQ
+  // 🔥 LÓGICA DE ZOE CON GROQ (NLP INTELIGENTE)
   // =======================================================
 
   initSpeechRecognition() {
@@ -407,6 +327,61 @@ export class Facturas implements OnInit, OnDestroy {
     }
   }
 
+  // =======================================================
+  // 🔥 UTILS NLP: MATCH RESILIENTE (Nombre, DNI, Email)
+  // =======================================================
+  private limpiarTexto(texto: any): string {
+    if (texto == null) return '';
+    return String(texto).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+  }
+
+  private encontrarMejorCoincidenciaCliente(textoBuscado: string): any {
+    if (!textoBuscado) return null;
+    const textoLimpio = this.limpiarTexto(textoBuscado);
+    
+    // Buscar en nombre, cédula o correo de forma inteligente
+    let match = this.clientesList.find(cli => {
+        const nom = this.limpiarTexto(cli.nombreCompleto || cli.razonSocial || cli.primerNombre || '');
+        const doc = this.limpiarTexto(cli.identificacion || cli.dni || cli.ruc || '');
+        const corr = this.limpiarTexto(cli.correo || cli.email || '');
+        
+        return nom === textoLimpio || doc === textoLimpio || corr === textoLimpio;
+    });
+
+    if (match) return match;
+
+    // Búsqueda más flexible
+    match = this.clientesList.find(cli => {
+        const nom = this.limpiarTexto(cli.nombreCompleto || cli.razonSocial || cli.primerNombre || '');
+        const doc = this.limpiarTexto(cli.identificacion || cli.dni || cli.ruc || '');
+        const corr = this.limpiarTexto(cli.correo || cli.email || '');
+        
+        return nom.includes(textoLimpio) || textoLimpio.includes(nom) ||
+               doc.includes(textoLimpio) || textoLimpio.includes(doc) ||
+               corr.includes(textoLimpio) || textoLimpio.includes(corr);
+    });
+
+    return match || null;
+  }
+
+  private encontrarMejorCoincidencia(textoBuscado: string, lista: any[], campoBusqueda: string): any {
+    if (!textoBuscado) return null;
+    const textoLimpio = this.limpiarTexto(textoBuscado);
+    
+    let match = lista.find(item => this.limpiarTexto(item[campoBusqueda]) === textoLimpio);
+    if (match) return match;
+    
+    match = lista.find(item => {
+        const nombreBD = this.limpiarTexto(item[campoBusqueda]);
+        return nombreBD.includes(textoLimpio) || textoLimpio.includes(nombreBD);
+    });
+    
+    return match || null;
+  }
+
+  // =======================================================
+  // 🔥 CONEXIÓN A GROQ MULTIPRODUCTO (URL CORREGIDA)
+  // =======================================================
   private analizarConGroq(fraseUsuario: string) {
     this.isThinking = true;
     this.cdr.detectChanges();
@@ -418,20 +393,17 @@ export class Facturas implements OnInit, OnDestroy {
 
     const promptSystem = `
       Eres el asistente de un punto de venta. Analiza la frase del usuario y extrae los datos requeridos.
-      
-      ESTADO ACTUAL DEL CARRITO:
-      - Cliente ya seleccionado: ${this.nuevaFactura.clienteId ? 'SÍ (No busques cliente a menos que pida cambiarlo)' : 'NO'}
-
       Debes responder ÚNICAMENTE con un JSON válido usando la siguiente estructura:
       {
-         "cliente": "Nombre exacto, Cédula o correo" (Omitir si el cliente ya está seleccionado),
+         "cliente": "Nombre exacto, Cédula o correo o null",
+         "bodega": "Nombre o null",
          "metodoPago": "EFECTIVO" | "TRANSFERENCIA" | "TARJETA_CREDITO" | null,
          "cuotas": numero_entero_o_null,
          "items": [
-            { "producto": "Nombre exacto del producto", "cantidad": numero_entero }
+            { "producto": "Nombre exacto", "cantidad": numero_entero }
          ]
       }
-      Si dicta varios productos, agrega todos al arreglo 'items'. Si no menciona cantidad, asume 1.
+      Si el usuario dicta varios productos, agrega todos al arreglo 'items'. Si no menciona cantidad, asume 1.
     `;
 
     const payload = {
@@ -444,6 +416,7 @@ export class Facturas implements OnInit, OnDestroy {
       max_tokens: 350
     };
 
+    // 🔥 URL CORRECTA (SIN ENLACES MARKDOWN)
     this.http.post<any>('https://api.groq.com/openai/v1/chat/completions', payload, { headers })
       .subscribe({
         next: (res) => {
@@ -459,31 +432,35 @@ export class Facturas implements OnInit, OnDestroy {
         },
         error: () => {
           this.isThinking = false;
-          this.hablar("Fallo de red al conectar con Inteligencia Artificial.", () => this.escuchar());
+          this.hablar("Fallo de conexión. Repite, por favor.", () => this.escuchar());
         }
       });
   }
 
+  // =======================================================
+  // 🔥 RELLENADO MASIVO EN VIVO
+  // =======================================================
   private aplicarDatosExtraidos(datos: any) {
     let algoAgregado = false;
     let nombresAgregados: string[] = [];
 
-    // 1. Asignar Cliente (Avanzado)
+    // 1. Asignar Cliente (Búsqueda mejorada)
     if (datos.cliente && !this.nuevaFactura.clienteId) {
-        const matchesCli = this.buscarClientes(datos.cliente);
-        
-        if (matchesCli.length === 1) {
-            this.seleccionarCliente(matchesCli[0]);
-        } else if (matchesCli.length > 1) {
-            this.iniciarDesambiguacion('CLIENTE', matchesCli, `Encontré varios clientes. Di el número del correcto: ${matchesCli.slice(0,4).map((m, i) => (i+1) + ', ' + (m.nombreCompleto || m.primerNombre)).join('. ')}.`);
-            return; // Detenemos la ejecución para que el usuario responda
-        } else {
-            this.hablar(`No encontré ningún cliente llamado ${datos.cliente}. ¿Me repites?`, () => this.escuchar());
-            return;
-        }
+        const matchCli = this.encontrarMejorCoincidenciaCliente(datos.cliente);
+        if (matchCli) this.seleccionarCliente(matchCli);
     }
 
-    // 2. Asignar Método de pago
+    // 2. Asignar Bodega
+    let bodegaDefaultId = this.itemTemp.bodegaId;
+    if (!bodegaDefaultId && this.bodegasList.length === 1) {
+        bodegaDefaultId = this.bodegasList[0].id;
+    } else if (datos.bodega) {
+        const matchBod = this.encontrarMejorCoincidencia(datos.bodega, this.bodegasList, 'nombre');
+        if (matchBod) bodegaDefaultId = matchBod.id;
+    }
+    if (bodegaDefaultId) this.itemTemp.bodegaId = bodegaDefaultId;
+
+    // 3. Asignar Método de pago y cuotas
     if (datos.metodoPago) {
         this.nuevaFactura.metodoPago = datos.metodoPago;
         if (datos.metodoPago === 'TARJETA_CREDITO' && datos.cuotas) {
@@ -491,58 +468,84 @@ export class Facturas implements OnInit, OnDestroy {
         }
     }
 
-    // 3. Procesar Productos
-    let bodegaDefaultId = this.bodegasList.length > 0 ? this.bodegasList[0].id : null;
+    // 4. Agregar Productos en bloque
     const items = datos.items || [];
-    
-    // Si la IA responde "producto" directo en vez de arreglo
     if (datos.producto && items.length === 0) items.push({ producto: datos.producto, cantidad: datos.cantidad || 1 });
 
-    for (let item of items) {
-        if (!item.producto) continue;
+    items.forEach((item: any) => {
+        const dProducto = item.producto;
+        if (!dProducto) return;
 
-        const matchesProd = this.buscarProductos(item.producto);
-        if (matchesProd.length === 1) {
-            this.agregarProductoDirecto(matchesProd[0], item.cantidad || 1, bodegaDefaultId);
-            algoAgregado = true;
-            nombresAgregados.push(`${item.cantidad || 1} ${matchesProd[0].nombre}`);
-        } else if (matchesProd.length > 1) {
-            this.itemTemp.cantidad = item.cantidad || 1; // Guardamos la cantidad temporalmente
-            this.iniciarDesambiguacion('PRODUCTO', matchesProd, `Encontré varios productos similares. Di el número del correcto: ${matchesProd.slice(0,4).map((m, i) => (i+1) + ', ' + m.nombre).join('. ')}.`);
-            return; // Detenemos la ejecución
+        const matchProd = this.encontrarMejorCoincidencia(dProducto, this.productosList, 'nombre');
+        
+        if (matchProd) {
+            let cant = item.cantidad || 1;
+            const stock = this.obtenerStock(matchProd.id, bodegaDefaultId);
+            
+            if (stock !== null && cant > stock) cant = stock; 
+
+            if (cant > 0) {
+                this.itemTemp.productoId = matchProd.id;
+                this.itemTemp.cantidad = cant;
+                this.agregarAlCarritoSilencioso();
+                algoAgregado = true;
+                nombresAgregados.push(`${cant} ${matchProd.nombre}`);
+            }
         }
-    }
+    });
 
     this.cdr.detectChanges();
     this.evaluarEstadoFactura(algoAgregado, nombresAgregados);
   }
 
+  // =======================================================
+  // 🔥 EVALUADOR INTELIGENTE AL FINALIZAR
+  // =======================================================
   private evaluarEstadoFactura(algoAgregado: boolean, nombresAgregados: string[]) {
     const faltaCliente = !this.nuevaFactura.clienteId;
     const faltaItems = this.nuevaFactura.detalles.length === 0;
 
     if (faltaCliente && faltaItems) {
         this.voiceState = VoiceStep.ESCUCHA_LIBRE;
-        this.hablar("No logré identificar los datos. Intenta de nuevo.", () => this.escuchar());
+        this.hablar("No logré identificar clientes ni productos. Intenta mencionarlos nuevamente.", () => this.escuchar());
     } 
     else if (faltaCliente) {
         this.voiceState = VoiceStep.ESCUCHA_LIBRE;
         const msg = algoAgregado 
-          ? `Agregué ${nombresAgregados.join(', ')}. Me falta el cliente. ¿A quién le facturamos?` 
+          ? `Agregué ${nombresAgregados.join(', ')}. Pero me falta el cliente. ¿A quién le facturamos?` 
           : "Me falta el cliente. ¿A quién le facturamos?";
         this.hablar(msg, () => this.escuchar());
     } 
     else if (faltaItems) {
         this.voiceState = VoiceStep.ESCUCHA_LIBRE;
-        this.hablar(`Listo con el cliente. ¿Qué productos agregamos?`, () => this.escuchar());
+        this.hablar(`Listo con el cliente. ¿Qué productos agregamos a la factura?`, () => this.escuchar());
     } 
     else {
         this.voiceState = VoiceStep.CONFIRMAR;
         let msj = algoAgregado
-            ? `Listo. Llevas $${this.totalCarrito.toFixed(2)}. ¿Emito la factura o agregas algo más?`
+            ? `Listo. El total a pagar es $${this.totalCarrito.toFixed(2)}. ¿Falta algo más o emito la factura?`
             : `Llevas $${this.totalCarrito.toFixed(2)}. ¿Deseas agregar otro producto o emitimos?`;
         
         this.hablar(msj, () => this.escuchar());
+    }
+  }
+
+  private intentarAgregarItem() {
+    if (this.nuevaFactura.clienteId && this.itemTemp.bodegaId && this.itemTemp.productoId && this.itemTemp.cantidad > 0) {
+        const stockActual = this.stockDisponible;
+        if (stockActual !== null && this.itemTemp.cantidad > stockActual) {
+            this.itemTemp.cantidad = stockActual; 
+        }
+        if (this.itemTemp.cantidad > 0) {
+            const prodSelect = this.productosList.find(p => p.id === this.itemTemp.productoId);
+            const nombreProd = prodSelect ? prodSelect.nombre : 'Producto';
+            this.agregarAlCarritoSilencioso();
+            this.evaluarEstadoFactura(true, [`${this.itemTemp.cantidad} ${nombreProd}`]);
+        } else {
+            this.evaluarEstadoFactura(false, []);
+        }
+    } else {
+        this.evaluarEstadoFactura(false, []);
     }
   }
 
@@ -560,20 +563,15 @@ export class Facturas implements OnInit, OnDestroy {
     if (num >= 0 && num < this.opcionesVoz.length) {
       const seleccionado = this.opcionesVoz[num];
       
-      if (this.tipoOpciones === 'CLIENTE') {
-          this.seleccionarCliente(seleccionado);
-          this.opcionesVoz = [];
-          this.tipoOpciones = null;
-          this.evaluarEstadoFactura(false, []);
-      } else if (this.tipoOpciones === 'PRODUCTO') {
-          let bodegaDefaultId = this.bodegasList.length > 0 ? this.bodegasList[0].id : null;
-          this.agregarProductoDirecto(seleccionado, this.itemTemp.cantidad || 1, bodegaDefaultId);
-          this.opcionesVoz = [];
-          this.tipoOpciones = null;
-          this.evaluarEstadoFactura(true, [`${this.itemTemp.cantidad || 1} ${seleccionado.nombre}`]);
-      }
+      if (this.tipoOpciones === 'CLIENTE') this.seleccionarCliente(seleccionado);
+      else if (this.tipoOpciones === 'BODEGA') this.itemTemp.bodegaId = seleccionado.id;
+      else if (this.tipoOpciones === 'PRODUCTO') this.itemTemp.productoId = seleccionado.id;
+      
+      this.opcionesVoz = [];
+      this.tipoOpciones = null;
+      this.intentarAgregarItem();
     } else {
-      this.hablar("No capté el número correcto. Repite solo el número, por favor.", () => this.escuchar());
+      this.hablar("No capté el número. Dilo de nuevo.", () => this.escuchar());
     }
   }
 
@@ -592,34 +590,66 @@ export class Facturas implements OnInit, OnDestroy {
   }
 
   // =======================================================
-  // 🔥 CARRITO Y GUARDADO DE FACTURA
+  // 🔥 MÉTODOS DEL COMPONENTE (FACTURA NORMAL Y SILENCIOSO)
   // =======================================================
-  agregarAlCarrito() {
-    if (!this.itemTemp.productoId || !this.itemTemp.bodegaId || this.itemTemp.cantidad <= 0) return;
-    const prodSelect = this.productosList.find(p => p.id === this.itemTemp.productoId);
-    this.agregarProductoDirecto(prodSelect, this.itemTemp.cantidad, this.itemTemp.bodegaId);
-    this.itemTemp = { productoId: null, bodegaId: this.itemTemp.bodegaId, cantidad: 1, productoNombre: '' }; 
+
+  filtrarClientes() {
+    if (!this.terminoBusquedaCliente.trim()) {
+      this.clientesFiltrados = [...this.clientesList];
+    } else {
+      const termino = this.limpiarTexto(this.terminoBusquedaCliente);
+      this.clientesFiltrados = this.clientesList.filter(cli => 
+        this.limpiarTexto(cli.nombreCompleto).includes(termino) ||
+        this.limpiarTexto(cli.razonSocial).includes(termino) ||
+        this.limpiarTexto(cli.primerNombre).includes(termino) ||
+        this.limpiarTexto(cli.identificacion).includes(termino) ||
+        this.limpiarTexto(cli.dni).includes(termino) ||
+        this.limpiarTexto(cli.ruc).includes(termino) ||
+        this.limpiarTexto(cli.correo).includes(termino) ||
+        this.limpiarTexto(cli.email).includes(termino)
+      );
+    }
   }
 
-  private agregarProductoDirecto(producto: any, cantidad: number, bodegaId: any) {
-    if (!producto || !bodegaId) return;
+  // 🔥 CORRECCIÓN: Evitamos que se trabe el dropdown al seleccionar
+  seleccionarCliente(cliente: any) {
+    if (!cliente) return;
+    this.nuevaFactura.clienteId = cliente.id;
+    this.clienteSeleccionadoInfo = cliente;
+    this.terminoBusquedaCliente = cliente.nombreCompleto || cliente.razonSocial || cliente.primerNombre || '';
+    
+    this.mostrarDropdownClientes = false; // Cerramos el menú
+    this.cdr.detectChanges(); 
+  }
 
-    let cant = cantidad;
-    const stock = this.obtenerStock(producto.id, bodegaId);
-    if (stock !== null && cant > stock) cant = stock; 
-    if (cant <= 0) return;
+  limpiarClienteSeleccionado() {
+    this.nuevaFactura.clienteId = null;
+    this.clienteSeleccionadoInfo = null;
+    this.terminoBusquedaCliente = '';
+    this.clientesFiltrados = [...this.clientesList];
+  }
 
-    let precio = Number(producto.costoPromedioActual || 0);
-    if (precio <= 0) precio = Number(producto.precioUnitario || 0);
+  agregarAlCarrito() {
+    this.agregarAlCarritoSilencioso();
+  }
+
+  private agregarAlCarritoSilencioso() {
+    if (!this.itemTemp.productoId || !this.itemTemp.bodegaId || this.itemTemp.cantidad <= 0) return;
+
+    const prodSelect = this.productosList.find(p => p.id === this.itemTemp.productoId);
+    let precio = Number(prodSelect?.costoPromedioActual || 0);
+    if (precio <= 0) precio = Number(prodSelect?.precioUnitario || 0);
     
     this.nuevaFactura.detalles.push({
-      productoId: producto.id,
-      bodegaId: bodegaId,
-      cantidad: cant,
-      productoNombre: producto.nombre,
+      productoId: this.itemTemp.productoId,
+      bodegaId: this.itemTemp.bodegaId,
+      cantidad: this.itemTemp.cantidad,
+      productoNombre: prodSelect ? prodSelect.nombre : 'Producto',
       precioUnitario: precio,
-      subtotal: precio * cant
+      subtotal: precio * this.itemTemp.cantidad
     });
+
+    this.itemTemp = { productoId: null, bodegaId: this.itemTemp.bodegaId, cantidad: 1, productoNombre: '' }; 
     this.cdr.detectChanges();
   }
 
@@ -664,6 +694,7 @@ export class Facturas implements OnInit, OnDestroy {
           };
           
           this.imprimirFacturaPDF(facturaParaPDF);
+
           Swal.fire({ icon: 'success', title: '¡Factura Emitida!', timer: 1500, showConfirmButton: false });
         },
         error: (err) => {
@@ -749,6 +780,14 @@ export class Facturas implements OnInit, OnDestroy {
               .footer { text-align: center; padding-top: 30px; border-top: 2px dashed #e2e8f0; color: #64748b; font-size: 13px; }
               .footer p { margin: 5px 0; }
               .footer-bold { font-weight: 600; color: #0f172a; }
+              @media print { 
+                  body { background-color: white; }
+                  .invoice-container { padding: 0; max-width: 100%; }
+                  .top-bar { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                  th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                  .total-row.grand-total { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                  .info-grid { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+              }
           </style>
       </head>
       <body>
