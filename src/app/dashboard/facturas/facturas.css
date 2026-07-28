@@ -139,47 +139,260 @@
 .empty-state span { font-size: 0.95rem; color: #64748b; }
 
 /* =========================================
-   🔥 DISEÑO DEL MODAL (PUNTO DE VENTA)
+   🔥 DISEÑO DEL MODAL Y ZOE (LADO A LADO)
    ========================================= */
 .modal-overlay {
-    /* Fondo oscuro desenfocado */
-    background-color: rgba(15, 23, 42, 0.65);
-    backdrop-filter: blur(4px);
+    background-color: rgba(15, 23, 42, 0.7);
+    backdrop-filter: blur(5px);
     display: flex;
     align-items: center;
     justify-content: center;
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
     z-index: 1000;
-    padding: 20px; /* Margen global para evitar que toque los bordes */
+    padding: 20px;
 }
 
+/* El Wrapper alinea ambos paneles perfectamente por arriba */
+.modal-layout-wrapper {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start; 
+    justify-content: center;
+    gap: 20px;
+    width: 100%;
+    max-width: 1320px; 
+}
+
+/* Modal de Factura Principal */
 .modal-content {
     background: white;
     border-radius: 16px;
-    width: 100%;
-    max-height: 90vh; /* Nunca debe ser más alto que la pantalla */
+    flex: 1; /* Crece para ocupar el espacio disponible */
+    max-width: 950px; 
+    max-height: 90vh;
     display: flex;
     flex-direction: column;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
     overflow: hidden;
 }
 
+/* =========================================
+   🔥 DISEÑO DEL PANEL LATERAL ZOE
+   ========================================= */
+.zoe-side-panel {
+    width: 340px;
+    flex-shrink: 0; /* Evita que el modal principal aplaste a Zoe */
+    display: flex;
+    flex-direction: column;
+    animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    max-height: 90vh; /* Misma altura máxima que el modal */
+}
+
+@keyframes slideInRight {
+    from { opacity: 0; transform: translateX(30px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+.zoe-widget {
+    background: white;
+    border-radius: 16px;
+    width: 100%;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(99, 102, 241, 0.1);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+}
+
+/* Botón de cerrar de Zoe */
+.close-zoe-btn {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: white;
+    border: 1px solid #e2e8f0;
+    color: #64748b;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 50%;
+    transition: all 0.2s;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.close-zoe-btn:hover {
+    background: #ef4444;
+    color: white;
+    border-color: #ef4444;
+}
+
+/* Cabecera de Zoe */
+.zoe-header {
+    background: linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%);
+    padding: 20px 20px 20px 25px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+/* Micrófono adaptado al panel lateral */
+.mic-container-small {
+    position: relative;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.mic-icon-small {
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2;
+    transition: transform 0.2s;
+    box-shadow: 0 4px 10px rgba(99, 102, 241, 0.3);
+}
+
+.mic-container-small.is-listening .mic-icon-small {
+    background: linear-gradient(135deg, #ef4444 0%, #f97316 100%);
+    transform: scale(1.1);
+    box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3);
+}
+
+.mic-ring-small {
+    position: absolute;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: rgba(239, 68, 68, 0.4);
+    z-index: 1;
+    animation: ping-small 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@keyframes ping-small {
+    75%, 100% { transform: scale(1.8); opacity: 0; }
+}
+
+/* Cuerpo de mensajes de Zoe */
+.zoe-body {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    overflow-y: auto; /* Scroll propio para que no rompa la tarjeta */
+}
+
+.bot-message p {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 500;
+    color: #0f172a;
+    line-height: 1.5;
+}
+
+.user-message p {
+    margin: 0;
+    font-size: 0.95rem;
+    color: #475569;
+    font-style: italic;
+    background: #f1f5f9;
+    padding: 12px 16px;
+    border-radius: 12px;
+    display: inline-block;
+    border-left: 3px solid #cbd5e1;
+}
+
+/* Opciones de Voz */
+.voice-options-list {
+    background: #f8fafc;
+    border-radius: 12px;
+    padding: 16px;
+    border: 1px solid #e2e8f0;
+}
+
+.voice-options-title {
+    margin: 0 0 12px 0;
+    font-size: 0.85rem;
+    color: #64748b;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.voice-option-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px dashed #cbd5e1;
+}
+
+.voice-option-item:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.voice-opt-number {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    color: white;
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-weight: 800;
+    font-size: 0.85rem;
+    flex-shrink: 0;
+}
+
+.voice-opt-text {
+    font-size: 0.95rem;
+    color: #0f172a;
+    font-weight: 600;
+}
+
+.listening-indicator {
+    color: #8b5cf6;
+    font-size: 0.85rem;
+    font-weight: 600;
+    animation: pulseText 1.5s infinite;
+}
+
+.thinking-indicator {
+    color: #f59e0b;
+    font-size: 0.85rem;
+    font-weight: 600;
+    animation: pulseText 1.5s infinite;
+}
+
+@keyframes pulseText {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+
+/* =========================================
+   🔥 EL RESTO DEL MODAL INTERNO (CONTENIDO)
+   ========================================= */
 .modal-grid-layout {
     display: grid;
     grid-template-columns: 1.2fr 1fr;
     gap: 30px;
     background-color: #f8fafc;
     padding: 30px;
-    overflow-y: auto; /* Permite scroll interno si es muy alto */
+    overflow-y: auto; 
 }
-
 .modal-col { display: flex; flex-direction: column; }
-
-/* Inputs Modernos */
 .form-row { display: flex; gap: 15px; width: 100%; align-items: flex-end;}
-.w-50 { flex: 1; min-width: 0; } /* Flex 1 maneja el 50% de forma fluida */
-
+.w-50 { flex: 1; min-width: 0; } 
 .modern-input {
     background-color: #ffffff;
     border: 1px solid #cbd5e1;
@@ -197,15 +410,12 @@
     box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.1);
     outline: none;
 }
-
-/* Utilidades */
 .mt-2 { margin-top: 10px; }
 .mt-3 { margin-top: 15px; }
 .mt-4 { margin-top: 25px; }
 .text-center { text-align: center; }
 .shadow-sm { box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
 
-/* Títulos Secciones Modal */
 .section-badge {
     display: inline-flex;
     align-items: center;
@@ -220,14 +430,10 @@
     letter-spacing: 0.5px;
     margin-bottom: 10px;
 }
-.section-badge svg { color: #4338ca; }
-
 .input-with-button { display: flex; gap: 12px; align-items: center; width: 100%; }
 .add-product-box { background: white; border: 1px solid #e2e8f0; padding: 20px; border-radius: 12px; }
 
-/* =========================================
-   🔥 CARRITO (TICKET LATERAL)
-   ========================================= */
+/* CARRITO */
 .cart-col {
     background: #ffffff;
     border: 1px solid #e2e8f0;
@@ -237,7 +443,6 @@
     display: flex;
     flex-direction: column;
 }
-
 .cart-header {
     background: #0f172a;
     color: white;
@@ -248,28 +453,18 @@
 }
 .cart-header h4 { margin: 0; font-size: 1.1rem; font-weight: 600; }
 .cart-header .badge { background: #334155; padding: 4px 12px; border-radius: 12px; font-size: 0.8rem; font-weight: 700; }
-
 .cart-items-container {
-    flex: 1; /* Ocupa el espacio restante */
+    flex: 1; 
     overflow-y: auto;
     padding: 20px;
     background-color: #f8fafc;
     min-height: 280px;
 }
-
-/* Vacío */
 .empty-cart-premium {
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     height: 100%; color: #64748b; text-align: center; padding: 40px 0;
 }
-.empty-cart-premium .icon-circle {
-    width: 65px; height: 65px; background: #e2e8f0; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center; margin-bottom: 15px;
-}
 .empty-cart-premium p { margin: 0; font-weight: 700; font-size: 1.05rem; color: #334155; }
-.empty-cart-premium span { font-size: 0.9rem; margin-top: 5px; }
-
-/* Items */
 .cart-item-ticket {
     background: white;
     border: 1px solid #e2e8f0;
@@ -282,14 +477,11 @@
     transition: transform 0.2s, box-shadow 0.2s;
 }
 .cart-item-ticket:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
-
 .ticket-info { display: flex; flex-direction: column; gap: 6px; }
 .t-name { margin: 0; font-weight: 700; color: #0f172a; font-size: 0.95rem; }
 .t-qty { margin: 0; font-size: 0.85rem; color: #64748b; font-weight: 600;}
-
 .ticket-price { display: flex; align-items: center; gap: 15px; }
 .ticket-price strong { font-size: 1.15rem; color: #0f172a; }
-
 .delete-icon {
     background: #fef2f2; color: #ef4444; border: none;
     width: 30px; height: 30px; border-radius: 8px;
@@ -297,11 +489,7 @@
     cursor: pointer; transition: all 0.2s;
 }
 .delete-icon:hover { background: #ef4444; color: white; transform: scale(1.1); }
-
-/* Footer Carrito */
 .cart-footer { padding: 20px; background: white; border-top: 1px dashed #cbd5e1; }
-.cart-warning-subtle { display: flex; align-items: center; gap: 8px; color: #64748b; font-size: 0.85rem; margin-bottom: 15px; font-weight: 500; line-height: 1.3;}
-
 .cart-total-box {
     display: flex; justify-content: space-between; align-items: center;
     background: #f1f5f9; color: #64748b;
@@ -315,8 +503,18 @@
 .cart-total-amount { font-size: 1.8rem; font-weight: 800; color: inherit;}
 .cart-total-box.active .cart-total-amount { color: var(--primary-orange); }
 
+/* Modal Footer General */
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 15px;
+    padding: 20px 30px;
+    background: white;
+    border-top: 1px solid #e2e8f0;
+}
+
 /* =========================================
-   🔥 BOTONES GLOBALES
+   🔥 BOTONES GLOBALES Y PREMIUM (ZOE)
    ========================================= */
 .btn-primary {
     background-color: var(--primary-orange, #ed8936);
@@ -328,94 +526,20 @@
 .btn-primary:disabled { background-color: #fdba74; cursor: not-allowed; }
 
 .btn-large { padding: 14px 30px; font-size: 1.05rem; border-radius: 10px; }
+
 .btn-outline-secondary {
     background: white; border: 1px solid #cbd5e1; color: #475569;
     padding: 14px 28px; border-radius: 10px; font-weight: 600; cursor: pointer; transition: all 0.2s;
 }
 .btn-outline-secondary:hover:not(:disabled) { background: #f8fafc; color: #0f172a; border-color: #94a3b8; }
 
-.spinner-small {
-    width: 20px; height: 20px;
-    border: 3px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%;
-    animation: spin 1s linear infinite; margin-right: 10px;
-}
-
-/* =========================================
-   🔥 RESPONSIVE ESTILO SAAS (Móviles y Tablets)
-   ========================================= */
-@media (max-width: 1024px) {
-    /* En tablets, la columna izquierda toma menos espacio para no aplastar el carrito */
-    .modal-grid-layout { grid-template-columns: 1fr 1fr; gap: 20px; padding: 20px; }
-}
-
-@media (max-width: 768px) {
-    /* La cabecera se apila verticalmente */
-    .page-header {
-        flex-direction: column;
-        align-items: stretch;
-    }
-    
-    .btn-primary { width: 100%; justify-content: center; } /* Botón ancho táctil */
-
-    /* El modal de la factura ocupa toda la pantalla en móviles (Diseño Bottom Sheet) */
-    .modal-overlay { padding: 0; align-items: flex-end; }
-    .modal-content { 
-        border-radius: 20px 20px 0 0; 
-        max-height: 95vh;
-        width: 100%;
-    }
-    
-    /* El Grid pasa a 1 sola columna: Formulario arriba, Carrito abajo */
-    .modal-grid-layout { 
-        grid-template-columns: 1fr; 
-        gap: 20px; 
-        padding: 20px; 
-    }
-    
-    /* Formulario: Inputs en fila pasan a ser bloques */
-    .form-row { flex-direction: column; gap: 15px; }
-    .w-50 { width: 100%; }
-    
-    /* Botón Agregar debajo del input */
-    .input-with-button { flex-direction: column; align-items: stretch; }
-    .input-with-button select { margin-bottom: 0; }
-    
-    /* Carrito: Limitar altura para que el modal no sea infinito */
-    .cart-col { border-radius: 12px; }
-    .cart-items-container { min-height: 150px; max-height: 250px; }
-    
-    /* Footer del Modal: Botones apilados (Guardar grande, Cancelar abajo) */
-    .modal-footer {
-        flex-direction: column-reverse;
-        padding: 20px;
-        gap: 12px;
-    }
-    .modal-footer button { width: 100%; margin: 0; }
-}
-
-@media (max-width: 480px) {
-    .header-titles h2 { font-size: 1.5rem; }
-    .header-titles p { font-size: 0.95rem; line-height: 1.4; }
-    
-    /* Ajustes mínimos en el Ticket para que quepa en iPhones pequeños */
-    .ticket-price strong { font-size: 1rem; }
-    .cart-total-amount { font-size: 1.4rem; }
-    .delete-icon { width: 26px; height: 26px; }
-}
-
-.dropdown-item:hover {
-    background-color: #f1f5f9 !important;
-}
-/* =========================================
-   🔥 DISEÑO DEL ASISTENTE DE VOZ (ZOE)
-   ========================================= */
-
+/* Botón Premium Zoe */
 .btn-voice-premium {
     background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
     color: white; 
     border: none; 
     padding: 12px 28px; 
-    border-radius: 12px; /* Más redondeado para darle toque moderno */
+    border-radius: 12px; 
     font-weight: 700; 
     font-size: 1.05rem; 
     display: inline-flex; 
@@ -429,7 +553,6 @@
     overflow: hidden;
 }
 
-/* Efecto sutil de brillo en el botón al hacer hover */
 .btn-voice-premium::after {
     content: '';
     position: absolute;
@@ -449,400 +572,42 @@
     left: 150%;
 }
 
-.voice-assistant-overlay {
-    position: fixed; /* 🔥 FIXED: Cubre absolutamente todo, sin fallos de tamaño */
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(15, 23, 42, 0.85);
-    backdrop-filter: blur(8px);
-    z-index: 2000; /* 🔥 2000: Asegura que está sobre el Modal que suele usar 1000/1050 */
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
 
-.voice-card {
-    background: white;
-    border-radius: 24px;
-    width: 420px;
-    max-width: 90%;
-    padding: 45px 30px;
-    text-align: center;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 20px;
-}
-
-.close-voice-btn {
-    position: absolute;
-    top: 15px;
-    right: 15px;
-    background: transparent;
-    border: none;
-    color: #94a3b8;
-    cursor: pointer;
-    padding: 5px;
-    border-radius: 50%;
-    transition: background 0.2s;
-}
-.close-voice-btn:hover {
-    background: #f1f5f9;
-    color: #ef4444;
-}
-
-/* Micrófono Animado de Zoe */
-.mic-container {
-    position: relative;
-    width: 80px;
-    height: 80px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin: 10px 0;
-}
-
-.mic-icon {
-    width: 80px;
-    height: 80px;
-    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-    border-radius: 50%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 2;
-    box-shadow: 0 10px 20px rgba(99, 102, 241, 0.4);
-    transition: transform 0.2s;
-}
-
-.mic-container.is-listening .mic-icon {
-    background: linear-gradient(135deg, #ef4444 0%, #f97316 100%); /* Naranja/Rojo al escuchar */
-    transform: scale(1.1);
-    box-shadow: 0 10px 20px rgba(239, 68, 68, 0.4);
-}
-
-.mic-ring {
-    position: absolute;
-    width: 80px;
-    height: 80px;
-    border-radius: 50%;
-    background: rgba(239, 68, 68, 0.4); /* Anillos rojos */
-    z-index: 1;
-    animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
-}
-
-.mic-ring.delay {
-    animation-delay: 0.5s;
-}
-
-@keyframes ping {
-    75%, 100% {
-        transform: scale(2.2);
-        opacity: 0;
+/* =========================================
+   🔥 RESPONSIVE ADAPTADO PARA EL PANEL LATERAL
+   ========================================= */
+@media (max-width: 1200px) {
+    .modal-layout-wrapper {
+        flex-direction: column-reverse; /* Pone a Zoe arriba en tablets/móviles para que resalte */
+        align-items: center;
+        overflow-y: auto;
+        max-height: 95vh;
+        padding-bottom: 20px;
+    }
+    .modal-content {
+        max-height: none;
+        width: 100%;
+    }
+    .zoe-side-panel {
+        width: 100%;
+        max-width: 950px;
     }
 }
 
-/* Diálogos */
-.voice-dialogues {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-}
-
-.bot-message {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 10px;
-}
-
-.bot-avatar {
-    font-size: 2.2rem;
-    filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.1));
-}
-
-.bot-message p {
-    margin: 0;
-    font-size: 1.15rem;
-    font-weight: 500;
-    color: #0f172a;
-    line-height: 1.5;
-}
-.bot-message strong {
-    color: #6366f1;
-    font-weight: 800;
-}
-
-.user-message p {
-    margin: 0;
-    font-size: 1.05rem;
-    color: #475569;
-    font-style: italic;
-    background: #f1f5f9;
-    padding: 12px 18px;
-    border-radius: 12px;
-    display: inline-block;
-    box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
-}
-
-.listening-indicator {
-    color: #8b5cf6;
-    font-size: 0.95rem;
-    font-weight: 600;
-    animation: pulseText 1.5s infinite;
-}
-
-@keyframes pulseText {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
-}
-/* =========================================
-   🔥 DISEÑO DE LAS OPCIONES DE VOZ DE ZOE
-   ========================================= */
-
-.voice-options-list {
-    background: #f8fafc;
-    border-radius: 12px;
-    padding: 15px;
-    margin-top: 10px;
-    text-align: left;
-    width: 100%;
-    box-sizing: border-box;
-    border: 1px solid #e2e8f0;
-}
-
-.voice-options-title {
-    margin: 0 0 10px 0;
-    font-size: 0.85rem;
-    color: #64748b;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.voice-option-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 10px 0;
-    border-bottom: 1px solid #e2e8f0;
-}
-
-.voice-option-item:last-child {
-    border-bottom: none;
-    padding-bottom: 0;
-}
-
-.voice-opt-number {
-    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-    color: white;
-    width: 28px;
-    height: 28px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    font-weight: 800;
-    font-size: 0.9rem;
-    flex-shrink: 0;
-    box-shadow: 0 2px 5px rgba(99, 102, 241, 0.3);
-}
-
-.voice-opt-text {
-    font-size: 0.95rem;
-    color: #0f172a;
-    font-weight: 600;
-    line-height: 1.3;
-}
-
-
-/* =========================================
-   🔥 DISEÑO DEL ASISTENTE ZOE WIDGET
-   ========================================= */
-
-.zoe-widget-container {
-    position: fixed;
-    bottom: 25px;
-    right: 25px;
-    z-index: 2000; /* Siempre sobre todo */
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-}
-
-.zoe-widget {
-    background: white;
-    border-radius: 20px;
-    width: 320px;
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(99, 102, 241, 0.1);
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
-
-.close-zoe-btn {
-    position: absolute;
-    top: 12px;
-    right: 12px;
-    background: #f1f5f9;
-    border: none;
-    color: #64748b;
-    cursor: pointer;
-    padding: 6px;
-    border-radius: 50%;
-    transition: all 0.2s;
-    z-index: 10;
-}
-
-.close-zoe-btn:hover {
-    background: #ef4444;
-    color: white;
-}
-
-.zoe-header {
-    background: linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%);
-    padding: 15px 20px;
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    border-bottom: 1px solid #e2e8f0;
-}
-
-.mic-container-small {
-    position: relative;
-    width: 45px;
-    height: 45px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-.mic-icon-small {
-    width: 45px;
-    height: 45px;
-    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-    border-radius: 50%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 2;
-    transition: transform 0.2s;
-}
-
-.mic-container-small.is-listening .mic-icon-small {
-    background: linear-gradient(135deg, #ef4444 0%, #f97316 100%);
-    transform: scale(1.1);
-}
-
-.mic-ring-small {
-    position: absolute;
-    width: 45px;
-    height: 45px;
-    border-radius: 50%;
-    background: rgba(239, 68, 68, 0.4);
-    z-index: 1;
-    animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
-}
-
-@keyframes ping {
-    75%, 100% {
-        transform: scale(1.8);
-        opacity: 0;
+@media (max-width: 768px) {
+    .modal-grid-layout { 
+        grid-template-columns: 1fr; 
+        gap: 20px; 
+        padding: 20px; 
     }
-}
-
-.zoe-body {
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.bot-message p {
-    margin: 0;
-    font-size: 0.95rem;
-    font-weight: 500;
-    color: #0f172a;
-    line-height: 1.4;
-}
-
-.user-message p {
-    margin: 0;
-    font-size: 0.9rem;
-    color: #475569;
-    font-style: italic;
-    background: #f1f5f9;
-    padding: 10px 12px;
-    border-radius: 10px;
-    display: inline-block;
-}
-
-.listening-indicator {
-    color: #8b5cf6;
-    font-weight: 600;
-    animation: pulseText 1.5s infinite;
-}
-
-@keyframes pulseText {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
-}
-
-.voice-options-list {
-    background: #f8fafc;
-    border-radius: 12px;
-    padding: 12px;
-    border: 1px solid #e2e8f0;
-}
-
-.voice-options-title {
-    margin: 0 0 8px 0;
-    font-size: 0.8rem;
-    color: #64748b;
-    font-weight: 700;
-    text-transform: uppercase;
-}
-
-.voice-option-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 8px 0;
-    border-bottom: 1px solid #e2e8f0;
-}
-
-.voice-option-item:last-child {
-    border-bottom: none;
-    padding-bottom: 0;
-}
-
-.voice-opt-number {
-    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-    color: white;
-    width: 24px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    font-weight: 700;
-    font-size: 0.8rem;
-}
-
-.voice-opt-text {
-    font-size: 0.9rem;
-    color: #0f172a;
-    font-weight: 600;
-}
-
-.thinking-indicator {
-    animation: blink 1s infinite alternate;
-}
-
-@keyframes blink {
-    0% { opacity: 0.4; }
-    100% { opacity: 1; }
+    .form-row { flex-direction: column; gap: 15px; }
+    .w-50 { width: 100%; }
+    .input-with-button { flex-direction: column; align-items: stretch; }
+    .cart-items-container { min-height: 150px; max-height: 250px; }
+    .modal-footer {
+        flex-direction: column-reverse;
+        padding: 20px;
+        gap: 12px;
+    }
+    .modal-footer button { width: 100%; margin: 0; }
 }
