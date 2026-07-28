@@ -237,7 +237,7 @@ export class Facturas implements OnInit, OnDestroy {
     }
     
     this.voiceState = VoiceStep.ESCUCHA_LIBRE;
-    this.voiceMessage = "Te escucho. Dicta el cliente y los productos...";
+    this.voiceMessage = "Te escucho. Dicta el nombre, cédula o correo del cliente, y los productos...";
     this.cdr.detectChanges();
     this.escuchar();
   }
@@ -266,7 +266,6 @@ export class Facturas implements OnInit, OnDestroy {
         utterance.rate = 1.05; 
         
         let voices = window.speechSynthesis.getVoices();
-        
         let femaleVoice = voices.find(v => v.lang.startsWith('es') && (v.name.includes('Google español') || v.name.includes('Sabina') || v.name.includes('Microsoft'))) ||
                           voices.find(v => v.lang.startsWith('es') && v.name.includes('Google')) || 
                           voices.find(v => v.lang.startsWith('es'));
@@ -329,11 +328,40 @@ export class Facturas implements OnInit, OnDestroy {
   }
 
   // =======================================================
-  // 🔥 UTILS NLP: MATCH RESILIENTE
+  // 🔥 UTILS NLP: MATCH RESILIENTE (Nombre, DNI, Email)
   // =======================================================
   private limpiarTexto(texto: any): string {
     if (texto == null) return '';
     return String(texto).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+  }
+
+  private encontrarMejorCoincidenciaCliente(textoBuscado: string): any {
+    if (!textoBuscado) return null;
+    const textoLimpio = this.limpiarTexto(textoBuscado);
+    
+    // Buscar en nombre, cédula o correo de forma inteligente
+    let match = this.clientesList.find(cli => {
+        const nom = this.limpiarTexto(cli.nombreCompleto || cli.razonSocial || cli.primerNombre || '');
+        const doc = this.limpiarTexto(cli.identificacion || cli.dni || cli.ruc || '');
+        const corr = this.limpiarTexto(cli.correo || cli.email || '');
+        
+        return nom === textoLimpio || doc === textoLimpio || corr === textoLimpio;
+    });
+
+    if (match) return match;
+
+    // Búsqueda más flexible
+    match = this.clientesList.find(cli => {
+        const nom = this.limpiarTexto(cli.nombreCompleto || cli.razonSocial || cli.primerNombre || '');
+        const doc = this.limpiarTexto(cli.identificacion || cli.dni || cli.ruc || '');
+        const corr = this.limpiarTexto(cli.correo || cli.email || '');
+        
+        return nom.includes(textoLimpio) || textoLimpio.includes(nom) ||
+               doc.includes(textoLimpio) || textoLimpio.includes(doc) ||
+               corr.includes(textoLimpio) || textoLimpio.includes(corr);
+    });
+
+    return match || null;
   }
 
   private encontrarMejorCoincidencia(textoBuscado: string, lista: any[], campoBusqueda: string): any {
@@ -352,7 +380,7 @@ export class Facturas implements OnInit, OnDestroy {
   }
 
   // =======================================================
-  // 🔥 CONEXIÓN A GROQ MULTIPRODUCTO
+  // 🔥 CONEXIÓN A GROQ MULTIPRODUCTO (URL CORREGIDA)
   // =======================================================
   private analizarConGroq(fraseUsuario: string) {
     this.isThinking = true;
@@ -363,15 +391,11 @@ export class Facturas implements OnInit, OnDestroy {
       'Content-Type': 'application/json'
     });
 
-    const listaNombresProd = this.productosList.map(p => p.nombre).join(', ');
-    const listaNombresCli = this.clientesList.map(c => c.nombreCompleto || c.primerNombre).join(', ');
-    const listaNombresBod = this.bodegasList.map(b => b.nombre).join(', ');
-
     const promptSystem = `
       Eres el asistente de un punto de venta. Analiza la frase del usuario y extrae los datos requeridos.
-      Debes responder ÚNICAMENTE con un JSON válido usando la siguiente estructura (omite texto adicional):
+      Debes responder ÚNICAMENTE con un JSON válido usando la siguiente estructura:
       {
-         "cliente": "Nombre exacto o null",
+         "cliente": "Nombre exacto, Cédula o correo o null",
          "bodega": "Nombre o null",
          "metodoPago": "EFECTIVO" | "TRANSFERENCIA" | "TARJETA_CREDITO" | null,
          "cuotas": numero_entero_o_null,
@@ -379,12 +403,7 @@ export class Facturas implements OnInit, OnDestroy {
             { "producto": "Nombre exacto", "cantidad": numero_entero }
          ]
       }
-      Bases de datos:
-      - Productos: [${listaNombresProd}]
-      - Clientes: [${listaNombresCli}]
-      - Bodegas: [${listaNombresBod}]
       Si el usuario dicta varios productos, agrega todos al arreglo 'items'. Si no menciona cantidad, asume 1.
-      IMPORTANTE: Si el usuario menciona "tarjeta de crédito" y un número de cuotas/meses, asegúrate de llenar el campo "metodoPago" con "TARJETA_CREDITO" y "cuotas" con el número.
     `;
 
     const payload = {
@@ -397,7 +416,7 @@ export class Facturas implements OnInit, OnDestroy {
       max_tokens: 350
     };
 
-    // 🔥 CORRECCIÓN AQUÍ: URL limpia sin sintaxis markdown 
+    // 🔥 URL CORRECTA (SIN ENLACES MARKDOWN)
     this.http.post<any>('https://api.groq.com/openai/v1/chat/completions', payload, { headers })
       .subscribe({
         next: (res) => {
@@ -413,7 +432,7 @@ export class Facturas implements OnInit, OnDestroy {
         },
         error: () => {
           this.isThinking = false;
-          this.hablar("Fallo de red. Repite, por favor.", () => this.escuchar());
+          this.hablar("Fallo de conexión. Repite, por favor.", () => this.escuchar());
         }
       });
   }
@@ -425,10 +444,9 @@ export class Facturas implements OnInit, OnDestroy {
     let algoAgregado = false;
     let nombresAgregados: string[] = [];
 
-    // 1. Asignar Cliente
+    // 1. Asignar Cliente (Búsqueda mejorada)
     if (datos.cliente && !this.nuevaFactura.clienteId) {
-        const matchCli = this.encontrarMejorCoincidencia(datos.cliente, this.clientesList, 'nombreCompleto') 
-                         || this.encontrarMejorCoincidencia(datos.cliente, this.clientesList, 'primerNombre');
+        const matchCli = this.encontrarMejorCoincidenciaCliente(datos.cliente);
         if (matchCli) this.seleccionarCliente(matchCli);
     }
 
@@ -593,13 +611,14 @@ export class Facturas implements OnInit, OnDestroy {
     }
   }
 
+  // 🔥 CORRECCIÓN: Evitamos que se trabe el dropdown al seleccionar
   seleccionarCliente(cliente: any) {
     if (!cliente) return;
     this.nuevaFactura.clienteId = cliente.id;
     this.clienteSeleccionadoInfo = cliente;
     this.terminoBusquedaCliente = cliente.nombreCompleto || cliente.razonSocial || cliente.primerNombre || '';
     
-    this.mostrarDropdownClientes = false;
+    this.mostrarDropdownClientes = false; // Cerramos el menú
     this.cdr.detectChanges(); 
   }
 
