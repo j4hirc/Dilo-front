@@ -59,7 +59,7 @@ export class Facturas implements OnInit, OnDestroy {
     productoNombre: '' 
   };
 
-  // 🔥 VARIABLES DE ZOE
+  // 🔥 VARIABLES DE ZOE (VOZ)
   voiceState: VoiceStep = VoiceStep.OFF;
   voiceMessage: string = ''; 
   userTranscript: string = ''; 
@@ -68,6 +68,9 @@ export class Facturas implements OnInit, OnDestroy {
   private recognition: any;
   opcionesVoz: any[] = [];
   tipoOpciones: 'CLIENTE' | 'BODEGA' | 'PRODUCTO' | null = null;
+  
+  // 🔥 NUEVO: Control estricto de método de pago
+  metodoPagoConfirmado: boolean = false;
 
   get totalCarrito(): number {
     return this.nuevaFactura.detalles.reduce((sum, item) => sum + (item.subtotal || 0), 0);
@@ -98,11 +101,7 @@ export class Facturas implements OnInit, OnDestroy {
     }
 
     this.initSpeechRecognition();
-    
-    // Forzar la carga de voces en Chrome
-    window.speechSynthesis.onvoiceschanged = () => {
-        window.speechSynthesis.getVoices();
-    };
+    window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
   }
 
   ngOnDestroy(): void {
@@ -147,8 +146,11 @@ export class Facturas implements OnInit, OnDestroy {
     this.terminoBusquedaCliente = '';
     this.clienteSeleccionadoInfo = null;
     this.mostrarDropdownClientes = false;
+    
+    // Reseteos de Zoe
     this.opcionesVoz = [];
     this.tipoOpciones = null;
+    this.metodoPagoConfirmado = false;
 
     if (porVoz) {
       window.speechSynthesis.resume();
@@ -184,7 +186,7 @@ export class Facturas implements OnInit, OnDestroy {
   }
 
   // =======================================================
-  // 🔥 LÓGICA DE BÚSQUEDA UNIVERSAL (MANUAL Y VOZ)
+  // 🔥 BUSCADOR UNIVERSAL (MANUAL Y VOZ)
   // =======================================================
   private limpiarTexto(texto: any): string {
     if (texto == null) return '';
@@ -200,17 +202,17 @@ export class Facturas implements OnInit, OnDestroy {
         this.limpiarTexto(cli.primerNombre) === txt ||
         this.limpiarTexto(cli.apellidoPaterno) === txt ||
         this.limpiarTexto(cli.dni) === txt ||
-        this.limpiarTexto(cli.email) === txt
+        this.limpiarTexto(cli.identificacion) === txt ||
+        this.limpiarTexto(cli.email) === txt ||
+        this.limpiarTexto(cli.correo) === txt
     );
     if (exact.length > 0) return exact;
 
     let partial = this.clientesList.filter(cli => {
         const nom = this.limpiarTexto(cli.nombreCompleto || `${cli.primerNombre || ''} ${cli.apellidoPaterno || ''}`);
-        const doc = this.limpiarTexto(cli.dni || '');
-        const corr = this.limpiarTexto(cli.email || '');
-        return nom.includes(txt) || txt.includes(nom) ||
-               (doc && doc.includes(txt)) ||
-               (corr && corr.includes(txt));
+        const doc = this.limpiarTexto(cli.dni || cli.identificacion || '');
+        const corr = this.limpiarTexto(cli.email || cli.correo || '');
+        return nom.includes(txt) || txt.includes(nom) || (doc && doc.includes(txt)) || (corr && corr.includes(txt));
     });
     if (partial.length > 0) return partial;
 
@@ -245,7 +247,7 @@ export class Facturas implements OnInit, OnDestroy {
   }
 
   // =======================================================
-  // 🔥 LÓGICA DE ZOE CON GROQ (NLP INTELIGENTE)
+  // 🔥 LÓGICA DE ZOE Y NLP
   // =======================================================
 
   initSpeechRecognition() {
@@ -276,7 +278,7 @@ export class Facturas implements OnInit, OnDestroy {
       this.isListening = false;
       this.cdr.detectChanges();
       if (event.error === 'not-allowed') {
-        Swal.fire('Micrófono bloqueado', 'Permite el acceso al micrófono.', 'error');
+        Swal.fire('Micrófono bloqueado', 'Permite el acceso al micrófono en el navegador.', 'error');
         this.cancelarAsistenteVoz();
       } else if (event.error !== 'aborted') {
         setTimeout(() => this.escuchar(), 1000);
@@ -293,11 +295,10 @@ export class Facturas implements OnInit, OnDestroy {
     if (!this.recognition) return;
     this.voiceState = VoiceStep.ESCUCHA_LIBRE;
     
-    // Si ya elegimos al cliente manualmente, Zoe entra directo a pedir productos
     if (this.nuevaFactura.clienteId) {
-        this.voiceMessage = "Te escucho. Dime los productos que deseas facturar.";
+        this.voiceMessage = "¿Qué método de pago usará el cliente?";
     } else {
-        this.voiceMessage = "Te escucho. Dicta el cliente y los productos que deseas facturar.";
+        this.voiceMessage = "Hola. ¿A quién le facturamos?";
     }
     
     this.cdr.detectChanges();
@@ -325,19 +326,19 @@ export class Facturas implements OnInit, OnDestroy {
 
         const utterance = new SpeechSynthesisUtterance(texto);
         utterance.lang = 'es-ES';
-        utterance.rate = 1.0; // Velocidad normal para que suene humana
-        utterance.pitch = 1.1; // Un poco más agudo para quitar lo robótico
+        
+        // 🔥 Ajustes para voz humana femenina
+        utterance.rate = 0.95; // Un poco más lento para que vocalice mejor
+        utterance.pitch = 1.15; // Tono más alto (femenino)
         
         let voices = window.speechSynthesis.getVoices();
         
-        // 🔥 FORZAR VOZ FEMENINA: Buscamos por nombre las mejores voces latinas/españolas
-        let femaleVoice = voices.find(v => v.lang.startsWith('es') && v.name.includes('Google español')) || 
-                          voices.find(v => v.lang.startsWith('es') && v.name.includes('Sabina')) ||
-                          voices.find(v => v.lang.startsWith('es') && v.name.includes('Paulina')) ||
-                          voices.find(v => v.lang.startsWith('es') && v.name.includes('Helena')) ||
-                          voices.find(v => v.lang.startsWith('es') && v.name.includes('Microsoft') && v.name.includes('Desktop')) ||
-                          voices.find(v => v.lang.startsWith('es'));
-                          
+        // Buscamos estrictamente voces de mujer
+        const nombresMujer = ['sabina', 'paulina', 'helena', 'monica', 'victoria', 'lucia', 'sofia', 'laura', 'google español', 'microsoft elena'];
+        let femaleVoice = voices.find(v => v.lang.startsWith('es') && nombresMujer.some(n => v.name.toLowerCase().includes(n))) 
+                       || voices.find(v => v.lang.startsWith('es-US') && v.name.toLowerCase().includes('female'))
+                       || voices.find(v => v.lang.startsWith('es'));
+                       
         if (femaleVoice) {
             utterance.voice = femaleVoice;
         }
@@ -358,32 +359,29 @@ export class Facturas implements OnInit, OnDestroy {
   }
 
   private procesarComandoVoz(transcript: string) {
-    const comandosAceptacion = ['si', 'sí', 'emite', 'dale', 'confirmo', 'listo', 'ok', 'todo bien', 'factura'];
-    const esComandoPositivo = comandosAceptacion.some(cmd => transcript.includes(cmd));
+    // Comandos directos de emisión
+    const comandosAceptacion = ['si', 'sí', 'emite', 'emitir', 'dale', 'confirmo', 'listo', 'ok', 'todo bien', 'factura', 'cobra', 'cobrar'];
+    const esComandoRapido = comandosAceptacion.some(cmd => transcript === cmd || transcript.startsWith(cmd + ' ') || transcript.endsWith(' ' + cmd));
 
-    if (this.voiceState === VoiceStep.ESCUCHA_LIBRE) {
-       if ((transcript.includes('emite') || transcript.includes('factura ya')) && this.nuevaFactura.detalles.length > 0) {
-          this.voiceState = VoiceStep.OFF;
-          this.hablar("Emitiendo factura.", () => this.guardarFactura());
-          return;
-       }
-       this.analizarConGroq(transcript);
-    } 
-    else if (this.voiceState === VoiceStep.ELEGIR_OPCION) {
-       this.manejarDesambiguacion(transcript);
+    if (this.voiceState === VoiceStep.CONFIRMAR && esComandoRapido) {
+        this.voiceState = VoiceStep.OFF;
+        this.hablar("Emitiendo comprobante en este momento.", () => this.guardarFactura());
+        return;
     }
-    else if (this.voiceState === VoiceStep.CONFIRMAR) {
-       if (esComandoPositivo || transcript.includes('no falta nada') || transcript.includes('nada más')) {
-          this.voiceState = VoiceStep.OFF;
-          this.hablar("Emitiendo comprobante.", () => this.guardarFactura());
-       } else if (transcript.includes('espera') || transcript.includes('pausa') || transcript.includes('cancela')) {
-          this.voiceState = VoiceStep.OFF;
-          this.hablar("Factura pausada. Puedes continuar de forma manual.");
-       } else {
-          this.voiceState = VoiceStep.ESCUCHA_LIBRE;
-          this.analizarConGroq(transcript);
-       }
+
+    if (this.voiceState === VoiceStep.ESCUCHA_LIBRE && (transcript.includes('emite factura') || transcript.includes('factura ya')) && this.nuevaFactura.detalles.length > 0) {
+        this.voiceState = VoiceStep.OFF;
+        this.hablar("Emitiendo factura.", () => this.guardarFactura());
+        return;
     }
+
+    if (this.voiceState === VoiceStep.ELEGIR_OPCION) {
+        this.manejarDesambiguacion(transcript);
+        return;
+    }
+    
+    // Si no es un comando directo, analizamos con Groq
+    this.analizarConGroq(transcript);
   }
 
   private analizarConGroq(fraseUsuario: string) {
@@ -395,14 +393,13 @@ export class Facturas implements OnInit, OnDestroy {
       'Content-Type': 'application/json'
     });
 
-    // 🔥 SEGURO ANTI-BUCLE: Le decimos a Groq que ignore el cliente si ya existe
     const instruccionCliente = this.nuevaFactura.clienteId 
-      ? `"cliente": null (IGNORAR ESTE CAMPO, EL CLIENTE YA ESTÁ SELECCIONADO EN EL SISTEMA),` 
-      : `"cliente": "Nombre exacto, DNI o email del cliente" (O null si el usuario no lo menciona),`;
+      ? `"cliente": null (IGNORA ESTE CAMPO, EL CLIENTE YA ESTÁ SELECCIONADO),` 
+      : `"cliente": "Extrae el nombre, DNI o correo del cliente, o null si no lo menciona",`;
 
     const promptSystem = `
       Eres el asistente de un punto de venta.
-      Debes responder ÚNICAMENTE con un JSON:
+      Debes responder ÚNICAMENTE con un JSON puro:
       {
          ${instruccionCliente}
          "metodoPago": "EFECTIVO" | "TRANSFERENCIA" | "TARJETA_CREDITO" | null,
@@ -411,6 +408,8 @@ export class Facturas implements OnInit, OnDestroy {
             { "producto": "Nombre exacto del producto", "cantidad": numero_entero }
          ]
       }
+      REGLA IMPORTANTE: Si el usuario solo menciona un método de pago (ej: "en efectivo", "con tarjeta"), llena solo "metodoPago" y deja lo demás null/vacío. 
+      Si dicta productos, agrégalos. NO devuelvas texto fuera del JSON.
     `;
 
     const payload = {
@@ -420,7 +419,7 @@ export class Facturas implements OnInit, OnDestroy {
         { role: 'user', content: fraseUsuario }
       ],
       temperature: 0.1, 
-      max_tokens: 350
+      max_tokens: 400
     };
 
     this.http.post<any>('https://api.groq.com/openai/v1/chat/completions', payload, { headers })
@@ -428,17 +427,24 @@ export class Facturas implements OnInit, OnDestroy {
         next: (res) => {
           this.isThinking = false;
           try {
-            const respuestaStr = res.choices[0].message.content;
+            let respuestaStr = res.choices[0].message.content;
+            
+            // 🔥 SEGURO ANTI-FALLO DE FORMATO DE IA
+            if (respuestaStr.includes('```json')) {
+                respuestaStr = respuestaStr.replace(/```json/g, '').replace(/```/g, '');
+            }
             const jsonStr = respuestaStr.substring(respuestaStr.indexOf('{'), respuestaStr.lastIndexOf('}') + 1);
+            
             const datosExtraidos = JSON.parse(jsonStr);
             this.aplicarDatosExtraidos(datosExtraidos);
           } catch (e) {
-            this.hablar("No procesé bien la petición. ¿Repetimos?", () => this.escuchar());
+            console.error("Error parseando JSON de Groq:", e);
+            this.hablar("No comprendí bien eso. ¿Podrías repetirlo?", () => this.escuchar());
           }
         },
         error: () => {
           this.isThinking = false;
-          this.hablar("Fallo de red al conectar con IA.", () => this.escuchar());
+          this.hablar("Hubo un fallo de conexión. Repite, por favor.", () => this.escuchar());
         }
       });
   }
@@ -456,6 +462,7 @@ export class Facturas implements OnInit, OnDestroy {
     // 1. Procesar Método de pago
     if (datos.metodoPago) {
         this.nuevaFactura.metodoPago = datos.metodoPago;
+        this.metodoPagoConfirmado = true;
         if (datos.metodoPago === 'TARJETA_CREDITO' && datos.cuotas) this.nuevaFactura.numeroCuotas = datos.cuotas;
     }
 
@@ -479,7 +486,7 @@ export class Facturas implements OnInit, OnDestroy {
         }
     }
 
-    // 3. Procesar Cliente (Solo si hace falta y si Groq lo devolvió)
+    // 3. Procesar Cliente (Solo si no hay uno)
     if (datos.cliente && !this.nuevaFactura.clienteId) {
         nombreCliBuscado = datos.cliente;
         const matchesCli = this.buscarClientesUniversales(datos.cliente);
@@ -497,36 +504,40 @@ export class Facturas implements OnInit, OnDestroy {
 
     // 4. Pausas Inteligentes por falta de datos
     if (requiereDesambiguacionCli) {
-        this.iniciarDesambiguacion('CLIENTE', requiereDesambiguacionCli, `Encontré varios clientes parecidos. Di el número del correcto: ${requiereDesambiguacionCli.slice(0,4).map((m, i) => (i+1) + '. ' + (m.nombreCompleto || m.primerNombre)).join(', ')}.`);
+        // 🔥 MEJORA: Mostrar nombre y Cédula en la desambiguación para que el usuario sepa cuál elegir
+        const opcionesTxt = requiereDesambiguacionCli.slice(0, 4).map((m, i) => {
+            const doc = m.dni || m.identificacion || m.ruc || 'sin documento';
+            return `${i + 1}. ${m.nombreCompleto || m.primerNombre}, cédula ${doc}`;
+        }).join('. ');
+        
+        this.iniciarDesambiguacion('CLIENTE', requiereDesambiguacionCli, `Encontré varios clientes. Di el número del correcto: ${opcionesTxt}.`);
         return;
     }
 
     if (requiereDesambiguacionProd) {
         this.itemTemp.cantidad = cantTemp;
-        this.iniciarDesambiguacion('PRODUCTO', requiereDesambiguacionProd, `Encontré varios productos. Di el número del que deseas: ${requiereDesambiguacionProd.slice(0,4).map((m, i) => (i+1) + '. ' + m.nombre).join(', ')}.`);
+        this.iniciarDesambiguacion('PRODUCTO', requiereDesambiguacionProd, `Encontré varios productos. Di el número: ${requiereDesambiguacionProd.slice(0,4).map((m, i) => (i+1) + '. ' + m.nombre).join(', ')}.`);
         return;
     }
 
+    // 🔥 5. ORDEN ESTRICTO: CLIENTE -> PAGO -> PRODUCTOS -> EMITIR
     const faltaCliente = !this.nuevaFactura.clienteId;
+    const faltaPago = !this.metodoPagoConfirmado;
     const faltaItems = this.nuevaFactura.detalles.length === 0;
 
     this.voiceState = VoiceStep.ESCUCHA_LIBRE;
 
-    // 🔥 MENSALES NATURALES (SIN BUCLES)
     if (falloCliente) {
-        this.hablar(`No encontré a ${nombreCliBuscado} en tu base de datos. Por favor, dímelo otra vez por su nombre, cédula o correo.`, () => this.escuchar());
+        this.hablar(`No encontré a ${nombreCliBuscado}. ¿Me dictas su nombre o cédula nuevamente?`, () => this.escuchar());
     }
-    else if (faltaCliente && faltaItems) {
-        this.hablar("No logré identificar los datos. Intenta nuevamente.", () => this.escuchar());
-    } 
     else if (faltaCliente) {
-        const msg = algoAgregado 
-          ? `Agregué los productos. Pero me falta el cliente. ¿A quién le facturamos?` 
-          : "Me falta el cliente. ¿A quién le facturamos?";
-        this.hablar(msg, () => this.escuchar());
+        this.hablar("Por favor, dime el nombre o cédula del cliente.", () => this.escuchar());
+    } 
+    else if (faltaPago) {
+        this.hablar(`Cliente seleccionado. ¿Cuál será el método de pago? Efectivo, transferencia o tarjeta.`, () => this.escuchar());
     } 
     else if (faltaItems) {
-        this.hablar(`¿Qué productos agregamos a la factura?`, () => this.escuchar());
+        this.hablar(`Pago en ${this.nuevaFactura.metodoPago}. ¿Qué productos agregamos a la factura?`, () => this.escuchar());
     } 
     else {
         this.voiceState = VoiceStep.CONFIRMAR;
@@ -580,7 +591,7 @@ export class Facturas implements OnInit, OnDestroy {
           this.aplicarDatosExtraidos({}); 
       }
     } else {
-      this.hablar("No capté el número. Dilo de nuevo.", () => this.escuchar());
+      this.hablar("No capté el número. Dilo de nuevo, por favor.", () => this.escuchar());
     }
   }
 
@@ -724,7 +735,7 @@ export class Facturas implements OnInit, OnDestroy {
       <head>
           <title>Factura_${fac.numero}</title>
           <style>
-              @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+              @import url('[https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap](https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap)');
               body { font-family: 'Inter', sans-serif; color: #1e293b; margin: 0; padding: 0; background-color: #f8fafc; }
               .invoice-container { max-width: 800px; margin: 0 auto; background: #fff; padding: 50px; box-sizing: border-box; }
               .top-bar { height: 8px; background: linear-gradient(90deg, #ed8936, #ea580c); width: 100%; margin-bottom: 30px; border-radius: 4px; }
