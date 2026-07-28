@@ -594,11 +594,14 @@ export class Facturas implements OnInit, OnDestroy {
   }
 
   seleccionarCliente(cliente: any) {
+    if (!cliente) return;
     this.nuevaFactura.clienteId = cliente.id;
     this.clienteSeleccionadoInfo = cliente;
-    this.terminoBusquedaCliente = cliente.nombreCompleto || cliente.razonSocial || cliente.primerNombre;
+    this.terminoBusquedaCliente = cliente.nombreCompleto || cliente.razonSocial || cliente.primerNombre || '';
+    
+    // Forzamos el cierre del menú y le decimos a Angular que refresque la vista
     this.mostrarDropdownClientes = false;
-    this.cdr.detectChanges();
+    this.cdr.detectChanges(); 
   }
 
   limpiarClienteSeleccionado() {
@@ -858,6 +861,9 @@ export class Facturas implements OnInit, OnDestroy {
   }
 
   ocultarDropdown() {
-    setTimeout(() => this.mostrarDropdownClientes = false, 200);
+    setTimeout(() => {
+      this.mostrarDropdownClientes = false;
+      this.cdr.detectChanges();
+    }, 250);
   }
 }
