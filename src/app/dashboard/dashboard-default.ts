@@ -26,41 +26,34 @@ export class DashboardDefault implements OnInit {
   usuarioLogueado: any = null;
   isSidebarOpen = false;
 
+  // 🔥 VARIABLES OPTIMIZADAS PARA LA UI (Evitan que las fotos parpadeen)
+  fotoPerfilUrl: string | null = null;
+  inicialesUsuario: string = 'US';
+
   alertasCaducidad: any[] = [];
   showNotificaciones = false;
   showUserMenu = false;
 
-  // 1. Usamos la URL del backend desde el archivo dinámico
   private apiUrl = environment.apiUrl;
-
-  // =========================================
-  // 🔥 CONTEXTO REAL DEL NEGOCIO (para la IA)
-  // =========================================
   private contextoNegocioTexto: string = 'Aún no se ha cargado la información del negocio.';
   private contextoNegocioListo = false;
 
-  // =========================================
-  // 🔥 VARIABLES DEL ASISTENTE VIRTUAL
-  // =========================================
   isChatOpen = false;
   isChatLoading = false;
   nuevoMensaje = '';
   chatMensajes: { role: string, text: string, safeHtml?: SafeHtml }[] = [];
  
-  // 2. Usamos la API Key de Groq desde el archivo dinámico
   private groqApiKey = environment.groqApiKey;
 
   ngOnInit() {
-    // 🔥 1. VALIDACIÓN FÍSICA: ¿Hay token y usuario en localStorage?
     const token = localStorage.getItem('dilo_token');
     const userStr = localStorage.getItem('usuario') || localStorage.getItem('dilo_user');
 
     if (!token || !userStr) {
-      this.cerrarSesionForzada(); // Lo expulsamos inmediatamente
+      this.cerrarSesionForzada(); 
       return; 
     }
 
-    // Inicializamos el primer mensaje aquí para poder usar el 'sanitizer'
     const textoBienvenida = '¡Hola! 👋 Soy **Zoe**, tu asistente virtual. ¿En qué módulo del sistema te puedo ayudar hoy?';
     this.chatMensajes = [
       { 
@@ -72,7 +65,12 @@ export class DashboardDefault implements OnInit {
 
     this.usuarioLogueado = JSON.parse(userStr);
     
-    // 🔥 Aseguramos la lectura del negocioId usando múltiples variantes (por si acaso)
+    // 🔥 OPTIMIZACIÓN: Extraemos la URL de la foto y las iniciales UNA SOLA VEZ
+    // Esto evita que Angular re-evalúe el objeto en cada parpadeo de la pantalla
+    this.fotoPerfilUrl = this.usuarioLogueado?.fotoPerfil || null;
+    const nombre = this.usuarioLogueado?.primerNombre || '';
+    this.inicialesUsuario = nombre ? nombre.substring(0, 2).toUpperCase() : 'EC';
+    
     this.negocioId = this.usuarioLogueado?.negocioId || this.usuarioLogueado?.idNegocio;
 
     if (this.negocioId) {
@@ -82,7 +80,6 @@ export class DashboardDefault implements OnInit {
     }
   }
 
-  // 🔥 MÉTODO NUEVO: Limpia todo y redirige al login
   cerrarSesionForzada() {
     localStorage.removeItem('dilo_token');
     localStorage.removeItem('usuario');
@@ -104,7 +101,6 @@ export class DashboardDefault implements OnInit {
         },
         error: (err) => {
           console.error(err);
-          // 🔥 2. VALIDACIÓN DE EXPIRACIÓN: Si el backend dice "No autorizado" (401 o 403)
           if (err.status === 401 || err.status === 403) {
             this.cerrarSesionForzada();
           }
@@ -126,7 +122,6 @@ export class DashboardDefault implements OnInit {
         },
         error: (err) => {
           console.error(err);
-          // 🔥 También lo validamos aquí por seguridad
           if (err.status === 401 || err.status === 403) {
             this.cerrarSesionForzada();
           }
@@ -148,7 +143,6 @@ export class DashboardDefault implements OnInit {
     this.isSidebarOpen = !this.isSidebarOpen;
   }
 
-  // Ahora reutiliza el método nuevo
   cerrarSesion() {
     this.cerrarSesionForzada();
   }
@@ -369,5 +363,10 @@ export class DashboardDefault implements OnInit {
           this.cdr.detectChanges();
         }
       });
+  }
+
+  // 🔥 ESENCIAL PARA EL CHAT: Evita que parpadee todo al enviar un mensaje
+  trackByMensaje(index: number, msg: any): number {
+    return index;
   }
 }

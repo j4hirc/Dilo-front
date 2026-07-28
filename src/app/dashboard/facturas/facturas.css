@@ -406,3 +406,253 @@
 .dropdown-item:hover {
     background-color: #f1f5f9 !important;
 }
+/* =========================================
+   🔥 DISEÑO DEL ASISTENTE DE VOZ (ZOE)
+   ========================================= */
+
+.btn-voice-premium {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    color: white; 
+    border: none; 
+    padding: 12px 28px; 
+    border-radius: 12px; /* Más redondeado para darle toque moderno */
+    font-weight: 700; 
+    font-size: 1.05rem; 
+    display: inline-flex; 
+    align-items: center; 
+    justify-content: center;
+    gap: 10px; 
+    cursor: pointer; 
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Efecto sutil de brillo en el botón al hacer hover */
+.btn-voice-premium::after {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%;
+    width: 50%; height: 100%;
+    background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0) 100%);
+    transform: skewX(-20deg);
+    transition: all 0.5s;
+}
+
+.btn-voice-premium:hover { 
+    transform: translateY(-2px); 
+    box-shadow: 0 8px 25px rgba(99, 102, 241, 0.5);
+}
+
+.btn-voice-premium:hover::after {
+    left: 150%;
+}
+
+.voice-assistant-overlay {
+    position: fixed; /* 🔥 FIXED: Cubre absolutamente todo, sin fallos de tamaño */
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(15, 23, 42, 0.85);
+    backdrop-filter: blur(8px);
+    z-index: 2000; /* 🔥 2000: Asegura que está sobre el Modal que suele usar 1000/1050 */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.voice-card {
+    background: white;
+    border-radius: 24px;
+    width: 420px;
+    max-width: 90%;
+    padding: 45px 30px;
+    text-align: center;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+}
+
+.close-voice-btn {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 50%;
+    transition: background 0.2s;
+}
+.close-voice-btn:hover {
+    background: #f1f5f9;
+    color: #ef4444;
+}
+
+/* Micrófono Animado de Zoe */
+.mic-container {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 10px 0;
+}
+
+.mic-icon {
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2;
+    box-shadow: 0 10px 20px rgba(99, 102, 241, 0.4);
+    transition: transform 0.2s;
+}
+
+.mic-container.is-listening .mic-icon {
+    background: linear-gradient(135deg, #ef4444 0%, #f97316 100%); /* Naranja/Rojo al escuchar */
+    transform: scale(1.1);
+    box-shadow: 0 10px 20px rgba(239, 68, 68, 0.4);
+}
+
+.mic-ring {
+    position: absolute;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: rgba(239, 68, 68, 0.4); /* Anillos rojos */
+    z-index: 1;
+    animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+.mic-ring.delay {
+    animation-delay: 0.5s;
+}
+
+@keyframes ping {
+    75%, 100% {
+        transform: scale(2.2);
+        opacity: 0;
+    }
+}
+
+/* Diálogos */
+.voice-dialogues {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.bot-message {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.bot-avatar {
+    font-size: 2.2rem;
+    filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.1));
+}
+
+.bot-message p {
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 500;
+    color: #0f172a;
+    line-height: 1.5;
+}
+.bot-message strong {
+    color: #6366f1;
+    font-weight: 800;
+}
+
+.user-message p {
+    margin: 0;
+    font-size: 1.05rem;
+    color: #475569;
+    font-style: italic;
+    background: #f1f5f9;
+    padding: 12px 18px;
+    border-radius: 12px;
+    display: inline-block;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.listening-indicator {
+    color: #8b5cf6;
+    font-size: 0.95rem;
+    font-weight: 600;
+    animation: pulseText 1.5s infinite;
+}
+
+@keyframes pulseText {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+/* =========================================
+   🔥 DISEÑO DE LAS OPCIONES DE VOZ DE ZOE
+   ========================================= */
+
+.voice-options-list {
+    background: #f8fafc;
+    border-radius: 12px;
+    padding: 15px;
+    margin-top: 10px;
+    text-align: left;
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid #e2e8f0;
+}
+
+.voice-options-title {
+    margin: 0 0 10px 0;
+    font-size: 0.85rem;
+    color: #64748b;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.voice-option-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.voice-option-item:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.voice-opt-number {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    color: white;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-weight: 800;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+    box-shadow: 0 2px 5px rgba(99, 102, 241, 0.3);
+}
+
+.voice-opt-text {
+    font-size: 0.95rem;
+    color: #0f172a;
+    font-weight: 600;
+    line-height: 1.3;
+}

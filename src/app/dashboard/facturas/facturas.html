@@ -6,10 +6,17 @@
         </h2>
         <p>Visualiza, emite y descarga los comprobantes de tus ventas.</p>
     </div>
-    <button class="btn-primary" (click)="abrirModalNuevo()">
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-        Nueva Factura Manual
-    </button>
+    <div style="display: flex; gap: 12px;">
+        <!-- 🔥 BOTÓN DE ZOE (Premium) -->
+        <button class="btn-voice-premium" (click)="abrirModalNuevo(true)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line></svg>
+            Zoe: Voz Inteligente
+        </button>
+        <button class="btn-primary" (click)="abrirModalNuevo(false)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            Factura Manual
+        </button>
+    </div>
 </div>
 
 <div class="card full-height-card premium-card">
@@ -36,7 +43,7 @@
                         <td colspan="6" class="empty-state">
                             <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="9" y1="15" x2="15" y2="15"></line></svg>
                             <p>No hay facturas registradas</p>
-                            <span>Comienza emitiendo una nueva factura manual.</span>
+                            <span>Comienza emitiendo una nueva factura manual o por voz con Zoe.</span>
                         </td>
                     </tr>
                     <tr *ngFor="let fac of facturas">
@@ -59,6 +66,63 @@
                     </tr>
                 </tbody>
             </table>
+        </div>
+    </div>
+</div>
+
+<!-- 🔥 OVERLAY ASISTENTE DE VOZ (EXTRAÍDO AFUERA DEL MODAL PARA EVITAR BUGS) -->
+<!-- REEMPLAZA EL BLOQUE DE "voice-assistant-overlay" CON ESTE: -->
+<div class="voice-assistant-overlay fade-in" *ngIf="voiceState !== 'OFF'">
+    <div class="voice-card">
+        
+        <button class="close-voice-btn" (click)="cancelarAsistenteVoz()" title="Detener a Zoe">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+
+        <!-- Micrófono Animado -->
+        <div class="mic-container" [ngClass]="{'is-listening': isListening}">
+            <div class="mic-ring" *ngIf="isListening"></div>
+            <div class="mic-ring delay" *ngIf="isListening"></div>
+            <div class="mic-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line></svg>
+            </div>
+        </div>
+
+        <div class="voice-dialogues">
+            <div class="bot-message" *ngIf="voiceMessage">
+                <span class="bot-avatar">✨</span>
+                <p><strong>Zoe:</strong> {{ voiceMessage }}</p>
+            </div>
+
+            <!-- 🔥 NUEVO: LISTA DE OPCIONES PARA EL USUARIO -->
+            <div class="voice-options-list fade-in" *ngIf="opcionesVoz.length > 0">
+                <p class="voice-options-title">Di el número de tu opción:</p>
+                <div class="voice-option-item" *ngFor="let opt of opcionesVoz; let i = index">
+                    <span class="voice-opt-number">{{ i + 1 }}</span>
+                    
+                    <span class="voice-opt-text" *ngIf="tipoOpciones === 'CLIENTE'">
+                        {{ opt.nombreCompleto || opt.razonSocial || opt.primerNombre }} 
+                        <small style="color: #94a3b8; font-size: 0.8rem; display: block;">CI: {{ opt.identificacion || opt.ruc || 'N/A' }}</small>
+                    </span>
+                    
+                    <span class="voice-opt-text" *ngIf="tipoOpciones === 'BODEGA'">
+                        {{ opt.nombre }}
+                    </span>
+                    
+                    <span class="voice-opt-text" *ngIf="tipoOpciones === 'PRODUCTO'">
+                        {{ opt.nombre }} 
+                        <small style="color: #059669; font-weight: bold; font-size: 0.8rem; display: block;">${{ opt.precioUnitario || opt.costoPromedioActual }}</small>
+                    </span>
+                </div>
+            </div>
+            
+            <div class="user-message" *ngIf="userTranscript && opcionesVoz.length === 0">
+                <p>"{{ userTranscript }}"</p>
+            </div>
+
+            <div class="listening-indicator" *ngIf="isListening && !userTranscript">
+                Zoe te está escuchando...
+            </div>
         </div>
     </div>
 </div>
@@ -87,7 +151,6 @@
                 <div class="form-group mt-2">
                     <label>Cliente a Facturar *</label>
                     
-                    <!-- BUSCADOR -->
                     <div class="search-dropdown-container" *ngIf="!clienteSeleccionadoInfo" style="position: relative;">
                         <input type="text" 
                                id="buscadorCliente"
@@ -116,12 +179,10 @@
                                     {{ cli.nombreCompleto || cli.razonSocial || cli.primerNombre }}
                                 </div>
                                 <div style="display: flex; gap: 15px; font-size: 12px; color: #64748b;">
-                                    <!-- 🔥 CORRECCIÓN: Agregar variables alternativas para la cédula -->
                                     <span>
                                         <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: text-top; margin-right: 2px;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
                                         {{ cli.identificacion || cli.dni || cli.ruc || 'Sin cédula' }}
                                     </span>
-                                    <!-- 🔥 CORRECCIÓN: Agregar variable alternativa para el correo -->
                                     <span>
                                         <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: text-top; margin-right: 2px;"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
                                         {{ cli.correo || cli.email || 'Sin correo' }}
@@ -137,7 +198,6 @@
                             <div style="font-weight: 700; color: #0f172a; font-size: 15px; margin-bottom: 4px;">
                                 {{ clienteSeleccionadoInfo.nombreCompleto || clienteSeleccionadoInfo.razonSocial || clienteSeleccionadoInfo.primerNombre }}
                             </div>
-                            <!-- 🔥 CORRECCIÓN: Agregar variables a la tarjeta seleccionada -->
                             <div style="display: flex; flex-direction: column; gap: 3px; font-size: 13px; color: #475569;">
                                 <span><strong>CI/RUC:</strong> {{ clienteSeleccionadoInfo.identificacion || clienteSeleccionadoInfo.dni || clienteSeleccionadoInfo.ruc || 'N/A' }}</span>
                                 <span><strong>Correo:</strong> {{ clienteSeleccionadoInfo.correo || clienteSeleccionadoInfo.email || 'N/A' }}</span>
