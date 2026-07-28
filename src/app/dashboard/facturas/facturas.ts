@@ -77,10 +77,14 @@ export class Facturas implements OnInit, OnDestroy {
   }
 
   get stockDisponible(): number | null {
-    if (!this.itemTemp.productoId || !this.itemTemp.bodegaId) return null;
+    return this.obtenerStock(this.itemTemp.productoId, this.itemTemp.bodegaId);
+  }
+
+  private obtenerStock(productoId: any, bodegaId: any): number | null {
+    if (!productoId || !bodegaId) return null;
     const inv = this.inventarioList.find(i => 
-      (i.productoId === this.itemTemp.productoId || i.producto?.id === this.itemTemp.productoId) && 
-      (i.bodegaId === this.itemTemp.bodegaId || i.bodega?.id === this.itemTemp.bodegaId)
+      (i.productoId === productoId || i.producto?.id === productoId) && 
+      (i.bodegaId === bodegaId || i.bodega?.id === bodegaId)
     );
     return inv ? Number(inv.cantidadActual || 0) : 0;
   }
@@ -231,8 +235,12 @@ export class Facturas implements OnInit, OnDestroy {
       this.cancelarAsistenteVoz();
       return;
     }
+    
+    // 🔥 Ya NO habla al principio, empieza a escuchar directamente
     this.voiceState = VoiceStep.ESCUCHA_LIBRE;
-    this.hablar("Dime los datos de tu venta.", () => this.escuchar());
+    this.voiceMessage = "Te escucho. Dicta el cliente y los productos...";
+    this.cdr.detectChanges();
+    this.escuchar();
   }
 
   cancelarAsistenteVoz() {
@@ -294,9 +302,12 @@ export class Facturas implements OnInit, OnDestroy {
   }
 
   private procesarComandoVoz(transcript: string) {
+    const comandosAceptacion = ['si', 'sí', 'emite', 'dale', 'confirmo', 'listo', 'ok', 'todo bien', 'factura'];
+    const esComandoPositivo = comandosAceptacion.some(cmd => transcript.includes(cmd));
+
     if (this.voiceState === VoiceStep.ESCUCHA_LIBRE) {
-       // Comando directo para emitir
-       if ((transcript.includes('confirma') || transcript.includes('emite') || transcript.includes('factura')) && this.nuevaFactura.detalles.length > 0) {
+       // Comando directo para emitir rápido
+       if ((transcript.includes('emite') || transcript.includes('factura ya')) && this.nuevaFactura.detalles.length > 0) {
           this.voiceState = VoiceStep.OFF;
           this.hablar("Emitiendo factura.", () => this.guardarFactura());
           return;
@@ -307,14 +318,15 @@ export class Facturas implements OnInit, OnDestroy {
        this.manejarDesambiguacion(transcript);
     }
     else if (this.voiceState === VoiceStep.CONFIRMAR) {
-       if (transcript.includes('si') || transcript.includes('sí') || transcript.includes('emite') || transcript.includes('dale')) {
+       // Si Zoe preguntó si faltaba algo y respondes que no/emite/si
+       if (esComandoPositivo || transcript.includes('no falta nada') || transcript.includes('nada más')) {
           this.voiceState = VoiceStep.OFF;
-          this.hablar("Emitiendo factura.");
-          this.guardarFactura();
-       } else if (transcript.includes('no') || transcript.includes('espera') || transcript.includes('pausa')) {
+          this.hablar("Emitiendo comprobante.", () => this.guardarFactura());
+       } else if (transcript.includes('espera') || transcript.includes('pausa') || transcript.includes('cancela')) {
           this.voiceState = VoiceStep.OFF;
-          this.hablar("Factura pausada.");
+          this.hablar("Factura pausada. Puedes continuar manualmente.");
        } else {
+          // Si te preguntó si faltaba algo y le dices "agregame dos panes", vuelve a analizar
           this.voiceState = VoiceStep.ESCUCHA_LIBRE;
           this.analizarConGroq(transcript);
        }
@@ -322,15 +334,32 @@ export class Facturas implements OnInit, OnDestroy {
   }
 
   // =======================================================
-  // 🔥 UTILS NLP: QUITAR TILDES (PARA BÚSQUEDAS EXACTAS)
+  // 🔥 UTILS NLP: MATCH RESILIENTE
   // =======================================================
   private limpiarTexto(texto: any): string {
-    if (!texto) return '';
-    return String(texto).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    if (texto == null) return '';
+    return String(texto).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+  }
+
+  private encontrarMejorCoincidencia(textoBuscado: string, lista: any[], campoBusqueda: string): any {
+    if (!textoBuscado) return null;
+    const textoLimpio = this.limpiarTexto(textoBuscado);
+    
+    // 1. Prioriza coincidencia exacta
+    let match = lista.find(item => this.limpiarTexto(item[campoBusqueda]) === textoLimpio);
+    if (match) return match;
+    
+    // 2. Coincidencia de dos vías (Lo dicho incluye lo de la BD o viceversa)
+    match = lista.find(item => {
+        const nombreBD = this.limpiarTexto(item[campoBusqueda]);
+        return nombreBD.includes(textoLimpio) || textoLimpio.includes(nombreBD);
+    });
+    
+    return match || null;
   }
 
   // =======================================================
-  // 🔥 CONEXIÓN A GROQ
+  // 🔥 CONEXIÓN A GROQ MULTIPRODUCTO
   // =======================================================
   private analizarConGroq(fraseUsuario: string) {
     this.isThinking = true;
@@ -345,20 +374,23 @@ export class Facturas implements OnInit, OnDestroy {
     const listaNombresCli = this.clientesList.map(c => c.nombreCompleto || c.primerNombre).join(', ');
     const listaNombresBod = this.bodegasList.map(b => b.nombre).join(', ');
 
+    // 🔥 Mejoramos el prompt para aceptar ARREGLOS de productos
     const promptSystem = `
-      Eres el motor NLP de un punto de venta.
-      Productos: [${listaNombresProd}]
-      Clientes: [${listaNombresCli}]
-      Bodegas: [${listaNombresBod}]
-
-      Extrae en JSON:
+      Eres el asistente de un punto de venta. Analiza la frase del usuario y extrae los datos requeridos.
+      Debes responder ÚNICAMENTE con un JSON válido usando la siguiente estructura (omite texto adicional):
       {
-         "producto": "nombre exacto o null",
-         "cantidad": numero_entero o null,
-         "cliente": "nombre exacto o null",
-         "bodega": "nombre exacto o null",
-         "metodoPago": "EFECTIVO", "TRANSFERENCIA", "TARJETA_CREDITO" o null
+         "cliente": "Nombre exacto o null",
+         "bodega": "Nombre o null",
+         "metodoPago": "EFECTIVO" | "TRANSFERENCIA" | "TARJETA_CREDITO" | null,
+         "items": [
+            { "producto": "Nombre exacto", "cantidad": numero_entero }
+         ]
       }
+      Bases de datos:
+      - Productos: [${listaNombresProd}]
+      - Clientes: [${listaNombresCli}]
+      - Bodegas: [${listaNombresBod}]
+      Si el usuario dicta varios productos, agrega todos al arreglo 'items'. Si no menciona cantidad, asume 1.
     `;
 
     const payload = {
@@ -368,7 +400,7 @@ export class Facturas implements OnInit, OnDestroy {
         { role: 'user', content: fraseUsuario }
       ],
       temperature: 0.1, 
-      max_tokens: 200
+      max_tokens: 350
     };
 
     this.http.post<any>('https://api.groq.com/openai/v1/chat/completions', payload, { headers })
@@ -381,7 +413,7 @@ export class Facturas implements OnInit, OnDestroy {
             const datosExtraidos = JSON.parse(jsonStr);
             this.aplicarDatosExtraidos(datosExtraidos);
           } catch (e) {
-            this.hablar("No entendí bien. ¿Repetimos?", () => this.escuchar());
+            this.hablar("No procesé bien la petición. ¿Repetimos?", () => this.escuchar());
           }
         },
         error: () => {
@@ -392,80 +424,115 @@ export class Facturas implements OnInit, OnDestroy {
   }
 
   // =======================================================
-  // 🔥 RELLENADO DE FORMULARIO EN VIVO
+  // 🔥 RELLENADO MASIVO EN VIVO
   // =======================================================
   private aplicarDatosExtraidos(datos: any) {
-    if (datos.metodoPago) this.nuevaFactura.metodoPago = datos.metodoPago;
-    if (datos.cantidad) this.itemTemp.cantidad = datos.cantidad;
+    let algoAgregado = false;
+    let nombresAgregados: string[] = [];
 
-    if (!this.itemTemp.bodegaId) {
-      if (this.bodegasList.length === 1) {
-        this.itemTemp.bodegaId = this.bodegasList[0].id;
-      } else if (datos.bodega) {
-        const dBodega = this.limpiarTexto(datos.bodega);
-        const bodMatch = this.bodegasList.find(b => this.limpiarTexto(b.nombre).includes(dBodega));
-        if (bodMatch) this.itemTemp.bodegaId = bodMatch.id;
-      }
-    }
-
+    // 1. Asignar Cliente
     if (datos.cliente && !this.nuevaFactura.clienteId) {
-      const dCliente = this.limpiarTexto(datos.cliente);
-      const cliMatches = this.clientesList.filter(c => 
-          this.limpiarTexto(c.nombreCompleto).includes(dCliente) || 
-          this.limpiarTexto(c.primerNombre).includes(dCliente)
-      );
-      if (cliMatches.length === 1) {
-        this.seleccionarCliente(cliMatches[0]);
-      } else if (cliMatches.length > 1) {
-        this.iniciarDesambiguacion('CLIENTE', cliMatches, `Encontré varios. Di el número del cliente correcto.`);
-        return;
-      }
+        const matchCli = this.encontrarMejorCoincidencia(datos.cliente, this.clientesList, 'nombreCompleto') 
+                         || this.encontrarMejorCoincidencia(datos.cliente, this.clientesList, 'primerNombre');
+        if (matchCli) this.seleccionarCliente(matchCli);
     }
 
-    if (datos.producto) {
-      const dProducto = this.limpiarTexto(datos.producto);
-      const prodMatches = this.productosList.filter(p => this.limpiarTexto(p.nombre).includes(dProducto));
-      
-      if (prodMatches.length === 1) {
-        this.itemTemp.productoId = prodMatches[0].id;
-      } else if (prodMatches.length > 1) {
-        this.iniciarDesambiguacion('PRODUCTO', prodMatches, `Hay varios productos parecidos. Di el número.`);
-        return;
-      }
+    // 2. Asignar Bodega
+    let bodegaDefaultId = this.itemTemp.bodegaId;
+    if (!bodegaDefaultId && this.bodegasList.length === 1) {
+        bodegaDefaultId = this.bodegasList[0].id;
+    } else if (datos.bodega) {
+        const matchBod = this.encontrarMejorCoincidencia(datos.bodega, this.bodegasList, 'nombre');
+        if (matchBod) bodegaDefaultId = matchBod.id;
     }
+    if (bodegaDefaultId) this.itemTemp.bodegaId = bodegaDefaultId;
+
+    // 3. Asignar Método de pago
+    if (datos.metodoPago) this.nuevaFactura.metodoPago = datos.metodoPago;
+
+    // 4. Agregar Productos en bloque
+    const items = datos.items || [];
+    if (datos.producto && items.length === 0) items.push({ producto: datos.producto, cantidad: datos.cantidad || 1 });
+
+    items.forEach((item: any) => {
+        const dProducto = item.producto;
+        if (!dProducto) return;
+
+        const matchProd = this.encontrarMejorCoincidencia(dProducto, this.productosList, 'nombre');
+        
+        if (matchProd) {
+            let cant = item.cantidad || 1;
+            const stock = this.obtenerStock(matchProd.id, bodegaDefaultId);
+            
+            // Limitamos la cantidad si pide más del stock
+            if (stock !== null && cant > stock) cant = stock; 
+
+            if (cant > 0) {
+                this.itemTemp.productoId = matchProd.id;
+                this.itemTemp.cantidad = cant;
+                this.agregarAlCarritoSilencioso();
+                algoAgregado = true;
+                nombresAgregados.push(`${cant} ${matchProd.nombre}`);
+            }
+        }
+    });
 
     this.cdr.detectChanges();
-    this.intentarAgregarItem();
+    this.evaluarEstadoFactura(algoAgregado, nombresAgregados);
+  }
+
+  // =======================================================
+  // 🔥 EVALUADOR INTELIGENTE AL FINALIZAR
+  // =======================================================
+  private evaluarEstadoFactura(algoAgregado: boolean, nombresAgregados: string[]) {
+    const faltaCliente = !this.nuevaFactura.clienteId;
+    const faltaItems = this.nuevaFactura.detalles.length === 0;
+
+    // Si falló en detectar tanto productos como cliente
+    if (faltaCliente && faltaItems) {
+        this.voiceState = VoiceStep.ESCUCHA_LIBRE;
+        this.hablar("No logré identificar clientes ni productos. Intenta mencionarlos nuevamente.", () => this.escuchar());
+    } 
+    // Si faltó el cliente pero sí agregó productos
+    else if (faltaCliente) {
+        this.voiceState = VoiceStep.ESCUCHA_LIBRE;
+        const msg = algoAgregado 
+          ? `Agregué ${nombresAgregados.join(', ')}. Pero me falta el cliente. ¿A quién le facturamos?` 
+          : "Me falta el cliente. ¿A quién le facturamos?";
+        this.hablar(msg, () => this.escuchar());
+    } 
+    // Si tiene cliente pero no agregó ningún producto
+    else if (faltaItems) {
+        this.voiceState = VoiceStep.ESCUCHA_LIBRE;
+        this.hablar(`Listo con el cliente. ¿Qué productos agregamos a la factura?`, () => this.escuchar());
+    } 
+    // ¡Toda la factura está lista!
+    else {
+        this.voiceState = VoiceStep.CONFIRMAR;
+        let msj = algoAgregado
+            ? `Listo. El total a pagar es $${this.totalCarrito.toFixed(2)}. ¿Falta algo más o emito la factura?`
+            : `Llevas $${this.totalCarrito.toFixed(2)}. ¿Deseas agregar otro producto o emitimos?`;
+        
+        this.hablar(msj, () => this.escuchar());
+    }
   }
 
   private intentarAgregarItem() {
     if (this.nuevaFactura.clienteId && this.itemTemp.bodegaId && this.itemTemp.productoId && this.itemTemp.cantidad > 0) {
         const stockActual = this.stockDisponible;
         if (stockActual !== null && this.itemTemp.cantidad > stockActual) {
-            this.itemTemp.cantidad = 0; 
-            this.voiceState = VoiceStep.ESCUCHA_LIBRE;
-            this.hablar(`Solo quedan ${stockActual} unidades. ¿Cuántas agregamos?`, () => this.escuchar());
-            return;
+            this.itemTemp.cantidad = stockActual; 
         }
-
-        this.agregarAlCarritoSilencioso();
-        this.voiceState = VoiceStep.CONFIRMAR;
-        this.hablar(`Agregado. Llevas ${this.totalCarrito.toFixed(2)}. ¿Deseas añadir otro producto o confirmo la factura?`, () => this.escuchar());
+        if (this.itemTemp.cantidad > 0) {
+            const prodSelect = this.productosList.find(p => p.id === this.itemTemp.productoId);
+            const nombreProd = prodSelect ? prodSelect.nombre : 'Producto';
+            this.agregarAlCarritoSilencioso();
+            this.evaluarEstadoFactura(true, [`${this.itemTemp.cantidad} ${nombreProd}`]);
+        } else {
+            this.evaluarEstadoFactura(false, []);
+        }
     } else {
-        this.evaluarQueFalta();
-    }
-  }
-
-  private evaluarQueFalta() {
-    this.voiceState = VoiceStep.ESCUCHA_LIBRE; // Siempre libre para Groq
-    if (!this.nuevaFactura.clienteId) {
-      this.hablar("Falta el cliente. ¿A quién facturamos?", () => this.escuchar());
-    } else if (!this.itemTemp.bodegaId && this.bodegasList.length > 1) {
-      this.hablar("¿De qué bodega salen los productos?", () => this.escuchar());
-    } else if (!this.itemTemp.productoId) {
-      this.hablar("¿Qué producto agregamos?", () => this.escuchar());
-    } else if (!this.itemTemp.cantidad || this.itemTemp.cantidad <= 0) {
-      this.hablar("¿Qué cantidad?", () => this.escuchar());
+        this.evaluarEstadoFactura(false, []);
     }
   }
 
