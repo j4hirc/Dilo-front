@@ -162,6 +162,11 @@
                             <option value="TARJETA_CREDITO">Tarjeta de Crédito</option>
                         </select>
                     </div>
+                    <!-- 🔥 CORRECCIÓN: Agregar campo cuotas si es TARJETA_CREDITO -->
+                    <div class="form-group w-50" *ngIf="nuevaFactura.metodoPago === 'TARJETA_CREDITO'">
+                        <label>Meses (Cuotas)</label>
+                        <input type="number" [(ngModel)]="nuevaFactura.numeroCuotas" min="0" class="modern-input" placeholder="Ej. 3">
+                    </div>
                 </div>
 
                 <div class="section-badge mt-4">Buscador de Productos</div>

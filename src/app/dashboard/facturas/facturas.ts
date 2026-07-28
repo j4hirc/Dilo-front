@@ -236,7 +236,6 @@ export class Facturas implements OnInit, OnDestroy {
       return;
     }
     
-    // 🔥 Ya NO habla al principio, empieza a escuchar directamente
     this.voiceState = VoiceStep.ESCUCHA_LIBRE;
     this.voiceMessage = "Te escucho. Dicta el cliente y los productos...";
     this.cdr.detectChanges();
@@ -268,7 +267,6 @@ export class Facturas implements OnInit, OnDestroy {
         
         let voices = window.speechSynthesis.getVoices();
         
-        // 🔥 FORZAMOS LA MEJOR VOZ FEMENINA
         let femaleVoice = voices.find(v => v.lang.startsWith('es') && (v.name.includes('Google español') || v.name.includes('Sabina') || v.name.includes('Microsoft'))) ||
                           voices.find(v => v.lang.startsWith('es') && v.name.includes('Google')) || 
                           voices.find(v => v.lang.startsWith('es'));
@@ -306,7 +304,6 @@ export class Facturas implements OnInit, OnDestroy {
     const esComandoPositivo = comandosAceptacion.some(cmd => transcript.includes(cmd));
 
     if (this.voiceState === VoiceStep.ESCUCHA_LIBRE) {
-       // Comando directo para emitir rápido
        if ((transcript.includes('emite') || transcript.includes('factura ya')) && this.nuevaFactura.detalles.length > 0) {
           this.voiceState = VoiceStep.OFF;
           this.hablar("Emitiendo factura.", () => this.guardarFactura());
@@ -318,7 +315,6 @@ export class Facturas implements OnInit, OnDestroy {
        this.manejarDesambiguacion(transcript);
     }
     else if (this.voiceState === VoiceStep.CONFIRMAR) {
-       // Si Zoe preguntó si faltaba algo y respondes que no/emite/si
        if (esComandoPositivo || transcript.includes('no falta nada') || transcript.includes('nada más')) {
           this.voiceState = VoiceStep.OFF;
           this.hablar("Emitiendo comprobante.", () => this.guardarFactura());
@@ -326,7 +322,6 @@ export class Facturas implements OnInit, OnDestroy {
           this.voiceState = VoiceStep.OFF;
           this.hablar("Factura pausada. Puedes continuar manualmente.");
        } else {
-          // Si te preguntó si faltaba algo y le dices "agregame dos panes", vuelve a analizar
           this.voiceState = VoiceStep.ESCUCHA_LIBRE;
           this.analizarConGroq(transcript);
        }
@@ -338,18 +333,16 @@ export class Facturas implements OnInit, OnDestroy {
   // =======================================================
   private limpiarTexto(texto: any): string {
     if (texto == null) return '';
-    return String(texto).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+    return String(texto).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
   }
 
   private encontrarMejorCoincidencia(textoBuscado: string, lista: any[], campoBusqueda: string): any {
     if (!textoBuscado) return null;
     const textoLimpio = this.limpiarTexto(textoBuscado);
     
-    // 1. Prioriza coincidencia exacta
     let match = lista.find(item => this.limpiarTexto(item[campoBusqueda]) === textoLimpio);
     if (match) return match;
     
-    // 2. Coincidencia de dos vías (Lo dicho incluye lo de la BD o viceversa)
     match = lista.find(item => {
         const nombreBD = this.limpiarTexto(item[campoBusqueda]);
         return nombreBD.includes(textoLimpio) || textoLimpio.includes(nombreBD);
@@ -374,7 +367,6 @@ export class Facturas implements OnInit, OnDestroy {
     const listaNombresCli = this.clientesList.map(c => c.nombreCompleto || c.primerNombre).join(', ');
     const listaNombresBod = this.bodegasList.map(b => b.nombre).join(', ');
 
-    // 🔥 Mejoramos el prompt para aceptar ARREGLOS de productos
     const promptSystem = `
       Eres el asistente de un punto de venta. Analiza la frase del usuario y extrae los datos requeridos.
       Debes responder ÚNICAMENTE con un JSON válido usando la siguiente estructura (omite texto adicional):
@@ -382,6 +374,7 @@ export class Facturas implements OnInit, OnDestroy {
          "cliente": "Nombre exacto o null",
          "bodega": "Nombre o null",
          "metodoPago": "EFECTIVO" | "TRANSFERENCIA" | "TARJETA_CREDITO" | null,
+         "cuotas": numero_entero_o_null,
          "items": [
             { "producto": "Nombre exacto", "cantidad": numero_entero }
          ]
@@ -391,6 +384,7 @@ export class Facturas implements OnInit, OnDestroy {
       - Clientes: [${listaNombresCli}]
       - Bodegas: [${listaNombresBod}]
       Si el usuario dicta varios productos, agrega todos al arreglo 'items'. Si no menciona cantidad, asume 1.
+      IMPORTANTE: Si el usuario menciona "tarjeta de crédito" y un número de cuotas/meses, asegúrate de llenar el campo "metodoPago" con "TARJETA_CREDITO" y "cuotas" con el número.
     `;
 
     const payload = {
@@ -447,8 +441,13 @@ export class Facturas implements OnInit, OnDestroy {
     }
     if (bodegaDefaultId) this.itemTemp.bodegaId = bodegaDefaultId;
 
-    // 3. Asignar Método de pago
-    if (datos.metodoPago) this.nuevaFactura.metodoPago = datos.metodoPago;
+    // 3. Asignar Método de pago y cuotas
+    if (datos.metodoPago) {
+        this.nuevaFactura.metodoPago = datos.metodoPago;
+        if (datos.metodoPago === 'TARJETA_CREDITO' && datos.cuotas) {
+            this.nuevaFactura.numeroCuotas = datos.cuotas;
+        }
+    }
 
     // 4. Agregar Productos en bloque
     const items = datos.items || [];
@@ -464,7 +463,6 @@ export class Facturas implements OnInit, OnDestroy {
             let cant = item.cantidad || 1;
             const stock = this.obtenerStock(matchProd.id, bodegaDefaultId);
             
-            // Limitamos la cantidad si pide más del stock
             if (stock !== null && cant > stock) cant = stock; 
 
             if (cant > 0) {
@@ -488,12 +486,10 @@ export class Facturas implements OnInit, OnDestroy {
     const faltaCliente = !this.nuevaFactura.clienteId;
     const faltaItems = this.nuevaFactura.detalles.length === 0;
 
-    // Si falló en detectar tanto productos como cliente
     if (faltaCliente && faltaItems) {
         this.voiceState = VoiceStep.ESCUCHA_LIBRE;
         this.hablar("No logré identificar clientes ni productos. Intenta mencionarlos nuevamente.", () => this.escuchar());
     } 
-    // Si faltó el cliente pero sí agregó productos
     else if (faltaCliente) {
         this.voiceState = VoiceStep.ESCUCHA_LIBRE;
         const msg = algoAgregado 
@@ -501,12 +497,10 @@ export class Facturas implements OnInit, OnDestroy {
           : "Me falta el cliente. ¿A quién le facturamos?";
         this.hablar(msg, () => this.escuchar());
     } 
-    // Si tiene cliente pero no agregó ningún producto
     else if (faltaItems) {
         this.voiceState = VoiceStep.ESCUCHA_LIBRE;
         this.hablar(`Listo con el cliente. ¿Qué productos agregamos a la factura?`, () => this.escuchar());
     } 
-    // ¡Toda la factura está lista!
     else {
         this.voiceState = VoiceStep.CONFIRMAR;
         let msj = algoAgregado
@@ -627,7 +621,6 @@ export class Facturas implements OnInit, OnDestroy {
       subtotal: precio * this.itemTemp.cantidad
     });
 
-    // Mantiene la bodega elegida para el siguiente producto por rapidez
     this.itemTemp = { productoId: null, bodegaId: this.itemTemp.bodegaId, cantidad: 1, productoNombre: '' }; 
     this.cdr.detectChanges();
   }
@@ -637,7 +630,10 @@ export class Facturas implements OnInit, OnDestroy {
   }
 
   guardarFactura() {
-    if (!this.nuevaFactura.clienteId || this.nuevaFactura.detalles.length === 0) return;
+    if (!this.nuevaFactura.clienteId || this.nuevaFactura.detalles.length === 0) {
+      Swal.fire('Error', 'Faltan datos para emitir la factura.', 'error');
+      return;
+    }
 
     this.isSaving = true;
     Swal.fire({ title: 'Emitiendo Factura...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
@@ -666,11 +662,12 @@ export class Facturas implements OnInit, OnDestroy {
             fecha: res.fechaEmision ? new Date(res.fechaEmision).toLocaleDateString() : new Date().toLocaleDateString(),
             monto: Number(res.totalFactura || res.total || 0),
             tipo: res.formaPago || 'Manual',
-            detalles: res.detallesFactura || res.detalles || [] 
+            detalles: res.detallesFactura || res.detalles || this.nuevaFactura.detalles 
           };
+          
+          this.imprimirFacturaPDF(facturaParaPDF);
 
-          Swal.fire({ icon: 'success', title: '¡Factura Emitida!', timer: 1500, showConfirmButton: false })
-            .then(() => this.imprimirFacturaPDF(facturaParaPDF));
+          Swal.fire({ icon: 'success', title: '¡Factura Emitida!', timer: 1500, showConfirmButton: false });
         },
         error: (err) => {
           this.isSaving = false;
@@ -689,29 +686,168 @@ export class Facturas implements OnInit, OnDestroy {
     const iva = total - subtotal;
     let filasProductos = '';
     
+    const baseUrl = window.location.origin; 
+    
     if (fac.detalles && fac.detalles.length > 0) {
       fac.detalles.forEach((item: any) => {
         const cantidad = item.cantidad || 1;
-        const descripcion = item.producto?.nombre || item.productoNombre || item.descripcion || 'Producto';
+        const descripcion = item.producto?.nombre || item.productoNombre || item.descripcion || 'Producto / Servicio';
         const precioUnit = Number(item.precioUnitario || item.precio || 0);
         const subtotalItem = Number(item.subtotal || item.subtotalItem || (cantidad * precioUnit));
         
-        filasProductos += `<tr><td class="center">${cantidad}</td><td>${descripcion}</td><td class="text-right">$${precioUnit.toFixed(2)}</td><td class="text-right font-bold">$${subtotalItem.toFixed(2)}</td></tr>`;
+        filasProductos += `
+          <tr>
+            <td class="center">${cantidad}</td>
+            <td>${descripcion}</td>
+            <td class="text-right">$${precioUnit.toFixed(2).replace('.', ',')}</td>
+            <td class="text-right font-bold">$${subtotalItem.toFixed(2).replace('.', ',')}</td>
+          </tr>`;
       });
+    } else {
+      filasProductos = `
+        <tr>
+          <td class="center">1</td>
+          <td>Consumo general</td>
+          <td class="text-right">$${subtotal.toFixed(2).replace('.', ',')}</td>
+          <td class="text-right font-bold">$${subtotal.toFixed(2).replace('.', ',')}</td>
+        </tr>`;
     }
     
-    const baseUrl = window.location.origin; 
     const ventana = window.open('', '', 'width=900,height=700');
     ventana?.document.write(`
-      <!DOCTYPE html><html><head><title>Factura_${fac.numero}</title>
-      <style>body{font-family:sans-serif;} table{width:100%;border-collapse:collapse;} th,td{border-bottom:1px solid #ddd;padding:8px;}</style>
-      </head><body><h2>Factura Nº ${fac.numero}</h2><p>Cliente: ${fac.cliente}</p>
-      <table><tr><th>Cant</th><th>Descripción</th><th>P.Unit</th><th>Total</th></tr>${filasProductos}</table>
-      <h3>Total: $${total.toFixed(2)}</h3></body></html>
+      <!DOCTYPE html>
+      <html>
+      <head>
+          <title>Factura_${fac.numero}</title>
+          <style>
+              @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+              body { font-family: 'Inter', sans-serif; color: #1e293b; margin: 0; padding: 0; background-color: #f8fafc; }
+              .invoice-container { max-width: 800px; margin: 0 auto; background: #fff; padding: 50px; box-sizing: border-box; }
+              .top-bar { height: 8px; background: linear-gradient(90deg, #ed8936, #ea580c); width: 100%; margin-bottom: 30px; border-radius: 4px; }
+              .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; }
+              
+              .logo img { max-height: 50px; object-fit: contain; margin-bottom: 10px; }
+              
+              .company-details { font-size: 13px; color: #64748b; line-height: 1.6; }
+              .invoice-title-area { text-align: right; }
+              .invoice-title-area h1 { margin: 0 0 5px 0; font-size: 32px; font-weight: 800; color: #0f172a; text-transform: uppercase; letter-spacing: 1px;}
+              .invoice-title-area .invoice-no { font-size: 16px; color: #ed8936; font-weight: 700; }
+              .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 40px; background: #f8fafc; padding: 25px; border-radius: 12px; border: 1px solid #e2e8f0; }
+              .info-block h3 { margin: 0 0 10px 0; font-size: 12px; text-transform: uppercase; color: #94a3b8; letter-spacing: 1px; }
+              .info-block p { margin: 0 0 5px 0; font-size: 15px; font-weight: 600; color: #0f172a; }
+              .info-block span { display: block; font-size: 14px; color: #475569; font-weight: 400; }
+              table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+              th { background-color: #0f172a; color: white; padding: 14px 15px; text-align: left; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;}
+              th:first-child { border-top-left-radius: 8px; border-bottom-left-radius: 8px; }
+              th:last-child { border-top-right-radius: 8px; border-bottom-right-radius: 8px; }
+              td { padding: 16px 15px; font-size: 14px; color: #334155; border-bottom: 1px solid #e2e8f0; }
+              .text-right { text-align: right; }
+              .center { text-align: center; }
+              .font-bold { font-weight: 700; color: #0f172a; }
+              .totals-wrapper { display: flex; justify-content: flex-end; margin-bottom: 40px; }
+              .totals-box { width: 320px; }
+              .total-row { display: flex; justify-content: space-between; padding: 12px 15px; font-size: 14px; color: #475569; border-bottom: 1px solid #f1f5f9; }
+              .total-row.grand-total { background: #0f172a; color: white; border-radius: 8px; font-size: 18px; font-weight: 700; border: none; margin-top: 10px; padding: 16px 20px;}
+              .total-row.grand-total span:last-child { color: #ed8936; }
+              .footer { text-align: center; padding-top: 30px; border-top: 2px dashed #e2e8f0; color: #64748b; font-size: 13px; }
+              .footer p { margin: 5px 0; }
+              .footer-bold { font-weight: 600; color: #0f172a; }
+              @media print { 
+                  body { background-color: white; }
+                  .invoice-container { padding: 0; max-width: 100%; }
+                  .top-bar { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                  th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                  .total-row.grand-total { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                  .info-grid { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+              }
+          </style>
+      </head>
+      <body>
+          <div class="invoice-container">
+              <div class="top-bar"></div>
+              <div class="header">
+                  <div>
+                      <div class="logo">
+                          <img src="${baseUrl}/images/Dilo-Logo-2-.png" alt="Dilo">
+                      </div>
+                      <div class="company-details">
+                          <strong>Mi Negocio S.A.</strong><br>
+                          RUC: 0102030405001<br>
+                          Cuenca, Azuay, Ecuador<br>
+                          contacto@minegocio.com
+                      </div>
+                  </div>
+                  <div class="invoice-title-area">
+                      <h1>FACTURA</h1>
+                      <div class="invoice-no">Nº ${fac.numero}</div>
+                  </div>
+              </div>
+
+              <div class="info-grid">
+                  <div class="info-block">
+                      <h3>Facturar a:</h3>
+                      <p>${fac.cliente}</p>
+                      <span>Consumidor Final / Cliente</span>
+                  </div>
+                  <div class="info-block" style="text-align: right;">
+                      <h3>Detalles del Documento:</h3>
+                      <p>Fecha: <span>${fac.fecha}</span></p>
+                      <p>Método de Pago: <span>${fac.tipo}</span></p>
+                  </div>
+              </div>
+
+              <table>
+                  <thead>
+                      <tr>
+                          <th class="center" width="10%">Cant.</th>
+                          <th width="50%">Descripción del Producto</th>
+                          <th class="text-right" width="20%">P. Unitario</th>
+                          <th class="text-right" width="20%">Total</th>
+                      </tr>
+                  </thead>
+                  <tbody>
+                      ${filasProductos}
+                  </tbody>
+              </table>
+
+              <div class="totals-wrapper">
+                  <div class="totals-box">
+                      <div class="total-row">
+                          <span>Subtotal (Sin IVA)</span>
+                          <span class="font-bold">$${subtotal.toFixed(2).replace('.', ',')}</span>
+                      </div>
+                      <div class="total-row">
+                          <span>IVA (15%)</span>
+                          <span class="font-bold">$${iva.toFixed(2).replace('.', ',')}</span>
+                      </div>
+                      <div class="total-row grand-total">
+                          <span>TOTAL</span>
+                          <span>$${total.toFixed(2).replace('.', ',')}</span>
+                      </div>
+                  </div>
+              </div>
+
+              <div class="footer">
+                  <p class="footer-bold">¡Gracias por preferir nuestros servicios!</p>
+                  <p>Documento generado electrónicamente por <strong>Dilo Sistema de Gestión</strong>.</p>
+              </div>
+          </div>
+      </body>
+      </html>
     `);
+    
     ventana?.document.close();
     ventana?.focus();
-    setTimeout(() => { ventana?.print(); ventana?.close(); }, 800);
+    
+    setTimeout(() => { 
+        ventana?.print(); 
+    }, 800);
+
+    if (ventana) {
+        ventana.onafterprint = () => {
+            ventana.close();
+        };
+    }
   }
 
   ocultarDropdown() {
