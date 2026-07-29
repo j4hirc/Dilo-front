@@ -105,7 +105,6 @@ export class DashboardDefault implements OnInit {
     if (this.negocioId) {
        this.cargarDatosNegocio();
        
-       // Si es Bodeguero o Propietario, intentamos cargar alertas.
        if (this.rolUsuario === 'PROPIETARIO' || this.rolUsuario === 'BODEGUERO') {
            this.cargarAlertasCaducidad();
        }
@@ -118,11 +117,6 @@ export class DashboardDefault implements OnInit {
     return rolesPermitidos.includes(this.rolUsuario);
   }
 
-  /**
-   * 🔥 Devuelve SOLO los módulos a los que el rol actual del usuario tiene
-   * acceso (los mismos que se muestran en el sidebar vía tieneRol()).
-   * Esto evita que la IA recomiende módulos que el usuario no puede ver.
-   */
   private getModulosPermitidosTexto(): string {
     const accesibles = this.modulosSistema.filter(m => this.tieneRol(m.roles));
     return accesibles.map(m => `- ${m.nombre}: ${m.descripcion}`).join('\n      ');
@@ -159,11 +153,10 @@ export class DashboardDefault implements OnInit {
         },
         error: (err) => {
           console.error("Error cargando nombre del negocio:", err);
-          // 🔥 AQUÍ ESTABA EL ERROR: Ya no cerramos sesión si es un 403 (falta de permisos).
           if (err.status === 401) {
             this.cerrarSesionForzada();
           } else if (err.status === 403) {
-            this.negocioNombre = 'Mi Negocio'; // Valor por defecto si no tiene permisos para leerlo
+            this.negocioNombre = 'Mi Negocio'; 
           }
         }
       });
@@ -183,11 +176,9 @@ export class DashboardDefault implements OnInit {
         },
         error: (err) => {
           console.error("Error cargando alertas:", err);
-          // 🔥 AQUÍ TAMBIÉN ESTABA EL ERROR. 
           if (err.status === 401) {
             this.cerrarSesionForzada();
           }
-          // Si es 403, simplemente ignora y no carga alertas, pero no bota al usuario.
         }
       });
   }
@@ -218,7 +209,6 @@ export class DashboardDefault implements OnInit {
     const headers = new HttpHeaders().set('Authorization', `Bearer ${cleanToken}`);
     const id = this.negocioId;
 
-    // 🔥 catchError asegura que si un usuario no tiene permisos para alguna de estas tablas (403), devuelva un arreglo vacío y NO explote.
     const reqProductos   = this.http.get<any[]>(`${this.apiUrl}/negocios/${id}/productos`, { headers }).pipe(catchError(() => of([])));
     const reqCategorias  = this.http.get<any[]>(`${this.apiUrl}/negocios/${id}/categorias`, { headers }).pipe(catchError(() => of([])));
     const reqClientes    = this.http.get<any[]>(`${this.apiUrl}/negocios/${id}/clientes`, { headers }).pipe(catchError(() => of([])));
@@ -242,42 +232,93 @@ export class DashboardDefault implements OnInit {
       });
   }
 
+  // 🔥 MÉTODO SUPERCARGADO DE INTELIGENCIA DE NEGOCIO
   construirResumenDelNegocio(
     productos: any[], categorias: any[], clientes: any[],
     proveedores: any[], inventario: any[], facturas: any[]
   ): string {
-    const nombresCategorias = categorias.map(c => c.nombre).filter(Boolean);
+    // 1. Categorías
+    const nombresCategorias = categorias.map(c => c.nombre).filter(Boolean).join(', ') || 'Ninguna registrada';
 
-    const listaProductos = productos.slice(0, 20).map(p =>
-      `${p.nombre || 'S/N'} (cod: ${p.codigoPrincipal || 'S/C'}, marca: ${p.marca || '-'}, PVP: $${Number(p.precioUnitario || 0).toFixed(2)})`
-    ).join('; ') || 'Aún no hay productos registrados.';
+    // 2. Productos
+    const totalProductos = productos.length;
+    const listaProductos = productos.slice(0, 30).map(p =>
+      `${p.nombre} (Cod: ${p.codigoPrincipal || 'S/C'}, PVP: $${Number(p.precioUnitario || 0).toFixed(2)}, IVA: ${p.grabaIva ? 'Sí' : 'No'})`
+    ).join('; ') + (totalProductos > 30 ? '... (entre otros)' : '');
 
-    const stockBajo = inventario
-      .filter(i => Number(i.cantidadActual || 0) <= Number(i.stockMinimo || 0))
-      .slice(0, 15)
-      .map(i => `${i.productoNombre || 'Producto'} en ${i.bodegaNombre || 'bodega'} (quedan ${i.cantidadActual ?? 0})`)
-      .join('; ') || 'Ningún producto en stock bajo por el momento.';
+    // 3. Inventario aglomerado por Bodega y Críticos
+    const bodegasMap = new Map<string, string[]>();
+    let stockCritico: string[] = [];
+    let valorTotalInventario = 0;
 
-    const valorTotalInventario = inventario.reduce((acc, i) => acc + Number(i.valorInventario || 0), 0);
+    inventario.forEach(i => {
+      const bodega = i.bodegaNombre || 'Bodega Principal';
+      const prod = i.productoNombre || 'Producto Desconocido';
+      const cant = Number(i.cantidadActual || 0);
+      const min = Number(i.stockMinimo || 0);
+      
+      valorTotalInventario += Number(i.valorInventario || 0);
 
-    const nombresClientes = clientes.slice(0, 10).map(c => c.nombreCompleto || `${c.primerNombre || ''} ${c.apellidoPaterno || ''}`.trim()).filter(Boolean);
-    const nombresProveedores = proveedores.slice(0, 10).map(p => p.nombreComercial || p.razonSocial || p.nombre).filter(Boolean);
+      // Agrupar por bodega
+      if (!bodegasMap.has(bodega)) bodegasMap.set(bodega, []);
+      bodegasMap.get(bodega)!.push(`${prod}: ${cant} unids`);
 
+      // Detectar críticos
+      if (cant <= min || cant === 0) {
+        stockCritico.push(`${prod} en ${bodega} (Stock actual: ${cant}, Mínimo: ${min})`);
+      }
+    });
+
+    let inventarioPorBodegaTexto = '';
+    bodegasMap.forEach((items, bodega) => {
+      inventarioPorBodegaTexto += `\n       - ${bodega}: ${items.slice(0, 25).join(', ')}${items.length > 25 ? '...' : ''}`;
+    });
+    if (!inventarioPorBodegaTexto) inventarioPorBodegaTexto = ' Sin stock registrado.';
+
+    const stockCriticoTexto = stockCritico.length > 0 
+      ? stockCritico.slice(0, 20).join('; ') 
+      : 'No hay productos en estado crítico ni con stock en 0.';
+
+    // 4. Clientes y Proveedores
+    const nombresClientes = clientes.slice(0, 15).map(c => c.nombreCompleto || `${c.primerNombre || ''} ${c.apellidoPaterno || ''}`.trim()).filter(Boolean).join(', ');
+    const nombresProveedores = proveedores.slice(0, 15).map(p => p.nombreComercial || p.razonSocial || p.nombre).filter(Boolean).join(', ');
+
+    // 5. Facturas, Ventas y Créditos
+    const totalFacturas = facturas.length;
     const totalVentas = facturas.reduce((acc, f) => acc + Number(f.totalFactura || f.total || 0), 0);
-    const ultimasFacturas = facturas.slice(-5).map(f =>
-      `#${f.numeroFactura || 'S/N'} - ${f.clienteNombre || f.cliente?.nombre || 'Consumidor Final'} - $${Number(f.totalFactura || f.total || 0).toFixed(2)}`
-    ).join('; ') || 'Aún no hay facturas emitidas.';
+    
+    const facturasCredito = facturas.filter(f => f.formaPago === 'TARJETA_CREDITO' || f.formaPago === 'CREDITO' || f.numeroCuotas > 0);
+    const totalCredito = facturasCredito.reduce((acc, f) => acc + Number(f.totalFactura || f.total || 0), 0);
 
+    const ultimasFacturas = facturas.slice(-10).reverse().map(f => {
+      const fecha = f.fechaEmision ? new Date(f.fechaEmision).toLocaleDateString() : 'Reciente';
+      const estado = f.estadoSri || 'Emitida';
+      return `Fac #${f.numeroFactura || 'S/N'} (${fecha}) | Cliente: ${f.clienteNombre || f.cliente?.nombre || 'Consumidor Final'} | Total: $${Number(f.totalFactura || f.total || 0).toFixed(2)} | Pago: ${f.formaPago || 'No especificado'} | Estado: ${estado}`;
+    }).join('\n       ');
+
+    // 6. Construcción Final del Texto para la IA
     return `
       DATOS REALES Y ACTUALES DEL NEGOCIO "${this.negocioNombre}":
-      - Categorías de productos registradas (${categorias.length}): ${nombresCategorias.join(', ') || 'ninguna aún'}.
-      - Total de productos en catálogo: ${productos.length}. Ejemplos: ${listaProductos}.
-      - Valor total actual del inventario: $${valorTotalInventario.toFixed(2)}.
-      - Productos con stock bajo o crítico: ${stockBajo}.
-      - Total de clientes registrados: ${clientes.length}. Algunos: ${nombresClientes.join(', ') || 'ninguno aún'}.
-      - Total de proveedores registrados: ${proveedores.length}. Algunos: ${nombresProveedores.join(', ') || 'ninguno aún'}.
-      - Total de facturas emitidas: ${facturas.length}, con ventas acumuladas por $${totalVentas.toFixed(2)}.
-      - Últimas facturas emitidas: ${ultimasFacturas}.
+      
+      📦 CATÁLOGO Y CATEGORÍAS:
+      - Categorías Activas (${categorias.length}): ${nombresCategorias}.
+      - Catálogo de Productos (${totalProductos} registrados): ${listaProductos}.
+
+      🏢 INVENTARIO Y BODEGAS:
+      - Valor total estimado del inventario: $${valorTotalInventario.toFixed(2)}.
+      - Existencias agrupadas por Bodega: ${inventarioPorBodegaTexto}
+      - 🚨 PRODUCTOS CRÍTICOS (Cero stock o bajo el mínimo): ${stockCriticoTexto}
+
+      👥 CONTACTOS:
+      - Clientes Registrados (${clientes.length}): ${nombresClientes || 'Ninguno aún'}.
+      - Proveedores Registrados (${proveedores.length}): ${nombresProveedores || 'Ninguno aún'}.
+
+      💰 VENTAS Y FACTURACIÓN:
+      - Historial de transacciones: ${totalFacturas} facturas emitidas.
+      - Ingresos Brutos Totales: $${totalVentas.toFixed(2)}.
+      - Total vendido a Crédito / Cuotas (Cuentas por Cobrar): $${totalCredito.toFixed(2)} (en ${facturasCredito.length} facturas).
+      - Detalle de las últimas 10 facturas:
+       ${ultimasFacturas || 'Ninguna factura reciente.'}
     `;
   }
 
@@ -387,7 +428,7 @@ export class DashboardDefault implements OnInit {
       3. Si pregunta por algo de la lista de "MÓDULOS A LOS QUE NO TIENE ACCESO", explícale amablemente que esa función es exclusiva de otro rol (dile cuál: PROPIETARIO, VENDEDOR o BODEGUERO) y que debe pedírselo al Propietario del negocio si necesita ese permiso. No inventes que sí puede acceder.
       4. Si te pregunta "qué rol tengo", "qué puedo hacer" o similar, respóndele con base en el SISTEMA DE ROLES y sus módulos permitidos de arriba.
       5. Si un PROPIETARIO te pregunta sobre los roles de su equipo (qué puede hacer un Vendedor o un Bodeguero), sí puedes explicárselo usando el SISTEMA DE ROLES, ya que administra el negocio.
-      6. Usa los DATOS REALES del negocio de arriba (productos, stock, clientes, proveedores, ventas) para responder con cifras exactas cuando te pregunten por su negocio. No inventes cifras que no estén ahí.
+      6. Usa los DATOS REALES del negocio de arriba (productos, stock por bodega, críticos, clientes, proveedores, ventas, facturas) para responder con cifras exactas cuando te pregunten por su negocio.
       7. Nunca inventes funciones que no estén en la lista de conocimientos.
       8. Preséntate como "Zoe" si te preguntan tu nombre, nunca como una IA genérica.
       9. Si pregunta quién eres, dile que eres la asistente "Zoe" del sistema Dilo, un sistema de facturación por voz.
