@@ -46,6 +46,34 @@ export class DashboardDefault implements OnInit {
  
   private groqApiKey = environment.groqApiKey;
 
+  // 🔥 FUENTE ÚNICA DE VERDAD del menú del sistema: mismos roles que se usan
+  // en el *ngIf="tieneRol([...])" del sidebar (dashboard-default.html).
+  // Así la IA "Zoe" siempre sabe exactamente qué módulos ve cada rol,
+  // sin importar que el menú cambie en el futuro (solo se edita aquí).
+  private readonly modulosSistema: { nombre: string; roles: string[]; descripcion: string }[] = [
+    { nombre: 'Dashboard (Propietario)', roles: ['PROPIETARIO'], descripcion: 'Gráficas y resumen general del negocio (ventas, stock, ganancias).' },
+    { nombre: 'Facturas', roles: ['PROPIETARIO', 'VENDEDOR'], descripcion: 'Registrar nuevas ventas, cobrar a clientes y emitir comprobantes (facturación tradicional y por voz).' },
+    { nombre: 'Cuentas por Cobrar', roles: ['PROPIETARIO', 'VENDEDOR'], descripcion: 'Ver y gestionar los saldos pendientes de clientes (crédito).' },
+    { nombre: 'Abastecimiento', roles: ['PROPIETARIO', 'BODEGUERO'], descripcion: 'Registrar compras de mercadería a proveedores.' },
+    { nombre: 'Clientes', roles: ['PROPIETARIO', 'VENDEDOR'], descripcion: 'Directorio para registrar y consultar la información de los clientes.' },
+    { nombre: 'Proveedores', roles: ['PROPIETARIO', 'BODEGUERO'], descripcion: 'Directorio de empresas y contactos que abastecen al negocio.' },
+    { nombre: 'Productos', roles: ['PROPIETARIO', 'BODEGUERO'], descripcion: 'Catálogo de mercadería: precios (PVP), códigos, IVA (15%) y control de caducidad.' },
+    { nombre: 'Categorías', roles: ['PROPIETARIO', 'BODEGUERO'], descripcion: 'Organizar los productos por categoría (ej. Lácteos, Ferretería).' },
+    { nombre: 'Bodegas', roles: ['PROPIETARIO', 'BODEGUERO'], descripcion: 'Creación de sucursales o cuartos de almacenamiento.' },
+    { nombre: 'Inventario', roles: ['PROPIETARIO', 'BODEGUERO'], descripcion: 'Stock actual por bodega y alertas de productos próximos a caducar.' },
+    { nombre: 'Kardex (Movimientos)', roles: ['PROPIETARIO', 'BODEGUERO'], descripcion: 'Historial contable detallado de entradas y salidas de cada producto.' },
+    { nombre: 'Mi Equipo', roles: ['PROPIETARIO'], descripcion: 'Agregar empleados/cajeros, aprobar solicitudes y cambiar roles de colaboradores.' },
+    { nombre: 'Configuración', roles: ['PROPIETARIO'], descripcion: 'Cambiar Logo, RUC, activar Contabilidad y definir método de costeo (Promedio, FIFO o LIFO).' },
+    { nombre: 'Mi Perfil', roles: ['PROPIETARIO', 'VENDEDOR', 'BODEGUERO'], descripcion: 'Datos personales, foto y contraseña del usuario.' },
+  ];
+
+  // Descripción de qué puede hacer cada rol en general (control de acceso del negocio).
+  private readonly rolesSistema: { rol: string; descripcion: string }[] = [
+    { rol: 'PROPIETARIO', descripcion: 'Control total del negocio. Acceso a todos los módulos, administración de equipo/roles y configuración del sistema.' },
+    { rol: 'VENDEDOR', descripcion: 'Enfocado solo en ventas: Facturas, Cuentas por Cobrar y Clientes. No tiene acceso a inventario, compras ni administración.' },
+    { rol: 'BODEGUERO', descripcion: 'Enfocado solo en mercadería: Abastecimiento, Productos, Categorías, Bodegas, Inventario, Proveedores y Kardex. No puede facturar ni ver clientes.' },
+  ];
+
   ngOnInit() {
     const token = localStorage.getItem('dilo_token');
     const userStr = localStorage.getItem('usuario') || localStorage.getItem('dilo_user');
@@ -88,6 +116,26 @@ export class DashboardDefault implements OnInit {
 
   tieneRol(rolesPermitidos: string[]): boolean {
     return rolesPermitidos.includes(this.rolUsuario);
+  }
+
+  /**
+   * 🔥 Devuelve SOLO los módulos a los que el rol actual del usuario tiene
+   * acceso (los mismos que se muestran en el sidebar vía tieneRol()).
+   * Esto evita que la IA recomiende módulos que el usuario no puede ver.
+   */
+  private getModulosPermitidosTexto(): string {
+    const accesibles = this.modulosSistema.filter(m => this.tieneRol(m.roles));
+    return accesibles.map(m => `- ${m.nombre}: ${m.descripcion}`).join('\n      ');
+  }
+
+  private getModulosRestringidosTexto(): string {
+    const restringidos = this.modulosSistema.filter(m => !this.tieneRol(m.roles));
+    if (restringidos.length === 0) return 'Ninguno, este usuario tiene acceso a todo el sistema.';
+    return restringidos.map(m => `${m.nombre} (solo ${m.roles.join(' / ')})`).join(', ');
+  }
+
+  private getResumenRolesTexto(): string {
+    return this.rolesSistema.map(r => `- ${r.rol}: ${r.descripcion}`).join('\n      ');
   }
 
   cerrarSesionForzada() {
@@ -303,24 +351,25 @@ export class DashboardDefault implements OnInit {
         ).join('; ')
       : 'No hay productos próximos a caducar en los siguientes 30 días.';
 
-    const manualDelSistema = `
-      Eres "Zoe", la asistente virtual del sistema de Facturacion e Inventario "Dilo".
-      Dilo es un sistema de facturación mediante voz. 
-      Tu personalidad es simpática, cercana y  positiva, pero siempre profesional y precisa con los datos.
-      Hablas con ${this.usuarioLogueado?.primerNombre || 'el usuario'}, quien tiene el rol de ${this.rolUsuario} en el negocio "${this.negocioNombre}".
+    const nombreUsuarioActual = this.usuarioLogueado?.primerNombre || 'el usuario';
+    const modulosPermitidos = this.getModulosPermitidosTexto();
+    const modulosRestringidos = this.getModulosRestringidosTexto();
+    const resumenRoles = this.getResumenRolesTexto();
 
-      TUS CONOCIMIENTOS DEL MENÚ LATERAL DEL SISTEMA (Úsalos para guiar al usuario):
-      - Dashboard: Gráficas y resumen general del negocio.
-      - Facturas: Módulo para registrar nuevas ventas, cobrar a clientes y emitir comprobantes (facturación tradicional y mediante voz).
-      - Abastecimiento: Módulo para registrar compras de mercadería a proveedores.
-      - Clientes / Proveedores: Directorio para registrar la información de contactos y empresas.
-      - Productos: Catálogo de mercadería. Aquí se configuran precios (PVP), códigos, si graban IVA (15%) y si tienen control de Caducidad.
-      - Categorías: Para organizar los productos (ej. Lácteos, Ferretería).
-      - Bodegas: Creación de sucursales o cuartos de almacenamiento.
-      - Inventario: Para ver el stock actual y las alertas de productos a punto de caducar.
-      - Kardex: El historial contable detallado de todas las entradas y salidas de un producto.
-      - Mi Equipo: Módulo para agregar empleados o cajeros y gestionar sus accesos.
-      - Configuración: Módulo para cambiar el Logo, el RUC, activar Contabilidad y definir el método de costeo (Promedio, FIFO o LIFO).
+    const manualDelSistema = `
+      Eres "Zoe", la asistente virtual del sistema de Facturación e Inventario "Dilo".
+      Dilo es un sistema de facturación mediante voz.
+      Tu personalidad es simpática, cercana y positiva, pero siempre profesional y precisa con los datos.
+      Hablas con ${nombreUsuarioActual}, quien tiene el rol de **${this.rolUsuario}** en el negocio "${this.negocioNombre}".
+
+      SISTEMA DE ROLES DE DILO (así funciona el control de acceso del negocio):
+      ${resumenRoles}
+
+      MÓDULOS DEL MENÚ QUE ${nombreUsuarioActual} PUEDE VER Y USAR AHORA (rol ${this.rolUsuario}):
+      ${modulosPermitidos}
+
+      MÓDULOS A LOS QUE ${nombreUsuarioActual} NO TIENE ACCESO CON SU ROL ACTUAL:
+      ${modulosRestringidos}
 
       ${this.contextoNegocioTexto}
 
@@ -334,11 +383,14 @@ export class DashboardDefault implements OnInit {
 
       REGLAS ESTRICTAS DE RESPUESTA:
       1. Sé MUY BREVE, directo y usa un tono amigable y simpático (puedes usar 1 emoji ocasional, sin abusar). Máximo 2 o 3 párrafos súper cortos.
-      2. Si el usuario te pregunta cómo hacer algo, dile a qué opción del menú lateral (de la lista de arriba) debe ir.
-      3. Usa los DATOS REALES del negocio de arriba (productos, stock, clientes, proveedores, ventas) para responder con cifras exactas cuando te pregunten por su negocio. No inventes cifras que no estén ahí.
-      4. Nunca inventes funciones que no estén en la lista de conocimientos.
-      5. Preséntate como "Zoe" si te preguntan tu nombre, nunca como una IA genérica.
-      6. Si pregunta quien eres dile que eres una Asistente Llamada "Zoe" del sistema Dilo que es un sistema de facturacion por voz
+      2. Si el usuario te pregunta cómo hacer algo, guíalo SOLO hacia módulos de la lista "MÓDULOS QUE PUEDE VER Y USAR AHORA". Nunca lo mandes a un módulo restringido para su rol.
+      3. Si pregunta por algo de la lista de "MÓDULOS A LOS QUE NO TIENE ACCESO", explícale amablemente que esa función es exclusiva de otro rol (dile cuál: PROPIETARIO, VENDEDOR o BODEGUERO) y que debe pedírselo al Propietario del negocio si necesita ese permiso. No inventes que sí puede acceder.
+      4. Si te pregunta "qué rol tengo", "qué puedo hacer" o similar, respóndele con base en el SISTEMA DE ROLES y sus módulos permitidos de arriba.
+      5. Si un PROPIETARIO te pregunta sobre los roles de su equipo (qué puede hacer un Vendedor o un Bodeguero), sí puedes explicárselo usando el SISTEMA DE ROLES, ya que administra el negocio.
+      6. Usa los DATOS REALES del negocio de arriba (productos, stock, clientes, proveedores, ventas) para responder con cifras exactas cuando te pregunten por su negocio. No inventes cifras que no estén ahí.
+      7. Nunca inventes funciones que no estén en la lista de conocimientos.
+      8. Preséntate como "Zoe" si te preguntan tu nombre, nunca como una IA genérica.
+      9. Si pregunta quién eres, dile que eres la asistente "Zoe" del sistema Dilo, un sistema de facturación por voz.
     `;
 
     const mensajeSistema = {
