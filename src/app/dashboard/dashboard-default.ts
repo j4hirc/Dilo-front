@@ -26,7 +26,8 @@ export class DashboardDefault implements OnInit {
   usuarioLogueado: any = null;
   isSidebarOpen = false;
 
-  // 🔥 VARIABLES OPTIMIZADAS PARA LA UI (Evitan que las fotos parpadeen)
+  rolUsuario: string = '';
+
   fotoPerfilUrl: string | null = null;
   inicialesUsuario: string = 'US';
 
@@ -65,8 +66,8 @@ export class DashboardDefault implements OnInit {
 
     this.usuarioLogueado = JSON.parse(userStr);
     
-    // 🔥 OPTIMIZACIÓN: Extraemos la URL de la foto y las iniciales UNA SOLA VEZ
-    // Esto evita que Angular re-evalúe el objeto en cada parpadeo de la pantalla
+    this.rolUsuario = this.usuarioLogueado?.rol || 'PROPIETARIO';
+    
     this.fotoPerfilUrl = this.usuarioLogueado?.fotoPerfil || null;
     const nombre = this.usuarioLogueado?.primerNombre || '';
     this.inicialesUsuario = nombre ? nombre.substring(0, 2).toUpperCase() : 'EC';
@@ -75,9 +76,18 @@ export class DashboardDefault implements OnInit {
 
     if (this.negocioId) {
        this.cargarDatosNegocio();
-       this.cargarAlertasCaducidad();
+       
+       // Si es Bodeguero o Propietario, intentamos cargar alertas.
+       if (this.rolUsuario === 'PROPIETARIO' || this.rolUsuario === 'BODEGUERO') {
+           this.cargarAlertasCaducidad();
+       }
+       
        this.cargarContextoNegocioParaIA();
     }
+  }
+
+  tieneRol(rolesPermitidos: string[]): boolean {
+    return rolesPermitidos.includes(this.rolUsuario);
   }
 
   cerrarSesionForzada() {
@@ -100,9 +110,12 @@ export class DashboardDefault implements OnInit {
           });
         },
         error: (err) => {
-          console.error(err);
-          if (err.status === 401 || err.status === 403) {
+          console.error("Error cargando nombre del negocio:", err);
+          // 🔥 AQUÍ ESTABA EL ERROR: Ya no cerramos sesión si es un 403 (falta de permisos).
+          if (err.status === 401) {
             this.cerrarSesionForzada();
+          } else if (err.status === 403) {
+            this.negocioNombre = 'Mi Negocio'; // Valor por defecto si no tiene permisos para leerlo
           }
         }
       });
@@ -121,10 +134,12 @@ export class DashboardDefault implements OnInit {
           });
         },
         error: (err) => {
-          console.error(err);
-          if (err.status === 401 || err.status === 403) {
+          console.error("Error cargando alertas:", err);
+          // 🔥 AQUÍ TAMBIÉN ESTABA EL ERROR. 
+          if (err.status === 401) {
             this.cerrarSesionForzada();
           }
+          // Si es 403, simplemente ignora y no carga alertas, pero no bota al usuario.
         }
       });
   }
@@ -155,6 +170,7 @@ export class DashboardDefault implements OnInit {
     const headers = new HttpHeaders().set('Authorization', `Bearer ${cleanToken}`);
     const id = this.negocioId;
 
+    // 🔥 catchError asegura que si un usuario no tiene permisos para alguna de estas tablas (403), devuelva un arreglo vacío y NO explote.
     const reqProductos   = this.http.get<any[]>(`${this.apiUrl}/negocios/${id}/productos`, { headers }).pipe(catchError(() => of([])));
     const reqCategorias  = this.http.get<any[]>(`${this.apiUrl}/negocios/${id}/categorias`, { headers }).pipe(catchError(() => of([])));
     const reqClientes    = this.http.get<any[]>(`${this.apiUrl}/negocios/${id}/clientes`, { headers }).pipe(catchError(() => of([])));
@@ -291,7 +307,7 @@ export class DashboardDefault implements OnInit {
       Eres "Zoe", la asistente virtual del sistema de Facturacion e Inventario "Dilo".
       Dilo es un sistema de facturación mediante voz. 
       Tu personalidad es simpática, cercana y  positiva, pero siempre profesional y precisa con los datos.
-      Hablas con ${this.usuarioLogueado?.primerNombre || 'el administrador'}, quien administra el negocio "${this.negocioNombre}".
+      Hablas con ${this.usuarioLogueado?.primerNombre || 'el usuario'}, quien tiene el rol de ${this.rolUsuario} en el negocio "${this.negocioNombre}".
 
       TUS CONOCIMIENTOS DEL MENÚ LATERAL DEL SISTEMA (Úsalos para guiar al usuario):
       - Dashboard: Gráficas y resumen general del negocio.
@@ -365,7 +381,6 @@ export class DashboardDefault implements OnInit {
       });
   }
 
-  // 🔥 ESENCIAL PARA EL CHAT: Evita que parpadee todo al enviar un mensaje
   trackByMensaje(index: number, msg: any): number {
     return index;
   }

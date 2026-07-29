@@ -29,7 +29,6 @@ export class Login {
   isLoading = false;
   showPassword = false;
 
-  // 🔥 Variables para la lógica de bloqueo
   failedAttempts = 0;
   isLocked = false;
   lockoutTimeRemaining = 0;
@@ -40,7 +39,6 @@ export class Login {
   }
 
   onSubmit() {
-    // 🔥 Si está bloqueado, no permitimos hacer el submit
     if (this.isLocked) {
       Swal.fire({
         icon: 'warning',
@@ -66,17 +64,17 @@ export class Login {
 
     this.authService.login(this.loginForm.value).subscribe({
       next: (response: any) => {
-        // 🔥 Si el login es exitoso, reiniciamos los intentos fallidos
         this.failedAttempts = 0;
 
-        // 1. Guardamos temporalmente el token para poder consultar el estado
-        this.authService.saveToken(response.token);
-        
+        // 🔥 FIX DEL KICKOUT: Limpiamos el token y lo guardamos estrictamente como el Dashboard lo busca
         const rawToken = response.token || '';
         const cleanToken = rawToken.replace(/['"]+/g, '');
+        
+        this.authService.saveToken(cleanToken);
+        localStorage.setItem('dilo_token', cleanToken); // Clave exacta que busca el dashboard
+
         const headers = new HttpHeaders().set('Authorization', `Bearer ${cleanToken}`);
 
-        // 2. Verificamos el estado en la ruta correcta del backend
         this.http.get<any>(`${this.apiUrl}/usuarios/verificar-estado`, { headers }).subscribe({
           next: (estadoRes) => {
             this.isLoading = false;
@@ -94,7 +92,6 @@ export class Login {
               return; 
             }
 
-            // 3. Si no tiene pendientes, procedemos con el login normal
             this.procesarAccesoExitoso(response);
           },
           error: (err) => {
@@ -109,13 +106,11 @@ export class Login {
         this.isLoading = false;
         console.error("Error en el login:", err);
         
-        // 🔥 Incrementamos los intentos fallidos
         this.failedAttempts++;
 
-        // 🔥 Validamos si llegó a 3 intentos
         if (this.failedAttempts >= 3) {
-          this.iniciarBloqueo(15); // Bloqueamos por 15 segundos
-          return; // Detenemos la ejecución para que no muestre el Swal de error normal
+          this.iniciarBloqueo(15); 
+          return; 
         }
 
         const mensajeError = typeof err.error === 'string' ? err.error : (err.error?.message || '');
@@ -130,12 +125,10 @@ export class Login {
     });
   }
 
-  // 🔥 Función para manejar el bloqueo y la cuenta regresiva
   private iniciarBloqueo(segundos: number) {
     this.isLocked = true;
     this.lockoutTimeRemaining = segundos;
     
-    // Deshabilitamos el formulario para que el usuario no pueda escribir
     this.loginForm.disable();
 
     Swal.fire({
@@ -143,7 +136,7 @@ export class Login {
       title: 'Demasiados intentos',
       text: `Has fallado 3 veces. El acceso ha sido bloqueado por 15 segundos.`,
       confirmButtonColor: '#ed8936',
-      timer: segundos * 1000, // Se cierra solo cuando acabe el tiempo
+      timer: segundos * 1000, 
       timerProgressBar: true,
       allowOutsideClick: false,
       showConfirmButton: false
@@ -153,11 +146,10 @@ export class Login {
       this.lockoutTimeRemaining--;
 
       if (this.lockoutTimeRemaining <= 0) {
-        // Desbloqueamos cuando el tiempo llega a 0
         clearInterval(this.lockoutTimer);
         this.isLocked = false;
-        this.failedAttempts = 0; // Reiniciamos los intentos
-        this.loginForm.enable(); // Volvemos a habilitar el formulario
+        this.failedAttempts = 0; 
+        this.loginForm.enable(); 
       }
     }, 1000);
   }
@@ -166,15 +158,19 @@ export class Login {
     const usuarioInfo = {
         email: response.email,
         nombre: response.nombreCompleto,
+        primerNombre: response.primerNombre,
+        apellidoPaterno: response.apellidoPaterno,
         rol: response.rol,
         roles: response.roles,
         negocioId: response.selectedBusinessId || response.negocioId, 
         businesses: response.businesses,
         needsBusinessSelection: response.needsBusinessSelection,
-        needsRoleSelection: response.needsRoleSelection
+        needsRoleSelection: response.needsRoleSelection,
+        fotoPerfil: response.fotoPerfil
     };
     
     localStorage.setItem('usuario', JSON.stringify(usuarioInfo));
+    localStorage.setItem('dilo_user', JSON.stringify(usuarioInfo)); // Respaldo extra
     this.authService.saveUser(usuarioInfo);
 
     const rol = response.rol;
@@ -190,6 +186,7 @@ export class Login {
       showConfirmButton: false,
       timerProgressBar: true
     }).then(() => {
+        // 🔥 AQUÍ REDIRIGE AL PANEL DE ADMIN QUE ESTÁ EN OTRA PARTE
         if (isSuperAdmin) {
             this.router.navigate(['/admin-panel']);
         } else if (!tieneNegocio) {
@@ -199,7 +196,7 @@ export class Login {
         } else {
             switch (rol) {
                 case 'PROPIETARIO': this.router.navigate(['/dashboard/propietario']); break;
-                case 'VENDEDOR': this.router.navigate(['/dashboard/ventas']); break;
+                case 'VENDEDOR': this.router.navigate(['/dashboard/clientes']); break;
                 case 'BODEGUERO': this.router.navigate(['/dashboard/inventario']); break;
                 default: this.router.navigate(['/dashboard']);
             }
@@ -207,7 +204,6 @@ export class Login {
     });
   }
 
-  // Asegúrate de limpiar el intervalo si el usuario cambia de ruta antes de que acabe
   ngOnDestroy() {
     if (this.lockoutTimer) {
       clearInterval(this.lockoutTimer);
