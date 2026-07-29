@@ -65,8 +65,22 @@ export class Equipo implements OnInit {
         // Separa las solicitudes pendientes
         this.solicitudes = equipoCompleto.filter(m => m.estadoInvitacion === 'PENDIENTE');
         
-        // 🔥 AHORA TODOS LOS DEMÁS SON ACTIVOS (porque los inactivos/rechazados se borran)
+        // Colaboradores activos
         this.miembrosActivos = equipoCompleto.filter(m => m.estadoInvitacion !== 'PENDIENTE');
+
+        // 🔥 LÓGICA PARA IDENTIFICAR AL CREADOR
+        if (this.miembrosActivos.length > 0) {
+          // 1. Ordenamos de más antiguo a más nuevo
+          this.miembrosActivos.sort((a, b) => {
+            // Reemplazamos el espacio por 'T' para asegurar compatibilidad en todos los navegadores
+            const timeA = a.fechaVinculacion ? new Date(a.fechaVinculacion.replace(' ', 'T')).getTime() : new Date().getTime();
+            const timeB = b.fechaVinculacion ? new Date(b.fechaVinculacion.replace(' ', 'T')).getTime() : new Date().getTime();
+            return timeA - timeB; // Ascendente
+          });
+
+          // 2. El primer elemento ahora es garantizado el más antiguo (el Creador)
+          this.miembrosActivos[0].esCreador = true;
+        }
 
         if (negData) {
           this.codigoInvitacion = negData.codigoInvitacion || negData.codigo || 'NO-DISPONIBLE';
@@ -137,7 +151,6 @@ export class Equipo implements OnInit {
     });
   }
 
-  // 🔥 ESTE BOTÓN AHORA ELIMINA AL USUARIO DE LA BASE DE DATOS
   desactivarMiembro(miembroId: number) {
     if (!this.negocioId) return;
 
@@ -172,7 +185,6 @@ export class Equipo implements OnInit {
   cambiarRol(miembro: any) {
     if (!this.negocioId) return;
     
-    // 🔥 Ya no necesitamos validar si está inactivo porque todos los de la lista están activos
     const opcionesRoles = {
       'PROPIETARIO': 'Propietario / Administrador (Control total)',
       'VENDEDOR': 'Vendedor (Solo facturación)',

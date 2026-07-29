@@ -4,7 +4,6 @@
         <p>Gestiona los accesos, roles y solicitudes de tus colaboradores.</p>
     </div>
     
-    <!-- 🔥 WIDGET DE CÓDIGO DE INVITACIÓN TIPO "TOKEN" -->
     <div class="code-container" (click)="copiarCodigo()" title="Copiar código al portapapeles">
         <div class="code-info">
             <span class="code-label">CÓDIGO DE ACCESO</span>
@@ -16,7 +15,6 @@
     </div>
 </div>
 
-<!-- 🔥 INSTRUCCIONES INTUITIVAS -->
 <div class="info-banner" *ngIf="!isLoading">
     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
     <p><strong>¿Cómo sumar personas a tu equipo?</strong> Comparte tu <strong>Código de Acceso</strong> con tus empleados. Ellos deberán ingresarlo al registrarse en la plataforma para enviarte una solicitud que podrás aprobar desde aquí.</p>
@@ -27,7 +25,7 @@
     <p>Cargando información del equipo...</p>
 </div>
 
-<!-- 🔥 SECCIÓN 1: SOLICITUDES PENDIENTES -->
+<!-- SOLICITUDES PENDIENTES -->
 <div *ngIf="solicitudes.length > 0 && !isLoading" class="fade-in">
     <div class="section-title">
         <h3>Solicitudes Pendientes <span class="badge-count">{{ solicitudes.length }}</span></h3>
@@ -65,7 +63,7 @@
     </div>
 </div>
 
-<!-- 🔥 SECCIÓN 2: TODOS LOS MIEMBROS -->
+<!-- TODOS LOS MIEMBROS -->
 <div *ngIf="!isLoading" class="fade-in">
     <div class="section-title">
         <h3>Colaboradores</h3>
@@ -82,8 +80,7 @@
                     <p>No tienes colaboradores registrados en este momento.</p>
                 </div>
 
-                <!-- 🔥 SE ELIMINÓ LA LÓGICA GRIS/INACTIVO, AHORA TODOS SON ACTIVOS -->
-                <div class="team-card" *ngFor="let m of miembrosActivos">
+                <div class="team-card" *ngFor="let m of miembrosActivos" [ngStyle]="{'border': m.esCreador ? '2px solid #fbbf24' : ''}">
                     
                     <div class="status-dot active-dot"></div>
                     
@@ -97,19 +94,28 @@
                     </div>
                     
                     <div class="team-info">
-                        <h4>{{ m.nombreUsuario }}</h4>
+                        <h4>
+                            {{ m.nombreUsuario }}
+                            <!-- 🔥 CORONA VISUAL PARA EL CREADOR -->
+                            <svg *ngIf="m.esCreador" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="#fbbf24" stroke="#d97706" stroke-width="1.5" style="margin-left: 5px; vertical-align: middle;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                        </h4>
                         <p class="email-text">{{ m.emailUsuario }}</p>
                         
                         <div class="role-container">
                             <span class="role-tag">{{ m.rol }}</span>
                             
-                            <button *ngIf="m.rol !== 'PROPIETARIO'" class="btn-edit-role" (click)="cambiarRol(m)" title="Cambiar rol">
+                            <!-- 🔥 ETIQUETA ADICIONAL DE DUEÑO -->
+                            <span *ngIf="m.esCreador" class="role-tag" style="background-color: #fef3c7; color: #b45309; border-color: #fde68a; margin-left: 5px;">Dueño Original</span>
+                            
+                            <!-- 🔥 PROTECCIÓN: Si es el creador, escondemos el botón de editar rol -->
+                            <button *ngIf="!m.esCreador" class="btn-edit-role" (click)="cambiarRol(m)" title="Cambiar rol">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                             </button>
                         </div>
                     </div>
 
-                    <div class="team-actions" *ngIf="m.rol !== 'PROPIETARIO'">
+                    <!-- 🔥 PROTECCIÓN: Si es el creador, escondemos el botón de expulsar -->
+                    <div class="team-actions" *ngIf="!m.esCreador">
                         <button class="btn-outline-danger" (click)="desactivarMiembro(m.id)" title="Expulsar del negocio">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path><line x1="12" y1="2" x2="12" y2="12"></line></svg>
                             Expulsar
