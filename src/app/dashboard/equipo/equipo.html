@@ -82,45 +82,37 @@
                     <p>No tienes colaboradores registrados en este momento.</p>
                 </div>
 
-                <!-- 🔥 APLICAMOS ESTILO 'INACTIVO' SI NO ESTÁ ACTIVO -->
-                <div class="team-card" *ngFor="let m of miembrosActivos" [ngClass]="{'card-inactiva': m.estadoLaboral?.toUpperCase() !== 'ACTIVO'}">
+                <!-- 🔥 SE ELIMINÓ LA LÓGICA GRIS/INACTIVO, AHORA TODOS SON ACTIVOS -->
+                <div class="team-card" *ngFor="let m of miembrosActivos">
                     
-                    <div class="status-dot" [ngClass]="{'active-dot': m.estadoLaboral?.toUpperCase() === 'ACTIVO', 'inactive-dot': m.estadoLaboral?.toUpperCase() !== 'ACTIVO'}"></div>
+                    <div class="status-dot active-dot"></div>
                     
                     <div class="user-avatar-medium" 
-                         [ngClass]="{'orange-bg': !m.fotoPerfil, 'gray-bg': m.estadoLaboral?.toUpperCase() !== 'ACTIVO' && !m.fotoPerfil}" 
+                         [ngClass]="{'orange-bg': !m.fotoPerfil}" 
                          [style.background-image]="m.fotoPerfil ? 'url(' + m.fotoPerfil + ')' : 'none'"
-                         style="background-size: cover; background-position: center; transition: all 0.3s;"
-                         [style.filter]="m.estadoLaboral?.toUpperCase() !== 'ACTIVO' ? 'grayscale(100%) opacity(0.7)' : 'none'">
+                         style="background-size: cover; background-position: center; transition: all 0.3s;">
                         <span *ngIf="!m.fotoPerfil">
                             {{ m.nombreUsuario ? m.nombreUsuario.substring(0, 2).toUpperCase() : 'US' }}
                         </span>
                     </div>
                     
-                    <div class="team-info" [style.opacity]="m.estadoLaboral?.toUpperCase() !== 'ACTIVO' ? '0.6' : '1'">
+                    <div class="team-info">
                         <h4>{{ m.nombreUsuario }}</h4>
                         <p class="email-text">{{ m.emailUsuario }}</p>
                         
                         <div class="role-container">
-                            <span class="role-tag" [ngClass]="{'tag-gris': m.estadoLaboral?.toUpperCase() !== 'ACTIVO'}">{{ m.rol }}</span>
+                            <span class="role-tag">{{ m.rol }}</span>
                             
-                            <button *ngIf="m.rol !== 'PROPIETARIO' && m.estadoLaboral?.toUpperCase() === 'ACTIVO'" class="btn-edit-role" (click)="cambiarRol(m)" title="Cambiar rol">
+                            <button *ngIf="m.rol !== 'PROPIETARIO'" class="btn-edit-role" (click)="cambiarRol(m)" title="Cambiar rol">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                             </button>
                         </div>
                     </div>
 
                     <div class="team-actions" *ngIf="m.rol !== 'PROPIETARIO'">
-                        <!-- 🔥 Botón Desactivar solo si está activo -->
-                        <button *ngIf="m.estadoLaboral?.toUpperCase() === 'ACTIVO'" class="btn-outline-danger" (click)="desactivarMiembro(m.id)" title="Quitar acceso al sistema">
+                        <button class="btn-outline-danger" (click)="desactivarMiembro(m.id)" title="Expulsar del negocio">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path><line x1="12" y1="2" x2="12" y2="12"></line></svg>
-                            Desactivar
-                        </button>
-                        
-                        <!-- 🔥 NUEVO: Botón Reactivar si está inactivo -->
-                        <button *ngIf="m.estadoLaboral?.toUpperCase() !== 'ACTIVO'" class="btn-outline-success" (click)="activarMiembro(m.id)" title="Devolver acceso al sistema">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-                            Reactivar
+                            Expulsar
                         </button>
                     </div>
                 </div>

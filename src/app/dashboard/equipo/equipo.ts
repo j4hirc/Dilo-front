@@ -65,7 +65,7 @@ export class Equipo implements OnInit {
         // Separa las solicitudes pendientes
         this.solicitudes = equipoCompleto.filter(m => m.estadoInvitacion === 'PENDIENTE');
         
-        // Todos los que NO son pendientes van a la lista de colaboradores (Activos e Inactivos)
+        // 🔥 AHORA TODOS LOS DEMÁS SON ACTIVOS (porque los inactivos/rechazados se borran)
         this.miembrosActivos = equipoCompleto.filter(m => m.estadoInvitacion !== 'PENDIENTE');
 
         if (negData) {
@@ -137,17 +137,18 @@ export class Equipo implements OnInit {
     });
   }
 
+  // 🔥 ESTE BOTÓN AHORA ELIMINA AL USUARIO DE LA BASE DE DATOS
   desactivarMiembro(miembroId: number) {
     if (!this.negocioId) return;
 
     Swal.fire({
-      title: '¿Desactivar miembro?',
-      text: "El usuario perderá acceso al sistema del negocio de forma inmediata.",
+      title: '¿Expulsar miembro?',
+      text: "El usuario perderá acceso al sistema y será eliminado del negocio permanentemente.",
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#d33',
       cancelButtonColor: '#64748b',
-      confirmButtonText: 'Sí, desactivar'
+      confirmButtonText: 'Sí, expulsar'
     }).then((result) => {
       if (result.isConfirmed) {
         const rawToken = localStorage.getItem('dilo_token') || '';
@@ -156,43 +157,12 @@ export class Equipo implements OnInit {
 
         this.http.put(`${this.apiUrl}/negocios/${this.negocioId}/miembros/${miembroId}/desactivar`, null, { headers }).subscribe({
           next: () => {
-            Swal.fire('¡Desactivado!', 'El miembro ha sido revocado del sistema.', 'success');
+            Swal.fire('¡Expulsado!', 'El miembro ha sido eliminado del negocio.', 'success');
             this.cargarEquipo(this.negocioId!);
           },
           error: (err) => {
             console.error(err);
-            Swal.fire('Oops...', 'Error al desactivar al miembro.', 'error');
-          }
-        });
-      }
-    });
-  }
-
-  activarMiembro(miembroId: number) {
-    if (!this.negocioId) return;
-
-    Swal.fire({
-      title: '¿Reactivar miembro?',
-      text: "El usuario recuperará su acceso al sistema inmediatamente.",
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonColor: '#22c55e',
-      cancelButtonColor: '#64748b',
-      confirmButtonText: 'Sí, reactivar'
-    }).then((result) => {
-      if (result.isConfirmed) {
-        const rawToken = localStorage.getItem('dilo_token') || '';
-        const cleanToken = rawToken.replace(/['"]+/g, '');
-        const headers = new HttpHeaders().set('Authorization', `Bearer ${cleanToken}`);
-
-        this.http.put(`${this.apiUrl}/negocios/${this.negocioId}/miembros/${miembroId}/activar`, null, { headers }).subscribe({
-          next: () => {
-            Swal.fire('¡Activado!', 'El miembro ha recuperado su acceso al sistema.', 'success');
-            this.cargarEquipo(this.negocioId!);
-          },
-          error: (err) => {
-            console.error(err);
-            Swal.fire('Oops...', 'Error al reactivar al miembro.', 'error');
+            Swal.fire('Oops...', 'Error al expulsar al miembro.', 'error');
           }
         });
       }
@@ -202,12 +172,7 @@ export class Equipo implements OnInit {
   cambiarRol(miembro: any) {
     if (!this.negocioId) return;
     
-    if (miembro.estadoLaboral?.toUpperCase() !== 'ACTIVO') {
-        Swal.fire('Acción no permitida', 'No puedes cambiar el rol de un usuario inactivo.', 'warning');
-        return;
-    }
-
-    // 🔥 CORRECCIÓN: Alineado exactamente a los valores de la base de datos
+    // 🔥 Ya no necesitamos validar si está inactivo porque todos los de la lista están activos
     const opcionesRoles = {
       'PROPIETARIO': 'Propietario / Administrador (Control total)',
       'VENDEDOR': 'Vendedor (Solo facturación)',
@@ -236,7 +201,7 @@ export class Equipo implements OnInit {
       }
     }).then((result) => {
       if (result.isConfirmed) {
-        const nuevoRol = result.value; // Ahora esto enviará 'PROPIETARIO', 'VENDEDOR' o 'BODEGUERO'
+        const nuevoRol = result.value; 
         const rawToken = localStorage.getItem('dilo_token') || '';
         const cleanToken = rawToken.replace(/['"]+/g, '');
         const headers = new HttpHeaders().set('Authorization', `Bearer ${cleanToken}`);

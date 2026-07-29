@@ -36,17 +36,24 @@ export class UnirNegocio implements OnInit {
       return; 
     }
 
-    // 🔥 2. VALIDACIÓN BLINDADA DEL NEGOCIO
+    // 🔥 2. VALIDACIÓN BLINDADA (CORREGIDA)
     const usuario = JSON.parse(usuarioStr);
-    
-    // Imprimimos en consola para que veas la estructura exacta que tiene tu objeto
     console.log("🔍 Datos del usuario en localStorage:", usuario);
 
-    // Buscamos la propiedad en todas sus posibles variantes (incluyendo 'negocioId' que usamos al crear)
-    const tieneUnNegocio = usuario.tieneNegocio || usuario.idNegocio || usuario.negocioId || usuario.negocio !== null;
+    // CORRECCIÓN: Usamos Boolean() para verificar que la variable exista y tenga un valor válido (no undefined, no null, no 0)
+    const tieneUnNegocio = Boolean(usuario.negocioId || usuario.idNegocio || usuario.tieneNegocio || usuario.negocio);
 
-    if (tieneUnNegocio) {
-      console.log("⛔ El usuario ya tiene negocio. Expulsando al dashboard...");
+    const estaDeshabilitado = 
+          usuario.rol === 'INACTIVO' || 
+          usuario.rol === 'DESHABILITADO' || 
+          usuario.rol === 'NINGUNO' || 
+          usuario.estado === 'INACTIVO' || 
+          usuario.activo === false;
+
+    // Si tiene un negocio Y NO está deshabilitado, entonces sí lo botamos al dashboard.
+    // Si no tiene negocio, este IF da falso y lo deja entrar normalmente.
+    if (tieneUnNegocio && !estaDeshabilitado) {
+      console.log("⛔ El usuario ya tiene negocio activo. Expulsando al dashboard...");
       this.router.navigate(['/dashboard']); 
       return;
     }
@@ -101,7 +108,9 @@ export class UnirNegocio implements OnInit {
         const mensajeError = err.error?.message || (typeof err.error === 'string' ? err.error : 'Verifica el código de invitación e intenta nuevamente.');
         const msgLower = mensajeError.toLowerCase();
 
-        if (msgLower.includes('revocado') || msgLower.includes('rechazada') || msgLower.includes('perteneces')) {
+        // 🔥 Aquí ya quitamos la alerta de "rechazada", porque si está rechazada, 
+        // tu backend lo borró y le dejará enviar una nueva.
+        if (msgLower.includes('revocado') || msgLower.includes('perteneces')) {
           Swal.fire({
             icon: 'warning',
             title: 'Acción no permitida',
