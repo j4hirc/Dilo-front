@@ -4,7 +4,14 @@
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
             <input type="text" placeholder="Buscar por Nombre, DNI o Email..." [(ngModel)]="busquedaUsuario" (input)="filtrarUsuarios()">
         </div>
-        <span class="results-count">{{ usuariosFiltrados.length }} usuarios</span>
+        
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <span class="results-count">{{ usuariosFiltrados.length }} usuarios</span>
+            <!-- 🔥 BOTÓN NUEVO USUARIO -->
+            <button class="btn btn-primary" style="padding: 8px 16px;" (click)="abrirModalCrear()">
+                + Nuevo Usuario
+            </button>
+        </div>
     </div>
 
     <div class="loading-state" *ngIf="isLoading">
@@ -49,8 +56,66 @@
     </div>
 </div>
 
-<!-- MODAL VER USUARIO -->
-<div class="modal-overlay" *ngIf="showModalUsuario">
+<!-- 🔥 MODAL CREAR NUEVO USUARIO -->
+<div class="modal-overlay" *ngIf="showModalCrear" style="z-index: 1040;">
+    <div class="modal-container shadow-xl">
+        <div class="modal-header">
+            <h3>Registrar Nuevo Usuario</h3>
+            <button class="close-modal" (click)="showModalCrear = false">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        </div>
+        <div class="modal-body form-grid">
+            <div class="form-group full-width">
+                <label>DNI / Cédula <span class="text-red">*</span></label>
+                <input type="text" class="form-control" [(ngModel)]="nuevoUsuario.dni" placeholder="Ej: 0102030405">
+            </div>
+            <div class="form-group">
+                <label>Primer Nombre <span class="text-red">*</span></label>
+                <input type="text" class="form-control" [(ngModel)]="nuevoUsuario.primerNombre">
+            </div>
+            <div class="form-group">
+                <label>Segundo Nombre</label>
+                <input type="text" class="form-control" [(ngModel)]="nuevoUsuario.segundoNombre">
+            </div>
+            <div class="form-group">
+                <label>Apellido Paterno <span class="text-red">*</span></label>
+                <input type="text" class="form-control" [(ngModel)]="nuevoUsuario.apellidoPaterno">
+            </div>
+            <div class="form-group">
+                <label>Apellido Materno</label>
+                <input type="text" class="form-control" [(ngModel)]="nuevoUsuario.apellidoMaterno">
+            </div>
+            <div class="form-group">
+                <label>Correo Electrónico <span class="text-red">*</span></label>
+                <input type="email" class="form-control" [(ngModel)]="nuevoUsuario.email" placeholder="ejemplo@correo.com">
+            </div>
+            <div class="form-group">
+                <label>Contraseña <span class="text-red">*</span></label>
+                <input type="password" class="form-control" [(ngModel)]="nuevoUsuario.password" placeholder="Mínimo 6 caracteres">
+            </div>
+            <div class="form-group">
+                <label>Teléfono</label>
+                <input type="text" class="form-control" [(ngModel)]="nuevoUsuario.telefono">
+            </div>
+            <div class="form-group">
+                <label>Fecha de Nacimiento</label>
+                <input type="date" class="form-control" [(ngModel)]="nuevoUsuario.fechaNacimiento">
+            </div>
+            <div class="form-group full-width">
+                <label>Dirección Física</label>
+                <input type="text" class="form-control" [(ngModel)]="nuevoUsuario.direccion" placeholder="Calle principal y secundaria">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" (click)="showModalCrear = false">Cancelar</button>
+            <button class="btn btn-primary" (click)="guardarNuevoUsuario()">Registrar Usuario</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL VER USUARIO (Mantenido igual) -->
+<div class="modal-overlay" *ngIf="showModalUsuario" style="z-index: 1040;">
     <div class="modal-container shadow-xl">
         <div class="modal-header">
             <h3>Detalles del Usuario</h3>
