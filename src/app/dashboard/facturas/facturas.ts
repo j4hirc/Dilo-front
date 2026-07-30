@@ -432,7 +432,7 @@ export class Facturas implements OnInit, OnDestroy {
     // Confirmación ultrarrápida si ya está en el último paso
     if (this.voiceState === VoiceStep.CONFIRMAR && (quiereEmitir || transcriptLimpio.includes('si') || transcriptLimpio.includes('sí') || transcriptLimpio.includes('ok') || transcriptLimpio.includes('dale'))) {
         this.voiceState = VoiceStep.OFF;
-        this.hablar("¡Listo! Emitiendo comprobante de inmediato.");
+        this.hablar("¡Listo! Emitiendo Factura de inmediato.");
         setTimeout(() => { this.guardarFactura(); }, 800);
         return;
     }
