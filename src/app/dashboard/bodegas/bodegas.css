@@ -8,11 +8,31 @@
 /* =========================================
    HEADER Y BOTONES
    ========================================= */
+/* =========================================
+   HEADER Y BOTONES
+   ========================================= */
 .page-header {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
+    align-items: center; /* Centramos verticalmente */
     margin-bottom: 25px;
+    flex-wrap: wrap; /* 🔥 MAGIA: Si no hay espacio, el botón baja a la siguiente línea en vez de desaparecer */
+    gap: 15px; 
+}
+
+.header-titles {
+    flex: 1; /* Le decimos al título que ocupe el espacio disponible */
+    min-width: 250px; /* Evita que el título se rompa */
+}
+
+.header-titles h2 {
+    margin: 0 0 5px 0;
+    color: #0f172a;
+}
+
+.header-titles p {
+    margin: 0;
+    color: #64748b;
 }
 
 .btn-primary {
@@ -23,12 +43,15 @@
     border-radius: 12px;
     font-weight: 700;
     font-size: 0.95rem;
-    display: flex;
+    display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 8px;
     cursor: pointer;
     transition: all 0.2s;
     box-shadow: 0 4px 10px rgba(237, 137, 54, 0.2);
+    flex-shrink: 0; /* 🔥 SUPER MAGIA: Prohíbe que el navegador encoja o desaparezca el botón */
+    white-space: nowrap; /* 🔥 Evita que las palabras "Nueva" y "Bodega" se separen */
 }
 
 .btn-primary:hover {
@@ -46,6 +69,8 @@
     font-weight: 700;
     cursor: pointer;
     transition: all 0.2s;
+    flex-shrink: 0; /* Tampoco deja que el botón de buscar desaparezca */
+    white-space: nowrap;
 }
 
 .btn-secondary:hover {

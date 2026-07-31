@@ -15,7 +15,6 @@ export class Bodegas implements OnInit {
   private http = inject(HttpClient);
   private cdr = inject(ChangeDetectorRef);
 
-  // 🔥 Guardamos los headers en una variable para no reconstruirlos
   private authHeaders: HttpHeaders | null = null;
 
   bodegas: any[] = [];
@@ -31,7 +30,6 @@ export class Bodegas implements OnInit {
     this.negocioId = usuarioLogueado?.negocioId;
     this.rolUsuario = usuarioLogueado?.rol || '';
 
-    // 🔥 Inicializamos los headers una sola vez al iniciar
     this.initHeaders();
 
     if (this.negocioId) {
@@ -49,7 +47,6 @@ export class Bodegas implements OnInit {
 
   cargarBodegas() {
     this.isLoading = true;
-    // Usamos los headers cacheados
     this.http.get<any[]>(`${this.apiUrl}/negocios/${this.negocioId}/bodegas`, { headers: this.authHeaders! }).subscribe({
       next: (data) => {
         this.bodegas = data;
@@ -64,7 +61,6 @@ export class Bodegas implements OnInit {
     });
   }
 
-  // 🔥 2. BUSCADOR EN TIEMPO REAL
   buscarBodegas() {
     if (!this.terminoBusqueda.trim()) {
       this.cargarBodegas();
@@ -82,14 +78,14 @@ export class Bodegas implements OnInit {
       },
       error: (err) => {
         console.error('Error en búsqueda:', err);
-        this.bodegas = []; // Si no encuentra, vaciamos la lista
+        this.bodegas = []; 
         this.isLoading = false;
         this.cdr.detectChanges();
       }
     });
   }
 
-  // 🔥 3. CREAR NUEVA BODEGA (Solo Propietario)
+  // 🔥 CREAR NUEVA BODEGA 
   abrirModalCrear() {
     Swal.fire({
       title: 'Nueva Bodega',
@@ -128,7 +124,7 @@ export class Bodegas implements OnInit {
     });
   }
 
-  // 🔥 4. EDITAR BODEGA (Solo Propietario)
+  // 🔥 EDITAR BODEGA 
   abrirModalEditar(bodega: any) {
     Swal.fire({
       title: 'Editar Bodega',
@@ -166,7 +162,7 @@ export class Bodegas implements OnInit {
     });
   }
 
-  // 🔥 5. ELIMINAR BODEGA (Solo Propietario)
+  // 🔥 ELIMINAR BODEGA
   eliminarBodega(id: number) {
     Swal.fire({
       title: '¿Estás seguro?',
@@ -191,7 +187,6 @@ export class Bodegas implements OnInit {
     });
   }
 
-  // Función Helper para los Headers
   private getHeaders(): HttpHeaders {
     const rawToken = localStorage.getItem('dilo_token') || '';
     const cleanToken = rawToken.replace(/['"]+/g, '');

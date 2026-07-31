@@ -4,8 +4,7 @@ import { Router, RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../auth.service';
 import { HttpClient } from '@angular/common/http';
-import Swal from 'sweetalert2'; // <-- IMPORTAMOS SWEETALERT2
-import { ParroquiaService } from '../../shared/parroquia.service';
+import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-registro',
@@ -18,9 +17,11 @@ export class Registro implements OnInit {
   private fb = inject(FormBuilder);
   private authService = inject(AuthService);
   private router = inject(Router);
-  private http = inject(HttpClient);
-  private parroquiaService = inject(ParroquiaService);
+  private http = inject(HttpClient); // 🔥 Usaremos esto directo
   
+  // 🔥 URL directa a tu backend para traer lo más fresco
+  private apiUrlParroquias = 'https://dilo-backend-mxlu.onrender.com/api/v1/parroquias';
+
   imagePreview: string | ArrayBuffer | null = null;
   showPassword = false;
   showConfirmPassword = false;
@@ -60,15 +61,22 @@ export class Registro implements OnInit {
     }, { validators: this.passwordMatchValidator });
   }
 
+  // 🔥 NUEVA FUNCIÓN DIRECTA A LA BASE DE DATOS
   cargarParroquias() {
-  this.isLoadingParroquias = true;
-  this.parroquiaService.getParroquias().subscribe({
-    next: data => { this.parroquias = data; this.isLoadingParroquias = false; },
-    error: () => this.isLoadingParroquias = false
-  });
-}
+    this.isLoadingParroquias = true;
+    this.http.get<any[]>(this.apiUrlParroquias).subscribe({
+      next: (data) => { 
+        this.parroquias = data; 
+        this.isLoadingParroquias = false; 
+      },
+      error: (err) => {
+        console.error("Error al cargar parroquias:", err);
+        this.isLoadingParroquias = false;
+      }
+    });
+  }
 
-trackById(_: number, p: any) {
+  trackById(_: number, p: any) {
     return p.id;
   }
 

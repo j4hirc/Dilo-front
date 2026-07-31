@@ -13,10 +13,9 @@ import Swal from 'sweetalert2';
 })
 export class AdminIva implements OnInit {
   private http = inject(HttpClient);
-  private cdr = inject(ChangeDetectorRef); // 🔥 Megáfono añadido
+  private cdr = inject(ChangeDetectorRef); 
   private apiUrl = 'https://dilo-backend-mxlu.onrender.com/api/v1';
 
-  // 🔥 AQUÍ ESTÁ LO QUE FALTABA
   isLoading: boolean = true; 
 
   ivaActual: number = 0;
@@ -34,18 +33,18 @@ export class AdminIva implements OnInit {
   }
 
   cargarIva() {
-    this.isLoading = true; // Le decimos que empiece a cargar
+    this.isLoading = true; 
     
     this.http.get<any>(`${this.apiUrl}/parametros/iva`, { headers: this.getAuthHeaders() })
       .subscribe({
         next: (data) => {
           this.ivaActual = parseFloat(data.ivaActual || '0.15');
           this.isIvaLoaded = true;
-          this.isLoading = false; // 🔥 Apagamos la carga al terminar
-          this.cdr.detectChanges(); // Forzamos la vista
+          this.isLoading = false; 
+          this.cdr.detectChanges(); 
         },
         error: () => {
-          this.isLoading = false; // 🔥 Apagamos la carga si hay error
+          this.isLoading = false; 
           this.cdr.detectChanges();
           Swal.fire('Error', 'Fallo al cargar la configuración de IVA.', 'error');
         }
@@ -55,6 +54,18 @@ export class AdminIva implements OnInit {
   actualizarIva() {
     if (this.nuevoIva === null || isNaN(this.nuevoIva)) {
       Swal.fire('Error', 'Por favor ingresa un valor numérico (ej. 0.15)', 'error');
+      return;
+    }
+
+    // 🔥 VALIDACIÓN ANTI-TONTOS 🔥
+    // Bloquea cualquier número que sea menor a 0 o mayor/igual a 1
+    if (this.nuevoIva < 0 || this.nuevoIva >= 1) {
+      Swal.fire({
+        title: 'Valor Inválido',
+        html: `El IVA debe ser un número decimal entre <b>0</b> y <b>0.99</b>.<br><br>Si deseas poner 15%, debes escribir <b>0.15</b>`,
+        icon: 'warning',
+        confirmButtonColor: '#0F172A'
+      });
       return;
     }
 
