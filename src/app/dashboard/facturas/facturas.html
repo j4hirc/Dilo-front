@@ -18,13 +18,23 @@
     </div>
 </div>
 
+<!-- 🔥 BUSCADOR -->
+<div class="search-container fade-in">
+    <div class="search-box">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <input type="text" placeholder="Buscar por número o cliente..." 
+               [(ngModel)]="terminoBusqueda" (keyup.enter)="buscarFacturas()" (input)="terminoBusqueda === '' ? buscarFacturas() : null">
+    </div>
+    <button class="btn-secondary" (click)="buscarFacturas()">Buscar</button>
+</div>
+
+<div *ngIf="isLoading" class="loading-container" style="background: white; border-radius: 20px; margin-top: 20px; padding: 60px 0;">
+    <div class="spinner"></div>
+    <p>Sincronizando con el servidor...</p>
+</div>
+
 <div class="card full-height-card premium-card">
     <div class="card-body">
-        <div *ngIf="isLoading" class="loading-container">
-            <div class="spinner"></div>
-            <p>Sincronizando con el servidor...</p>
-        </div>
-
         <div class="table-responsive" *ngIf="!isLoading">
             <table class="data-table">
                 <thead>
@@ -68,7 +78,6 @@
         </div>
     </div>
 </div>
-
 
 <!-- =========================================
    🔥 MODAL PUNTO DE VENTA (FONDO)
@@ -144,7 +153,15 @@
                             <option value="TARJETA_CREDITO">Tarjeta de Crédito</option>
                         </select>
                     </div>
+                    
                     <div class="form-group w-50" *ngIf="nuevaFactura.metodoPago === 'TARJETA_CREDITO'">
+                        <label>Detalle Tarjeta (Opcional)</label>
+                        <input type="text" [(ngModel)]="nuevaFactura.detallesTarjeta" class="modern-input" placeholder="Ej. Visa 1234">
+                    </div>
+                </div>
+
+                <div class="form-row mt-2" *ngIf="nuevaFactura.metodoPago === 'TARJETA_CREDITO'">
+                    <div class="form-group w-50">
                         <label>Meses (Cuotas)</label>
                         <input type="number" [(ngModel)]="nuevaFactura.numeroCuotas" min="0" class="modern-input" placeholder="Ej. 3">
                     </div>
@@ -154,19 +171,24 @@
                 
                 <div class="add-product-box mt-2 shadow-sm">
                     <div class="form-row">
-                        <div class="form-group w-50">
-                            <label>Bodega de Origen *</label>
+                        <div class="form-group" style="width: 40%">
+                            <label>Bodega *</label>
                             <select [(ngModel)]="itemTemp.bodegaId" class="custom-select modern-input" style="transition: all 0.3s ease;">
                                 <option [ngValue]="null" disabled>Seleccionar bodega</option>
                                 <option *ngFor="let bod of bodegasList" [ngValue]="bod.id">{{ bod.nombre }}</option>
                             </select>
                         </div>
-                        <div class="form-group w-50">
+                        <div class="form-group" style="width: 30%">
                             <label>Cantidad *</label>
                             <div style="position: relative;">
                                 <input type="number" [(ngModel)]="itemTemp.cantidad" min="1" class="modern-input text-center" style="transition: all 0.3s ease;">
                                 <small *ngIf="stockDisponible !== null" style="position: absolute; right: 5px; bottom: -20px; font-size: 0.75rem; font-weight: 700; color: #059669;">Disp: {{ stockDisponible }}</small>
                             </div>
+                        </div>
+                        
+                        <div class="form-group" style="width: 30%">
+                            <label>Desc. ($)</label>
+                            <input type="number" [(ngModel)]="itemTemp.descuento" min="0" class="modern-input text-center" placeholder="0.00">
                         </div>
                     </div>
 
@@ -195,11 +217,14 @@
                         <p>Ticket Vacío</p>
                     </div>
 
-                    <!-- 🔥 CORRECCIÓN: Agregado el nombre de la bodega en el ticket -->
                     <div class="cart-item-ticket fade-in" *ngFor="let d of nuevaFactura.detalles; let i = index">
                         <div class="ticket-info">
                             <p class="t-name">{{ d.productoNombre }}</p>
-                            <p class="t-qty">{{ d.cantidad }} un. x ${{ d.precioUnitario | number:'1.2-2' }} <span style="color: #94a3b8; font-size: 0.75rem; margin-left: 5px;">(Bodega: {{ d.bodegaNombre }})</span></p>
+                            <p class="t-qty">
+                                {{ d.cantidad }} un. x ${{ d.precioUnitario | number:'1.2-2' }} 
+                                <span *ngIf="d.descuento > 0" style="color: #ea580c; font-weight: 800; font-size: 0.8rem; margin-left: 5px;">(-${{ d.descuento | number:'1.2-2' }})</span>
+                                <span style="color: #94a3b8; font-size: 0.75rem; margin-left: 5px;">(Bodega: {{ d.bodegaNombre }})</span>
+                            </p>
                         </div>
                         <div class="ticket-price">
                             <strong>${{ d.subtotal | number:'1.2-2' }}</strong>
@@ -209,6 +234,16 @@
                 </div>
 
                 <div class="cart-footer">
+                    <div *ngIf="nuevaFactura.metodoPago === 'TARJETA_CREDITO' && nuevaFactura.detallesTarjeta" style="margin-bottom: 10px; font-size: 0.8rem; color: #64748b; font-weight: 600;">
+                        💳 Pago con: {{ nuevaFactura.detallesTarjeta }}
+                    </div>
+
+                    <!-- 🔥 DESCUENTO GLOBAL DE LA FACTURA -->
+                    <div class="discount-box" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <span style="font-size: 0.9rem; font-weight: 600; color: #475569;">Descuento Adicional ($)</span>
+                        <input type="number" [(ngModel)]="nuevaFactura.descuentoGlobal" min="0" class="modern-input text-right" style="width: 100px; padding: 6px 12px; height: auto;" placeholder="0.00">
+                    </div>
+
                     <div class="cart-total-box" [ngClass]="{'active': nuevaFactura.detalles.length > 0}">
                         <span>A COBRAR</span>
                         <span class="cart-total-amount">${{ totalCarrito | number:'1.2-2' }}</span>
@@ -224,6 +259,7 @@
             </button>
         </div>
     </div>
+    
     <div class="zoe-side-panel fade-in" *ngIf="voiceState !== 'OFF'">
             <div class="zoe-widget">
                 
@@ -270,4 +306,3 @@
         </div>
 </div>
 </div>
-
