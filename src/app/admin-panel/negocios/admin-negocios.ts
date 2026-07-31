@@ -9,7 +9,7 @@ import Swal from 'sweetalert2';
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './admin-negocios.html', 
-  styleUrls: ['../admin-panel.css'] 
+  styleUrls: ['../admin-panel.css', './admin-negocios.css']
 })
 export class AdminNegocios implements OnInit {
   private http = inject(HttpClient);

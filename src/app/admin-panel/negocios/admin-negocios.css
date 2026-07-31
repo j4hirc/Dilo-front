@@ -1,0 +1,281 @@
+/* =========================================
+   DISEÑO PREMIUM: TARJETAS DE NEGOCIOS
+   ========================================= */
+
+.wrapper-transparent {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+}
+
+/* --- TOOLBAR MODERNIZADA --- */
+.modern-toolbar {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 20px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    border: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+.shadow-sm {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+}
+
+.results-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #f8fafc;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #475569;
+    border: 1px solid #e2e8f0;
+}
+
+.pulse-dot {
+    width: 8px;
+    height: 8px;
+    background-color: #10b981;
+    border-radius: 50%;
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+    70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+/* --- GRILLA Y ANIMACIONES --- */
+.cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 28px;
+}
+
+@keyframes slideUpFade {
+    0% { opacity: 0; transform: translateY(30px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+
+/* --- TARJETA PRINCIPAL --- */
+.business-card {
+    background: #ffffff;
+    border-radius: 24px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #f1f5f9;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.03), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.business-card:hover {
+    transform: translateY(-8px) scale(1.01);
+    /* Sombra difuminada color naranja/marca al hacer hover */
+    box-shadow: 0 20px 40px -5px rgba(237, 137, 54, 0.15), 0 10px 15px -5px rgba(237, 137, 54, 0.08);
+    border-color: #fed7aa;
+}
+
+/* --- CABECERA TARJETA --- */
+.card-header {
+    background: linear-gradient(145deg, #ffffff, #f8fafc);
+    padding: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.logo-wrapper {
+    width: 64px;
+    height: 64px;
+    border-radius: 16px;
+    background: #ffffff;
+    box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border: 1px solid #f1f5f9;
+    padding: 4px;
+}
+
+.business-logo {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: 12px;
+}
+
+/* --- PIÍLDORAS DE ESTADO (BADGES) --- */
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 6px 12px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-pill .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+}
+
+.pill-orange {
+    background-color: #fff7ed;
+    color: #ea580c;
+    border: 1px solid #ffedd5;
+}
+.pill-orange .dot { background-color: #ea580c; }
+
+.pill-slate {
+    background-color: #f8fafc;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+}
+.pill-slate .dot { background-color: #94a3b8; }
+
+.flat-badge {
+    background-color: #f1f5f9;
+    color: #334155;
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+/* --- CUERPO Y TEXTOS --- */
+.card-body {
+    padding: 24px;
+    flex-grow: 1;
+}
+
+.business-title {
+    margin: 0 0 6px 0;
+    font-size: 19px;
+    font-weight: 800;
+    color: #0f172a;
+    letter-spacing: -0.5px;
+}
+
+.business-subtitle {
+    margin: 0 0 24px 0;
+    font-size: 14px;
+    color: #64748b;
+    font-weight: 500;
+}
+
+/* --- LISTA DE INFORMACIÓN CON ICONOS --- */
+.info-list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.info-label-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #94a3b8;
+}
+
+.info-label-group span {
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.info-value {
+    font-size: 14px;
+    color: #1e293b;
+}
+
+/* --- PIE DE TARJETA (BOTONES) --- */
+.card-footer {
+    display: flex;
+    align-items: center;
+    border-top: 1px solid #f1f5f9;
+    background: #ffffff;
+    padding: 4px;
+}
+
+.divider-vertical {
+    width: 1px;
+    height: 24px;
+    background-color: #e2e8f0;
+}
+
+.btn-action {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 16px;
+    border: none;
+    background: transparent;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 16px;
+    transition: all 0.2s ease;
+}
+
+.btn-action.edit {
+    color: #475569;
+}
+
+.btn-action.edit:hover {
+    background: #f8fafc;
+    color: #ed8936;
+}
+
+.btn-action.delete {
+    color: #94a3b8;
+}
+
+.btn-action.delete:hover {
+    background: #fff1f2;
+    color: #e11d48;
+}
+
+/* --- ESTADOS DE CARGA Y VACÍO (GLASSMORPHISM) --- */
+.glass-panel {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    padding: 60px 20px;
+    text-align: center;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.empty-icon-wrapper {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 20px auto;
+    background: #f8fafc;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #cbd5e1;
+}

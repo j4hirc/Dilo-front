@@ -1,56 +1,97 @@
-<div class="data-card shadow-lg">
-    <div class="table-toolbar">
+<div class="data-card wrapper-transparent">
+    
+    <!-- Barra de Herramientas -->
+    <div class="modern-toolbar shadow-sm">
         <div class="search-box">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
             <input type="text" placeholder="Buscar por Nombre o RUC..." [(ngModel)]="busquedaNegocio" (input)="filtrarNegocios()">
         </div>
-        <span class="results-count">{{ negociosFiltrados.length }} negocios</span>
+        <div class="results-badge">
+            <span class="pulse-dot"></span>
+            {{ negociosFiltrados.length }} negocios encontrados
+        </div>
     </div>
 
     <!-- Spinner -->
-    <div class="loading-state" *ngIf="isLoading">
-        <div class="spinner"></div><p>Cargando negocios...</p>
+    <div class="loading-state glass-panel shadow-sm" *ngIf="isLoading">
+        <div class="spinner"></div>
+        <p>Sincronizando negocios...</p>
     </div>
 
-    <div class="table-responsive" *ngIf="!isLoading">
-        <table class="admin-table">
-            <thead>
-                <tr>
-                    <th>ID</th><th>Logo</th><th>RUC</th><th>Negocio</th><th>Creación</th><th class="text-center">Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr *ngFor="let neg of negociosFiltrados">
-                    <td class="font-bold text-gray">#{{ neg.idNegocio }}</td>
-                    <td><img [src]="neg.rutaImagen || 'images/IA.png'" class="mini-avatar" alt="Logo"></td>
-                    <td>{{ neg.ruc }}</td>
-                    <td>
-                        <div class="flex-col">
-                            <span class="font-bold text-dark">{{ neg.razonSocial }}</span>
-                            <span class="text-sm text-gray">{{ neg.nombreComercial }}</span>
-                            <span class="badge-status mt-1" style="width: fit-content;">{{ neg.metodoCosteo || 'PROMEDIO' }}</span>
+    <!-- 🔥 CUADRÍCULA DE TARJETAS PREMIUM 🔥 -->
+    <div class="cards-grid" *ngIf="!isLoading && negociosFiltrados.length > 0">
+        <div class="business-card" *ngFor="let neg of negociosFiltrados; let i = index" [style.animation-delay]="(i * 0.05) + 's'">
+            
+            <div class="card-header">
+                <div class="logo-wrapper">
+                    <img [src]="neg.rutaImagen || 'images/Dilo-Logo-2-.png'" alt="Logo Negocio" class="business-logo">
+                </div>
+                <div class="status-pill" [ngClass]="neg.obligadoContabilidad ? 'pill-orange' : 'pill-slate'">
+                    <span class="dot"></span>
+                    {{ neg.obligadoContabilidad ? 'Obligado Cont.' : 'No Obligado' }}
+                </div>
+            </div>
+
+            <div class="card-body">
+                <h3 class="business-title">{{ neg.razonSocial }}</h3>
+                <p class="business-subtitle">{{ neg.nombreComercial || 'Sin nombre comercial' }}</p>
+                
+                <div class="info-list">
+                    <div class="info-row">
+                        <div class="info-label-group">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                            <span>RUC</span>
                         </div>
-                    </td>
-                    <td>
-                        <div class="flex-col">
-                            <span class="text-dark font-bold">{{ formatearFecha(neg.fechaCreacion, 'fecha') }}</span>
-                            <span class="text-sm text-gray">{{ formatearFecha(neg.fechaCreacion, 'hora') }}</span>
+                        <span class="info-value font-bold text-dark">{{ neg.ruc }}</span>
+                    </div>
+
+                    <div class="info-row">
+                        <div class="info-label-group">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>
+                            <span>ID Sistema</span>
                         </div>
-                    </td>
-                    <td class="text-center">
-                        <button class="action-btn edit-btn" (click)="abrirModalNegocio(neg)">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                        </button>
-                        <button class="action-btn delete-btn" (click)="eliminarNegocio(neg.idNegocio)">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                        </button>
-                    </td>
-                </tr>
-                <tr *ngIf="negociosFiltrados.length === 0">
-                    <td colspan="6" class="text-center text-gray py-8">No se encontraron negocios.</td>
-                </tr>
-            </tbody>
-        </table>
+                        <span class="info-value text-gray">#{{ neg.idNegocio }}</span>
+                    </div>
+
+                    <div class="info-row">
+                        <div class="info-label-group">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                            <span>Costeo</span>
+                        </div>
+                        <span class="badge-status flat-badge">{{ neg.metodoCosteo || 'PROMEDIO' }}</span>
+                    </div>
+
+                    <div class="info-row">
+                        <div class="info-label-group">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                            <span>Creación</span>
+                        </div>
+                        <span class="info-value">{{ formatearFecha(neg.fechaCreacion, 'fecha') }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-footer">
+                <button class="btn-action edit" (click)="abrirModalNegocio(neg)">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                    Editar
+                </button>
+                <div class="divider-vertical"></div>
+                <button class="btn-action delete" (click)="eliminarNegocio(neg.idNegocio)">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                    Eliminar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mensaje cuando no hay resultados -->
+    <div class="empty-state glass-panel shadow-sm" *ngIf="!isLoading && negociosFiltrados.length === 0">
+        <div class="empty-icon-wrapper">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+        </div>
+        <h3 class="text-dark font-bold">No hay negocios a la vista</h3>
+        <p class="text-gray">Intenta ajustando los términos de tu búsqueda o verifica la base de datos.</p>
     </div>
 </div>
 

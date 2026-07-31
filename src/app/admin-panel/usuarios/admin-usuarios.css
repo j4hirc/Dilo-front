@@ -1,0 +1,235 @@
+/* =========================================
+   DISEÑO PREMIUM: TARJETAS DE USUARIOS
+   ========================================= */
+
+.wrapper-transparent {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+}
+
+/* --- TOOLBAR --- */
+.modern-toolbar {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 20px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    border: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+.shadow-sm { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03); }
+.shadow-md { box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); }
+
+.results-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #f8fafc;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #475569;
+    border: 1px solid #e2e8f0;
+}
+
+.pulse-dot {
+    width: 8px;
+    height: 8px;
+    background-color: #3b82f6; /* Color azul para usuarios */
+    border-radius: 50%;
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4);
+    animation: pulseBlue 2s infinite;
+}
+
+@keyframes pulseBlue {
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
+    70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(59, 130, 246, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+}
+
+.btn-add {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+}
+
+/* --- GRILLA Y ANIMACIONES --- */
+.cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 28px;
+}
+
+@keyframes slideUpFade {
+    0% { opacity: 0; transform: translateY(30px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+
+/* --- TARJETA DE USUARIO --- */
+.user-card {
+    background: #ffffff;
+    border-radius: 24px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #f1f5f9;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.03), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.user-card:hover {
+    transform: translateY(-8px) scale(1.01);
+    box-shadow: 0 20px 40px -5px rgba(59, 130, 246, 0.15), 0 10px 15px -5px rgba(59, 130, 246, 0.08);
+    border-color: #bfdbfe;
+}
+
+/* --- CABECERA DE USUARIO CON FOTO GRANDE --- */
+.card-header-user {
+    height: 90px;
+    background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+    position: relative;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+/* 🔥 AQUÍ ESTÁ LA FOTO GRANDE FLOTANTE 🔥 */
+.user-avatar-profile {
+    width: 96px;
+    height: 96px;
+    border-radius: 50%;
+    border: 4px solid #ffffff;
+    position: absolute;
+    bottom: -48px; /* Hace que flote a la mitad del contenedor superior e inferior */
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #cbd5e1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    font-weight: 800;
+    color: white;
+    overflow: hidden;
+    transition: transform 0.3s;
+}
+
+.user-card:hover .user-avatar-profile {
+    transform: translateX(-50%) scale(1.05); /* Efecto pop al pasar el ratón */
+}
+
+.user-avatar-profile img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.orange-bg {
+    background: linear-gradient(135deg, #ed8936, #ea580c);
+}
+
+/* --- CUERPO (INFO DEL USUARIO) --- */
+.card-body-user {
+    padding: 60px 24px 24px 24px; /* El padding top grande deja espacio para la foto flotante */
+    flex-grow: 1;
+}
+
+.user-title {
+    margin: 0 0 4px 0;
+    font-size: 20px;
+    font-weight: 800;
+    color: #0f172a;
+    letter-spacing: -0.5px;
+}
+
+.user-subtitle {
+    margin: 0 0 20px 0;
+    font-size: 14px;
+    color: #64748b;
+}
+
+.user-badges {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: center;
+}
+
+.info-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background-color: #f8fafc;
+    color: #475569;
+    padding: 6px 14px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 600;
+    border: 1px solid #f1f5f9;
+}
+
+.info-pill svg {
+    color: #94a3b8;
+}
+
+/* --- PIE DE TARJETA (BOTÓN) --- */
+.card-footer-user {
+    padding: 8px 16px 16px 16px;
+    background: #ffffff;
+}
+
+.btn-action.view {
+    color: #3b82f6; /* Color azul link */
+    background: #eff6ff;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 14px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.2s;
+    width: 100%;
+}
+
+.btn-action.view:hover {
+    background: #dbeafe;
+    border-color: #bfdbfe;
+    color: #2563eb;
+}
+
+/* --- ESTADOS Y EXTRAS --- */
+.glass-panel {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    padding: 60px 20px;
+    text-align: center;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.empty-icon-wrapper {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 20px auto;
+    background: #f8fafc;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #cbd5e1;
+}
+
+@media (max-width: 640px) {
+    .hidden-mobile {
+        display: none !important;
+    }
+}
