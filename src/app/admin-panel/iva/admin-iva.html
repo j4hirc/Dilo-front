@@ -1,28 +1,50 @@
+<div class="page-header" *ngIf="!isLoading">
+    <div class="header-titles">
+        <h2 style="font-size: 24px; font-weight: 800; color: #0f172a; margin-bottom: 4px;">Configuración Global</h2>
+        <p style="color: #64748b;">Administra las variables del sistema que afectan a todos los negocios.</p>
+    </div>
+</div>
+
 <div class="config-grid">
-    <div class="config-card shadow-lg">
+    <div class="config-card">
         <div class="config-header">
             <div class="icon-box">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
             </div>
-            <h3>Impuesto al Valor Agregado (IVA)</h3>
+            <div class="header-text">
+                <h3>Impuesto al Valor Agregado (IVA)</h3>
+                <p>Tasa impositiva nacional de retención</p>
+            </div>
         </div>
+        
         <div class="config-body">
-            <div class="current-value">
-                <p>IVA Actual en Dilo:</p>
-                <h2 *ngIf="isIvaLoaded">{{ ivaActual }} <span class="text-sm text-gray">({{ ivaActual * 100 }}%)</span></h2>
-                <h2 *ngIf="!isIvaLoaded" class="text-gray">Cargando...</h2>
+            <!-- Valor Actual -->
+            <div class="current-value-box">
+                <p class="label-text">IVA Actual Configurado en Dilo:</p>
+                <h2 *ngIf="isIvaLoaded" class="value-text">
+                    {{ ivaActual * 100 }}% 
+                    <span class="text-sm text-gray">({{ ivaActual }})</span>
+                </h2>
+                <!-- Animación de carga si la red está lenta -->
+                <div *ngIf="!isIvaLoaded" class="skeleton-loader"></div>
             </div>
             
+            <!-- Formulario de Actualización -->
             <div class="form-group mt-4">
-                <label>Establecer nuevo IVA (Formato decimal)</label>
-                <div class="input-wrapper">
-                    <input type="number" step="0.01" [(ngModel)]="nuevoIva" placeholder="Ej: 0.15 para 15%" class="form-control">
+                <label>Establecer nuevo porcentaje de IVA</label>
+                <div class="input-with-icon">
+                    <span class="input-prefix">%</span>
+                    <input type="number" step="0.01" [(ngModel)]="nuevoIva" placeholder="Ej: 0.15 para representar el 15%" class="form-control premium-input">
                 </div>
-                <small class="text-gray mt-1 block">Este cambio afectará inmediatamente a todos los negocios.</small>
+                <div class="helper-text">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                    <span><strong>Atención:</strong> Este cambio afectará de manera inmediata y global a los cálculos de facturación de todos los negocios suscritos.</span>
+                </div>
             </div>
 
-            <button class="btn btn-primary mt-4 w-full" (click)="actualizarIva()" [disabled]="!nuevoIva">
-                Actualizar IVA del Sistema
+            <button class="btn-guardar w-full mt-4" (click)="actualizarIva()" [disabled]="!nuevoIva">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                Guardar y Aplicar IVA
             </button>
         </div>
     </div>

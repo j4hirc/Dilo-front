@@ -7,22 +7,24 @@ import { AdminNegocios } from './negocios/admin-negocios';
 import { AdminUsuarios } from './usuarios/admin-usuarios';
 import { AdminIva } from './iva/admin-iva';
 import { AdminPerfil } from './perfil/admin-perfil'; 
+import { AdminParroquias } from './parroquias/admin-parroquias'; // 🔥 NUEVO
 
 @Component({
   selector: 'app-admin-panel',
   standalone: true,
-  imports: [CommonModule, AdminNegocios, AdminUsuarios, AdminIva, AdminPerfil], 
+  imports: [CommonModule, AdminNegocios, AdminUsuarios, AdminIva, AdminPerfil, AdminParroquias], // 🔥 Agregado
   templateUrl: './admin-panel.html',
   styleUrls: ['./admin-panel.css']
 })
 export class AdminPanel implements OnInit {
   private router = inject(Router);
 
-  // 🔥 Agregamos 'perfil' a los tipos de pestaña permitidos
-  activeTab: 'negocios' | 'usuarios' | 'parametros' | 'perfil' = 'negocios';
+  // 🔥 Añadimos 'parroquias' a los tipos permitidos
+  activeTab: 'negocios' | 'usuarios' | 'parametros' | 'perfil' | 'parroquias' = 'negocios';
   
   adminNombre: string = 'Super Admin';
   adminEmail: string = '';
+  isMobileMenuOpen = false;
 
   ngOnInit() {
     this.cargarDatosUsuarioLocales();
@@ -42,9 +44,14 @@ export class AdminPanel implements OnInit {
     this.adminEmail = usuario.email || '';
   }
 
-  // 🔥 Ahora esta función acepta 'perfil'
-  switchTab(tab: 'negocios' | 'usuarios' | 'parametros' | 'perfil') {
+  // 🔥 Ahora acepta 'parroquias'
+  switchTab(tab: 'negocios' | 'usuarios' | 'parametros' | 'perfil' | 'parroquias') {
     this.activeTab = tab;
+    this.isMobileMenuOpen = false;
+  }
+
+  toggleMobileMenu() {
+    this.isMobileMenuOpen = !this.isMobileMenuOpen;
   }
 
   cerrarSesion() {

@@ -23,6 +23,7 @@
 
 .shadow-sm { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03); }
 .shadow-md { box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); }
+.shadow-xl { box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); }
 
 .results-badge {
     display: inline-flex;
@@ -40,7 +41,7 @@
 .pulse-dot {
     width: 8px;
     height: 8px;
-    background-color: #3b82f6; /* Color azul para usuarios */
+    background-color: #3b82f6; 
     border-radius: 50%;
     box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4);
     animation: pulseBlue 2s infinite;
@@ -98,14 +99,13 @@
     border-bottom: 1px solid #e2e8f0;
 }
 
-/* 🔥 AQUÍ ESTÁ LA FOTO GRANDE FLOTANTE 🔥 */
 .user-avatar-profile {
     width: 96px;
     height: 96px;
     border-radius: 50%;
     border: 4px solid #ffffff;
     position: absolute;
-    bottom: -48px; /* Hace que flote a la mitad del contenedor superior e inferior */
+    bottom: -48px; 
     left: 50%;
     transform: translateX(-50%);
     background-color: #cbd5e1;
@@ -120,7 +120,7 @@
 }
 
 .user-card:hover .user-avatar-profile {
-    transform: translateX(-50%) scale(1.05); /* Efecto pop al pasar el ratón */
+    transform: translateX(-50%) scale(1.05); 
 }
 
 .user-avatar-profile img {
@@ -135,7 +135,7 @@
 
 /* --- CUERPO (INFO DEL USUARIO) --- */
 .card-body-user {
-    padding: 60px 24px 24px 24px; /* El padding top grande deja espacio para la foto flotante */
+    padding: 60px 24px 24px 24px; 
     flex-grow: 1;
 }
 
@@ -173,9 +173,7 @@
     border: 1px solid #f1f5f9;
 }
 
-.info-pill svg {
-    color: #94a3b8;
-}
+.info-pill svg { color: #94a3b8; }
 
 /* --- PIE DE TARJETA (BOTÓN) --- */
 .card-footer-user {
@@ -184,7 +182,7 @@
 }
 
 .btn-action.view {
-    color: #3b82f6; /* Color azul link */
+    color: #3b82f6; 
     background: #eff6ff;
     border-radius: 12px;
     display: flex;
@@ -228,8 +226,127 @@
     color: #cbd5e1;
 }
 
-@media (max-width: 640px) {
-    .hidden-mobile {
-        display: none !important;
+/* --- LIMPIEZA CLASES GLOBALES --- */
+.toolbar-actions { display: flex; align-items: center; gap: 15px; }
+
+.admin-checkbox-container {
+    margin-top: 10px; background: #fff7ed; padding: 16px;
+    border-radius: 12px; border: 1px dashed #fdba74;
+    display: flex; align-items: center; gap: 12px;
+}
+.admin-checkbox-container input { width: 20px; height: 20px; accent-color: #ea580c; cursor: pointer; }
+.admin-checkbox-container label { margin: 0; font-weight: 700; color: #c2410c; cursor: pointer; font-size: 14px; }
+
+.password-alert-box {
+    background: #f8fafc; padding: 16px; border-radius: 8px; border: 1px dashed #cbd5e1;
+}
+
+
+/* =========================================
+   ✨ FIX GLOBAL DEL MODAL (SCROLL INTERNO) ✨
+   ========================================= */
+
+.modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px; /* Evita que el modal toque los bordes del monitor */
+    z-index: 1040 !important; 
+    animation: fadeIn 0.2s ease-out;
+}
+
+.modal-container {
+    background: white;
+    width: 100%;
+    max-width: 550px;
+    max-height: 90vh; /* 🔥 EL TRUCO ESTÁ AQUÍ: Nunca será más alto que el 90% de tu pantalla */
+    display: flex;
+    flex-direction: column; /* Organiza Header, Body y Footer */
+    border-radius: 16px;
+    overflow: hidden;
+    animation: slideUp 0.3s ease-out;
+}
+
+.modal-header {
+    flex-shrink: 0; /* Evita que la cabecera se aplaste */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid #e2e8f0;
+    background-color: #f8fafc;
+}
+
+.modal-header h3 { margin: 0; font-size: 18px; color: #0f172a; }
+
+.modal-body {
+    padding: 24px;
+    overflow-y: auto; /* 🔥 MAGIA: Agrega el scroll interno solo al contenido */
+    flex-grow: 1; /* Rellena el espacio sobrante */
+}
+
+/* Modificamos el Profile Header dentro del modal para que no se coma espacio */
+.modal-body .profile-header {
+    margin-top: 10px; 
+}
+
+.modal-footer {
+    flex-shrink: 0; /* Evita que los botones de guardar se aplasten */
+    padding: 16px 24px;
+    background-color: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+
+/* =========================================
+   🔥 RESPONSIVE MAGIA (MÓVILES Y TABLETS) 🔥
+   ========================================= */
+
+@media (max-width: 768px) {
+    
+    .hidden-mobile { display: none !important; }
+
+    /* Ajuste de Toolbar en columna */
+    .modern-toolbar {
+        flex-direction: column; align-items: stretch; padding: 16px; gap: 16px;
+    }
+    .search-box { width: 100%; }
+    .toolbar-actions { width: 100%; justify-content: center; }
+    .btn-add { width: 100%; justify-content: center; padding: 12px; }
+
+    /* Grillas a una columna */
+    .cards-grid { grid-template-columns: 1fr; }
+    .form-grid { grid-template-columns: 1fr; }
+    .info-grid { grid-template-columns: 1fr; }
+
+    /* --- Modales en celular --- */
+    .modal-overlay {
+        padding: 10px;
+        align-items: flex-end; /* En celular el modal sale desde abajo */
+    }
+
+    .modal-container {
+        border-radius: 16px 16px 8px 8px; 
+    }
+
+    .modal-footer {
+        flex-direction: column; /* Botones uno sobre otro en móvil */
+    }
+    
+    .modal-footer button {
+        width: 100%; 
+        margin: 0;
+        padding: 14px; 
+    }
+
+    .user-avatar-large {
+        width: 60px; height: 60px; font-size: 20px;
     }
 }

@@ -1,0 +1,136 @@
+ /* =========================================
+   DISEÑO PREMIUM: PARROQUIAS (Tarjetas Pequeñas)
+   ========================================= */
+
+.wrapper-transparent {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+}
+
+.modern-toolbar {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 20px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    border: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+.toolbar-actions { display: flex; align-items: center; gap: 15px; }
+.search-box { position: relative; width: 350px; }
+.search-box svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #94a3b8; }
+.search-box input { width: 100%; padding: 10px 10px 10px 42px; border: 1px solid #cbd5e1; border-radius: 8px; outline: none; transition: all 0.2s; }
+.search-box input:focus { border-color: #8b5cf6; box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1); }
+
+.results-badge { display: inline-flex; align-items: center; gap: 8px; background: #f8fafc; padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; color: #475569; border: 1px solid #e2e8f0; }
+.pulse-dot { width: 8px; height: 8px; border-radius: 50%; animation: pulseViolet 2s infinite; }
+
+@keyframes pulseViolet {
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.7); }
+    70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(139, 92, 246, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(139, 92, 246, 0); }
+}
+
+.btn { padding: 12px 20px; border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer; border: none; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.btn-primary { color: white; }
+.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3); }
+
+/* --- GRILLA DE LOCACIONES --- */
+.location-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+}
+
+@keyframes slideUpFade { 0% { opacity: 0; transform: translateY(20px); } 100% { opacity: 1; transform: translateY(0); } }
+
+.location-card {
+    background: #ffffff;
+    border-radius: 16px;
+    border: 1px solid #e2e8f0;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03);
+    transition: all 0.2s ease;
+    animation: slideUpFade 0.4s ease both;
+}
+
+.location-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 15px -3px rgba(139, 92, 246, 0.1);
+    border-color: #c4b5fd;
+}
+
+.location-icon {
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, #f5f3ff, #ede9fe);
+    color: #8b5cf6;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.location-info {
+    flex-grow: 1;
+    overflow: hidden;
+}
+
+.location-info h3 { margin: 0 0 4px 0; font-size: 16px; color: #0f172a; font-weight: 700; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
+.location-info p { margin: 0; font-size: 13px; color: #64748b; font-weight: 500; }
+
+.location-actions { display: flex; gap: 8px; }
+
+.btn-icon {
+    width: 36px; height: 36px; border-radius: 10px; border: none; background: #f8fafc; color: #64748b;
+    display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s;
+}
+
+.btn-icon.edit:hover { background: #eff6ff; color: #0284c7; }
+.btn-icon.delete:hover { background: #fff1f2; color: #e11d48; }
+
+/* MODAL Y RESPONSIVO */
+.modal-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center;
+    padding: 20px; z-index: 1040; animation: fadeIn 0.2s ease-out;
+}
+.modal-container { background: white; width: 100%; max-height: 90vh; display: flex; flex-direction: column; border-radius: 16px; overflow: hidden; }
+.modal-header { flex-shrink: 0; display: flex; justify-content: space-between; padding: 20px 24px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; }
+.modal-header h3 { margin: 0; font-size: 18px; color: #0f172a; }
+.close-modal { background: none; border: none; color: #94a3b8; cursor: pointer; padding: 4px; border-radius: 6px; }
+.close-modal:hover { background: #e2e8f0; color: #0f172a; }
+.modal-body { padding: 24px; overflow-y: auto; flex-grow: 1; }
+.modal-footer { flex-shrink: 0; padding: 16px 24px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 12px; }
+
+.form-group label { display: block; font-size: 14px; font-weight: 600; color: #334155; margin-bottom: 8px; }
+.form-control { width: 100%; padding: 12px 16px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; box-sizing: border-box; }
+.form-control:focus { outline: none; border-color: #8b5cf6; box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1); }
+.text-red { color: #e11d48; }
+.btn-outline { background: white; border: 1px solid #cbd5e1; color: #475569; }
+.btn-outline:hover { background: #f1f5f9; color: #0f172a; border-color: #94a3b8; }
+
+/* Estados vacíos y carga */
+.glass-panel { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(10px); border-radius: 20px; padding: 60px 20px; text-align: center; border: 1px solid rgba(255, 255, 255, 0.5); }
+.empty-icon-wrapper { width: 64px; height: 64px; margin: 0 auto 20px auto; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+
+@media (max-width: 768px) {
+    .hidden-mobile { display: none !important; }
+    .modern-toolbar { flex-direction: column; align-items: stretch; padding: 16px; gap: 16px; }
+    .search-box { width: 100%; }
+    .toolbar-actions { width: 100%; justify-content: center; }
+    .btn-add { width: 100%; justify-content: center; padding: 12px; }
+    .location-grid { grid-template-columns: 1fr; }
+    .modal-overlay { align-items: flex-end; padding: 10px; }
+    .modal-container { border-radius: 16px 16px 8px 8px; }
+    .modal-footer { flex-direction: column; }
+    .modal-footer button { width: 100%; margin: 0; padding: 14px; }
+}

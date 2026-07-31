@@ -675,3 +675,121 @@ label {
 
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+/* =========================================
+   ESTILOS RESPONSIVE (MÓVIL / TABLET)
+   ========================================= */
+
+/* Header exclusivo para celular (Oculto en PC) */
+.mobile-header {
+    display: none;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #0f172a;
+    padding: 15px 24px;
+    position: sticky;
+    top: 0;
+    z-index: 900;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.mobile-logo {
+    height: 28px;
+    object-fit: contain;
+}
+
+.menu-toggle-btn {
+    background: transparent;
+    border: none;
+    color: white;
+    cursor: pointer;
+    padding: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    transition: background 0.2s;
+}
+
+.menu-toggle-btn:active {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* Fondo oscuro borroso cuando el sidebar se abre en celular */
+.sidebar-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(3px);
+    z-index: 998;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.sidebar-overlay.show {
+    display: block;
+    opacity: 1;
+}
+
+/* MEDIA QUERY: Cuando la pantalla sea menor a 1024px (Tablets y Celulares) */
+@media (max-width: 1024px) {
+    .admin-layout {
+        flex-direction: column;
+    }
+
+    .mobile-header {
+        display: flex; /* Mostramos el menú superior */
+    }
+
+    /* Convertimos el sidebar en un cajón flotante oculto a la izquierda */
+    .admin-sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        z-index: 999; /* Por encima del fondo oscuro */
+        transform: translateX(-100%); /* Oculto por defecto */
+        width: 280px;
+    }
+
+    /* Clase que se activa al presionar el botón de hamburguesa */
+    .admin-sidebar.open {
+        transform: translateX(0); /* Entra en pantalla */
+        box-shadow: 4px 0 25px rgba(0,0,0,0.5);
+    }
+
+    .admin-main {
+        height: auto; /* Dejamos que haga scroll natural */
+        overflow-y: visible;
+    }
+
+    .admin-header {
+        padding: 20px 24px; /* Un poco menos de padding en celular */
+    }
+
+    .admin-header h2 {
+        font-size: 20px;
+    }
+
+    .content-wrapper {
+        padding: 20px 15px; /* Ajustamos márgenes para que no se pegue al borde */
+    }
+
+    /* Ajustes extra para los buscadores de las tablas en celular */
+    .table-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 15px;
+        padding: 15px;
+    }
+    
+    .search-box {
+        width: 100%;
+    }
+    
+    .table-toolbar > div {
+        width: 100%;
+        justify-content: space-between;
+    }
+}

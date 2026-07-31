@@ -1,0 +1,276 @@
+/* =========================================
+   DISEÑO PREMIUM: CONFIGURACIÓN GLOBAL (IVA)
+   ========================================= */
+
+.page-header { 
+    margin-bottom: 30px; 
+}
+
+.config-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+    gap: 24px;
+}
+
+.config-card {
+    background: #ffffff;
+    border-radius: 20px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.03), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
+    padding: 32px;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease;
+}
+
+.config-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 20px 25px -5px rgba(234, 88, 12, 0.08), 0 10px 10px -5px rgba(234, 88, 12, 0.04);
+    border-color: #fed7aa;
+}
+
+/* --- Cabecera de la Tarjeta --- */
+.config-header {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    margin-bottom: 28px;
+    border-bottom: 1px dashed #cbd5e1;
+    padding-bottom: 24px;
+}
+
+.icon-box {
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(135deg, #fff7ed, #ffedd5);
+    color: #ea580c;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 10px rgba(234, 88, 12, 0.15);
+    flex-shrink: 0;
+}
+
+.header-text h3 {
+    margin: 0 0 6px 0;
+    font-size: 20px;
+    font-weight: 800;
+    color: #0f172a;
+    letter-spacing: -0.5px;
+}
+
+.header-text p {
+    margin: 0;
+    font-size: 14px;
+    color: #64748b;
+    font-weight: 500;
+}
+
+/* --- Caja de Valor Actual --- */
+.current-value-box {
+    background: linear-gradient(to right, #f8fafc, #ffffff);
+    border: 1px solid #e2e8f0;
+    padding: 24px;
+    border-radius: 16px;
+    text-align: center;
+    margin-bottom: 28px;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.label-text {
+    margin: 0 0 8px 0;
+    color: #64748b;
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.value-text {
+    margin: 0;
+    font-size: 42px;
+    color: #0f172a;
+    font-weight: 900;
+    letter-spacing: -1.5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.text-sm { 
+    font-size: 18px; 
+    font-weight: 600; 
+}
+.text-gray { 
+    color: #94a3b8; 
+}
+
+/* --- Formulario --- */
+.form-group label {
+    display: block;
+    font-size: 14px;
+    font-weight: 700;
+    color: #334155;
+    margin-bottom: 10px;
+}
+
+.input-with-icon {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.input-prefix {
+    position: absolute;
+    left: 18px;
+    color: #94a3b8;
+    font-weight: 800;
+    font-size: 16px;
+}
+
+.premium-input {
+    width: 100%;
+    padding: 16px 16px 16px 45px;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    font-size: 16px;
+    font-family: inherit;
+    font-weight: 600;
+    color: #0f172a;
+    outline: none;
+    transition: all 0.2s;
+    background: #ffffff;
+    box-sizing: border-box;
+}
+
+.premium-input:focus {
+    border-color: #ea580c;
+    box-shadow: 0 0 0 4px rgba(234, 88, 12, 0.15);
+}
+
+.helper-text {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    color: #64748b;
+    font-size: 12.5px;
+    margin-top: 12px;
+    line-height: 1.5;
+    background-color: #fff1f2;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px dashed #fda4af;
+}
+
+.helper-text span {
+    color: #be123c;
+}
+
+.helper-text svg {
+    color: #e11d48;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+/* --- Botón Guardar --- */
+.btn-guardar {
+    background: linear-gradient(135deg, #ed8936, #ea580c);
+    color: white;
+    border: none;
+    padding: 16px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 15px;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 6px 12px rgba(234, 88, 12, 0.25);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+}
+
+.btn-guardar:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 15px rgba(234, 88, 12, 0.35);
+    background: linear-gradient(135deg, #f6ad55, #dd6b20);
+}
+
+.btn-guardar:disabled {
+    background: #e2e8f0;
+    box-shadow: none;
+    cursor: not-allowed;
+    color: #94a3b8;
+}
+
+.w-full { width: 100%; }
+.mt-4 { margin-top: 24px; }
+
+/* --- Animación Skeleton Loader --- */
+.skeleton-loader {
+    height: 48px;
+    width: 140px;
+    background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+    background-size: 200% 100%;
+    animation: skeletonLoading 1.5s infinite;
+    border-radius: 8px;
+    margin: 0 auto;
+}
+
+@keyframes skeletonLoading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* =========================================
+   🔥 RESPONSIVE MAGIA (MÓVILES Y TABLETS) 🔥
+   ========================================= */
+
+@media (max-width: 768px) {
+    
+    .config-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .config-card {
+        padding: 24px 20px;
+        border-radius: 16px;
+    }
+
+    .config-header {
+        flex-direction: column;
+        text-align: center;
+        gap: 12px;
+        padding-bottom: 20px;
+    }
+
+    .icon-box {
+        width: 64px;
+        height: 64px;
+    }
+    
+    .header-text h3 {
+        font-size: 18px;
+    }
+    
+    .value-text {
+        font-size: 32px;
+        flex-direction: column;
+        gap: 2px;
+    }
+    
+    .text-sm {
+        font-size: 16px;
+    }
+
+    .helper-text {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+
+    .btn-guardar {
+        padding: 18px;
+        font-size: 16px;
+    }
+}

@@ -9,12 +9,15 @@ import Swal from 'sweetalert2';
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './admin-iva.html', 
-  styleUrls: ['../admin-panel.css'] 
+  styleUrls: ['../admin-panel.css', './admin-iva.css'] 
 })
 export class AdminIva implements OnInit {
   private http = inject(HttpClient);
   private cdr = inject(ChangeDetectorRef); // 🔥 Megáfono añadido
   private apiUrl = 'https://dilo-backend-mxlu.onrender.com/api/v1';
+
+  // 🔥 AQUÍ ESTÁ LO QUE FALTABA
+  isLoading: boolean = true; 
 
   ivaActual: number = 0;
   isIvaLoaded: boolean = false;
@@ -31,14 +34,19 @@ export class AdminIva implements OnInit {
   }
 
   cargarIva() {
+    this.isLoading = true; // Le decimos que empiece a cargar
+    
     this.http.get<any>(`${this.apiUrl}/parametros/iva`, { headers: this.getAuthHeaders() })
       .subscribe({
         next: (data) => {
           this.ivaActual = parseFloat(data.ivaActual || '0.15');
           this.isIvaLoaded = true;
-          this.cdr.detectChanges(); // 🔥 Forzamos la vista
+          this.isLoading = false; // 🔥 Apagamos la carga al terminar
+          this.cdr.detectChanges(); // Forzamos la vista
         },
         error: () => {
+          this.isLoading = false; // 🔥 Apagamos la carga si hay error
+          this.cdr.detectChanges();
           Swal.fire('Error', 'Fallo al cargar la configuración de IVA.', 'error');
         }
       });

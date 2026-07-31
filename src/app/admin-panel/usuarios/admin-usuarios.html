@@ -7,12 +7,13 @@
             <input type="text" placeholder="Buscar por Nombre, DNI o Email..." [(ngModel)]="busquedaUsuario" (input)="filtrarUsuarios()">
         </div>
         
-        <div style="display: flex; align-items: center; gap: 15px;">
+        <!-- 🔥 FIX: Le puse una clase en vez de estilos en línea -->
+        <div class="toolbar-actions">
             <div class="results-badge hidden-mobile">
                 <span class="pulse-dot"></span>
                 {{ usuariosFiltrados.length }} usuarios
             </div>
-            <!-- 🔥 BOTÓN NUEVO USUARIO -->
+            <!-- BOTÓN NUEVO USUARIO -->
             <button class="btn btn-primary btn-add" (click)="abrirModalCrear()">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                 Nuevo Usuario
@@ -25,11 +26,10 @@
         <div class="spinner"></div><p>Cargando base de usuarios...</p>
     </div>
 
-    <!-- 🔥 NUEVO: CUADRÍCULA DE PERFILES 🔥 -->
+    <!-- CUADRÍCULA DE PERFILES -->
     <div class="cards-grid" *ngIf="!isLoading && usuariosFiltrados.length > 0">
         <div class="user-card" *ngFor="let user of usuariosFiltrados; let i = index" [style.animation-delay]="(i * 0.05) + 's'">
             
-            <!-- Encabezado con foto grande flotante -->
             <div class="card-header-user">
                 <div class="user-avatar-profile shadow-md" [ngClass]="{'orange-bg': !user.fotoPerfil}">
                     <img *ngIf="user.fotoPerfil" [src]="user.fotoPerfil" alt="Foto">
@@ -111,7 +111,6 @@
                 <input type="password" class="form-control" [(ngModel)]="nuevoUsuario.password" placeholder="Mínimo 8 caracteres">
             </div>
             
-            <!-- 🔥 NUEVO: Selector de Parroquias Dinámico -->
             <div class="form-group full-width">
                 <label>Parroquia <span class="text-red">*</span></label>
                 <select class="form-control" [(ngModel)]="nuevoUsuario.id_parroquia">
@@ -133,12 +132,10 @@
                 <input type="text" class="form-control" [(ngModel)]="nuevoUsuario.direccion" placeholder="Calle principal y secundaria">
             </div>
 
-            <!-- 🔥 NUEVO: Casilla de Rol Super Admin (Diseño resaltado) -->
-            <div class="form-group full-width" style="margin-top: 10px; background: #fff7ed; padding: 16px; border-radius: 12px; border: 1px dashed #fdba74; display: flex; align-items: center; gap: 12px;">
-                <input type="checkbox" id="chkAdmin" [(ngModel)]="nuevoUsuario.esAdmin" style="width: 20px; height: 20px; accent-color: #ea580c; cursor: pointer;">
-                <label for="chkAdmin" style="margin: 0; font-weight: 700; color: #c2410c; cursor: pointer; font-size: 14px;">
-                    Otorgar permisos de SUPER ADMIN a este usuario
-                </label>
+            <!-- Casilla Super Admin -->
+            <div class="form-group full-width admin-checkbox-container">
+                <input type="checkbox" id="chkAdmin" [(ngModel)]="nuevoUsuario.esAdmin">
+                <label for="chkAdmin">Otorgar permisos de SUPER ADMIN a este usuario</label>
             </div>
         </div>
         <div class="modal-footer">
@@ -154,7 +151,6 @@
         <div class="modal-header">
             <h3>{{ isEditingUser ? 'Editar Usuario' : 'Detalles del Usuario' }}</h3>
             <div style="display: flex; gap: 8px;">
-                <!-- Botón Editar (Solo se muestra si NO estamos editando) -->
                 <button class="action-btn edit" *ngIf="!isEditingUser" (click)="toggleEditUsuario()" title="Editar información">
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                 </button>
@@ -166,7 +162,6 @@
 
         <div class="modal-body profile-view">
             
-            <!-- Encabezado con Foto -->
             <div class="profile-header text-center mb-4">
                 <div class="user-avatar-large mx-auto" [ngClass]="{'orange-bg': !(isEditingUser ? usuarioEditando.fotoPerfil : usuarioViendo.fotoPerfil)}">
                     <img *ngIf="isEditingUser ? usuarioEditando.fotoPerfil : usuarioViendo.fotoPerfil" [src]="isEditingUser ? usuarioEditando.fotoPerfil : usuarioViendo.fotoPerfil" alt="Foto">
@@ -214,8 +209,7 @@
                     <input type="email" class="form-control" [(ngModel)]="usuarioEditando.email">
                 </div>
 
-                <!-- 🔥 NUEVO: CAMPO DE CONTRASEÑA OPCIONAL -->
-                <div class="form-group full-width" style="background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px dashed #cbd5e1;">
+                <div class="form-group full-width password-alert-box">
                     <label>Nueva Contraseña <span style="color: #64748b; font-weight: 400; font-size: 12px;">(Deja en blanco si no quieres cambiarla)</span></label>
                     <input type="password" class="form-control" [(ngModel)]="usuarioEditando.password" placeholder="Mínimo 8 caracteres">
                 </div>
