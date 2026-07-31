@@ -46,10 +46,6 @@ export class DashboardDefault implements OnInit {
  
   private groqApiKey = environment.groqApiKey;
 
-  // 🔥 FUENTE ÚNICA DE VERDAD del menú del sistema: mismos roles que se usan
-  // en el *ngIf="tieneRol([...])" del sidebar (dashboard-default.html).
-  // Así la IA "Zoe" siempre sabe exactamente qué módulos ve cada rol,
-  // sin importar que el menú cambie en el futuro (solo se edita aquí).
   private readonly modulosSistema: { nombre: string; roles: string[]; descripcion: string }[] = [
     { nombre: 'Dashboard (Propietario)', roles: ['PROPIETARIO'], descripcion: 'Gráficas y resumen general del negocio (ventas, stock, ganancias).' },
     { nombre: 'Facturas', roles: ['PROPIETARIO', 'VENDEDOR'], descripcion: 'Registrar nuevas ventas, cobrar a clientes y emitir comprobantes (facturación tradicional y por voz).' },
@@ -67,7 +63,6 @@ export class DashboardDefault implements OnInit {
     { nombre: 'Mi Perfil', roles: ['PROPIETARIO', 'VENDEDOR', 'BODEGUERO'], descripcion: 'Datos personales, foto y contraseña del usuario.' },
   ];
 
-  // Descripción de qué puede hacer cada rol en general (control de acceso del negocio).
   private readonly rolesSistema: { rol: string; descripcion: string }[] = [
     { rol: 'PROPIETARIO', descripcion: 'Control total del negocio. Acceso a todos los módulos, administración de equipo/roles y configuración del sistema.' },
     { rol: 'VENDEDOR', descripcion: 'Enfocado solo en ventas: Facturas, Cuentas por Cobrar y Clientes. No tiene acceso a inventario, compras ni administración.' },
@@ -83,7 +78,8 @@ export class DashboardDefault implements OnInit {
       return; 
     }
 
-    const textoBienvenida = '¡Hola! 👋 Soy **Zoe**, tu asistente virtual. ¿En qué módulo del sistema te puedo ayudar hoy?';
+    // 🔥 Mensaje de bienvenida adaptado para invitar a los nuevos
+    const textoBienvenida = '¡Hola! 👋 Soy **Zoe**, tu asistente virtual en Dilo. Si es tu primera vez aquí, solo pregúntame: *"¿Por dónde empiezo?"* y te guiaré paso a paso.\n\n¿En qué módulo del sistema te puedo ayudar hoy?';
     this.chatMensajes = [
       { 
         role: 'assistant', 
@@ -232,21 +228,16 @@ export class DashboardDefault implements OnInit {
       });
   }
 
-  // 🔥 MÉTODO SUPERCARGADO DE INTELIGENCIA DE NEGOCIO
   construirResumenDelNegocio(
     productos: any[], categorias: any[], clientes: any[],
     proveedores: any[], inventario: any[], facturas: any[]
   ): string {
-    // 1. Categorías
     const nombresCategorias = categorias.map(c => c.nombre).filter(Boolean).join(', ') || 'Ninguna registrada';
-
-    // 2. Productos
     const totalProductos = productos.length;
     const listaProductos = productos.slice(0, 30).map(p =>
       `${p.nombre} (Cod: ${p.codigoPrincipal || 'S/C'}, PVP: $${Number(p.precioUnitario || 0).toFixed(2)}, IVA: ${p.grabaIva ? 'Sí' : 'No'})`
     ).join('; ') + (totalProductos > 30 ? '... (entre otros)' : '');
 
-    // 3. Inventario aglomerado por Bodega y Críticos
     const bodegasMap = new Map<string, string[]>();
     let stockCritico: string[] = [];
     let valorTotalInventario = 0;
@@ -259,11 +250,9 @@ export class DashboardDefault implements OnInit {
       
       valorTotalInventario += Number(i.valorInventario || 0);
 
-      // Agrupar por bodega
       if (!bodegasMap.has(bodega)) bodegasMap.set(bodega, []);
       bodegasMap.get(bodega)!.push(`${prod}: ${cant} unids`);
 
-      // Detectar críticos
       if (cant <= min || cant === 0) {
         stockCritico.push(`${prod} en ${bodega} (Stock actual: ${cant}, Mínimo: ${min})`);
       }
@@ -279,11 +268,9 @@ export class DashboardDefault implements OnInit {
       ? stockCritico.slice(0, 20).join('; ') 
       : 'No hay productos en estado crítico ni con stock en 0.';
 
-    // 4. Clientes y Proveedores
     const nombresClientes = clientes.slice(0, 15).map(c => c.nombreCompleto || `${c.primerNombre || ''} ${c.apellidoPaterno || ''}`.trim()).filter(Boolean).join(', ');
     const nombresProveedores = proveedores.slice(0, 15).map(p => p.nombreComercial || p.razonSocial || p.nombre).filter(Boolean).join(', ');
 
-    // 5. Facturas, Ventas y Créditos
     const totalFacturas = facturas.length;
     const totalVentas = facturas.reduce((acc, f) => acc + Number(f.totalFactura || f.total || 0), 0);
     
@@ -296,7 +283,6 @@ export class DashboardDefault implements OnInit {
       return `Fac #${f.numeroFactura || 'S/N'} (${fecha}) | Cliente: ${f.clienteNombre || f.cliente?.nombre || 'Consumidor Final'} | Total: $${Number(f.totalFactura || f.total || 0).toFixed(2)} | Pago: ${f.formaPago || 'No especificado'} | Estado: ${estado}`;
     }).join('\n       ');
 
-    // 6. Construcción Final del Texto para la IA
     return `
       DATOS REALES Y ACTUALES DEL NEGOCIO "${this.negocioNombre}":
       
@@ -397,41 +383,44 @@ export class DashboardDefault implements OnInit {
     const modulosRestringidos = this.getModulosRestringidosTexto();
     const resumenRoles = this.getResumenRolesTexto();
 
+    // 🔥 AQUI LE ENSEÑAMOS A ZOE CÓMO HACER EL ONBOARDING
     const manualDelSistema = `
       Eres "Zoe", la asistente virtual del sistema de Facturación e Inventario "Dilo".
       Dilo es un sistema de facturación mediante voz.
       Tu personalidad es simpática, cercana y positiva, pero siempre profesional y precisa con los datos.
       Hablas con ${nombreUsuarioActual}, quien tiene el rol de **${this.rolUsuario}** en el negocio "${this.negocioNombre}".
 
-      SISTEMA DE ROLES DE DILO (así funciona el control de acceso del negocio):
+      SISTEMA DE ROLES DE DILO:
       ${resumenRoles}
 
-      MÓDULOS DEL MENÚ QUE ${nombreUsuarioActual} PUEDE VER Y USAR AHORA (rol ${this.rolUsuario}):
+      MÓDULOS DEL MENÚ QUE ${nombreUsuarioActual} PUEDE VER Y USAR AHORA:
       ${modulosPermitidos}
 
-      MÓDULOS A LOS QUE ${nombreUsuarioActual} NO TIENE ACCESO CON SU ROL ACTUAL:
+      MÓDULOS A LOS QUE NO TIENE ACCESO CON SU ROL ACTUAL:
       ${modulosRestringidos}
 
       ${this.contextoNegocioTexto}
 
-      ALERTAS DE CADUCIDAD (próximos 30 días): ${alertasTexto}
+      ALERTAS DE CADUCIDAD: ${alertasTexto}
 
-      FORMATO DE RESPUESTA (IMPORTANTE):
-      - Usa **negrita** (con doble asterisco) solo para resaltar cifras, nombres de módulos o datos clave.
-      - Si vas a dar varias opciones o pasos, usa una lista con líneas que empiecen en "- ".
-      - Usa saltos de línea entre ideas para que no sea un bloque de texto plano.
-      - Nunca muestres IDs internos, códigos de base de datos ni datos técnicos como negocioId, userId, etc. Refiérete siempre por nombre.
+      🔥 GUÍA DE INICIO (ONBOARDING) PARA NUEVOS USUARIOS 🔥
+      Si el usuario te pregunta "¿Por dónde empiezo?", "Soy nuevo", o pide ayuda para configurar el sistema desde cero, explícale de forma MUY AMIGABLE esta ruta ideal de pasos (asegúrate de mostrarle solo los módulos a los que su rol tiene acceso):
+      
+      1. **Configuración**: Primero, en el menú lateral ve a Configuración para definir los datos de la empresa (RUC, IVA, Contabilidad).
+      2. **Bodegas**: Crea al menos una bodega (ej. Bodega Principal) para saber dónde se guardarán las cosas.
+      3. **Categorías**: Crea las categorías para organizar bien tu mercadería (ej. Lácteos, Ferretería).
+      4. **Productos**: Registra tu catálogo de productos base (sus códigos y precios de venta).
+      5. **Proveedores y Abastecimiento**: Registra a quién le compras, y luego usa "Abastecimiento" para ingresar la cantidad de stock real a tus bodegas.
+      6. **Clientes**: Guarda a tus compradores frecuentes en el directorio.
+      7. **Facturación**: ¡Ya estás listo! Ve a facturas para empezar a vender usando tu voz o de manera manual.
 
       REGLAS ESTRICTAS DE RESPUESTA:
-      1. Sé MUY BREVE, directo y usa un tono amigable y simpático (puedes usar 1 emoji ocasional, sin abusar). Máximo 2 o 3 párrafos súper cortos.
-      2. Si el usuario te pregunta cómo hacer algo, guíalo SOLO hacia módulos de la lista "MÓDULOS QUE PUEDE VER Y USAR AHORA". Nunca lo mandes a un módulo restringido para su rol.
-      3. Si pregunta por algo de la lista de "MÓDULOS A LOS QUE NO TIENE ACCESO", explícale amablemente que esa función es exclusiva de otro rol (dile cuál: PROPIETARIO, VENDEDOR o BODEGUERO) y que debe pedírselo al Propietario del negocio si necesita ese permiso. No inventes que sí puede acceder.
-      4. Si te pregunta "qué rol tengo", "qué puedo hacer" o similar, respóndele con base en el SISTEMA DE ROLES y sus módulos permitidos de arriba.
-      5. Si un PROPIETARIO te pregunta sobre los roles de su equipo (qué puede hacer un Vendedor o un Bodeguero), sí puedes explicárselo usando el SISTEMA DE ROLES, ya que administra el negocio.
-      6. Usa los DATOS REALES del negocio de arriba (productos, stock por bodega, críticos, clientes, proveedores, ventas, facturas) para responder con cifras exactas cuando te pregunten por su negocio.
-      7. Nunca inventes funciones que no estén en la lista de conocimientos.
-      8. Preséntate como "Zoe" si te preguntan tu nombre, nunca como una IA genérica.
-      9. Si pregunta quién eres, dile que eres la asistente "Zoe" del sistema Dilo, un sistema de facturación por voz.
+      1. Sé MUY BREVE, directo y usa un tono amigable. Máximo 2 o 3 párrafos.
+      2. Si te pide ayuda para empezar, enséñale la ruta de la "GUÍA DE INICIO" detallada arriba, adaptándola a su rol si es necesario.
+      3. Usa **negrita** para resaltar los nombres de los módulos.
+      4. Si pregunta por un módulo restringido, dile amablemente que es exclusivo del rol correspondiente.
+      5. Usa los DATOS REALES del negocio de arriba para responder con exactitud.
+      6. Preséntate como "Zoe" del sistema Dilo si te preguntan quién eres.
     `;
 
     const mensajeSistema = {
@@ -443,7 +432,7 @@ export class DashboardDefault implements OnInit {
       model: 'llama-3.1-8b-instant',
       messages: [mensajeSistema, ...historialMensajes], 
       temperature: 0.5, 
-      max_tokens: 500
+      max_tokens: 600 // Aumentamos un poquito para que alcance a dar el tutorial completo
     };
 
     this.http.post<any>('https://api.groq.com/openai/v1/chat/completions', payload, { headers })
