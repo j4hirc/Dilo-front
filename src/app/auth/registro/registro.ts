@@ -1,5 +1,5 @@
 import { Component, inject, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, AbstractControl, ValidationErrors } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../auth.service';
@@ -17,9 +17,8 @@ export class Registro implements OnInit {
   private fb = inject(FormBuilder);
   private authService = inject(AuthService);
   private router = inject(Router);
-  private http = inject(HttpClient); // 🔥 Usaremos esto directo
+  private http = inject(HttpClient); 
   
-  // 🔥 URL directa a tu backend para traer lo más fresco
   private apiUrlParroquias = 'https://dilo-backend-mxlu.onrender.com/api/v1/parroquias';
 
   imagePreview: string | ArrayBuffer | null = null;
@@ -30,29 +29,29 @@ export class Registro implements OnInit {
   registerForm!: FormGroup;
   selectedFile: File | null = null; 
   
-  // Controladores de estado
   isLoading = false;
   isLoadingParroquias = true; 
   
-  // Calculamos la fecha máxima (Hoy) para que no pongan fechas del futuro
   fechaMaxima: string = new Date().toISOString().split('T')[0];
 
   ngOnInit(): void {
     this.cargarParroquias();
 
-    // EXPRESIONES REGULARES PARA VALIDAR MEJOR
     const soloLetras = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/; 
-    const formatoTelefono = /^\+?[0-9\s]{10,14}$/; // Acepta 09... o +593...
+    const soloDiezNumeros = /^[0-9]{10}$/; // Valida exactamente 10 números
 
     this.registerForm = this.fb.group({
-      dni: ['', [Validators.required, Validators.pattern('^[0-9]{10}$')]],
+      // DNI: Exactamente 10 números
+      dni: ['', [Validators.required, Validators.pattern(soloDiezNumeros)]],
       primerNombre: ['', [Validators.required, Validators.minLength(3), Validators.pattern(soloLetras)]],
-      segundoNombre: ['', [Validators.pattern(soloLetras)]], // Opcional, pero si escribe, que sean letras
+      segundoNombre: ['', [Validators.pattern(soloLetras)]],
       apellidoPaterno: ['', [Validators.required, Validators.minLength(3), Validators.pattern(soloLetras)]],
       apellidoMaterno: ['', [Validators.pattern(soloLetras)]],
       email: ['', [Validators.required, Validators.email]],
-      telefono: ['', [Validators.required, Validators.pattern(formatoTelefono)]],
-      fechaNacimiento: ['', Validators.required],
+      // Teléfono: Exactamente 10 números
+      telefono: ['', [Validators.required, Validators.pattern(soloDiezNumeros)]],
+      // Fecha Nacimiento: Obligatorio y con validador de edad (18 a 99 años)
+      fechaNacimiento: ['', [Validators.required, this.ageValidator]],
       direccion: ['', [Validators.required, Validators.minLength(5)]],
       id_parroquia: ['', Validators.required],
       password: ['', [Validators.required, Validators.minLength(8)]],
@@ -61,7 +60,30 @@ export class Registro implements OnInit {
     }, { validators: this.passwordMatchValidator });
   }
 
-  // 🔥 NUEVA FUNCIÓN DIRECTA A LA BASE DE DATOS
+  // 🔥 NUEVO: Validador de edad (18 a 99 años)
+  ageValidator(control: AbstractControl): ValidationErrors | null {
+    if (!control.value) return null; // Si está vacío, el required lo ataja
+    
+    const birthDate = new Date(control.value);
+    const today = new Date();
+    
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+    }
+    
+    if (age < 18) {
+        return { underage: true }; // Menor de 18
+    }
+    if (age > 99) {
+        return { overage: true }; // Mayor de 99
+    }
+    
+    return null; // Válido
+  }
+
   cargarParroquias() {
     this.isLoadingParroquias = true;
     this.http.get<any[]>(this.apiUrlParroquias).subscribe({
@@ -97,11 +119,10 @@ export class Registro implements OnInit {
   onSubmit() {
     if (this.registerForm.invalid) {
       this.registerForm.markAllAsTouched(); 
-      // Alerta de formulario incompleto
       Swal.fire({
         icon: 'warning',
         title: 'Formulario incompleto',
-        text: 'Por favor, revisa los campos en rojo antes de continuar.',
+        text: 'Por favor, revisa los campos marcados antes de continuar.',
         confirmButtonColor: '#ed8936'
       });
       return;
@@ -137,7 +158,6 @@ export class Registro implements OnInit {
       next: () => {
         this.isLoading = false; 
         
-        // SWEETALERT DE ÉXITO NIVEL DIOS
         Swal.fire({
           icon: 'success',
           title: '¡Registro Exitoso!',
@@ -145,7 +165,7 @@ export class Registro implements OnInit {
           confirmButtonColor: '#ed8936',
           timer: 3000,
           timerProgressBar: true,
-          showConfirmButton: false // Se cierra solo
+          showConfirmButton: false 
         }).then(() => {
           this.router.navigate(['/login']);
         });
@@ -159,7 +179,6 @@ export class Registro implements OnInit {
           errorMsg = 'Esta cédula o correo electrónico ya se encuentran registrados.';
         }
 
-        // SWEETALERT DE ERROR
         Swal.fire({
           icon: 'error',
           title: 'No se pudo crear la cuenta',
