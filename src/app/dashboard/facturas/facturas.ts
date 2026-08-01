@@ -27,8 +27,8 @@ export class Facturas implements OnInit, OnDestroy {
   private cdr = inject(ChangeDetectorRef);
   
   facturas: any[] = [];
-  facturasBase: any[] = []; // Guarda la lista original para el buscador
-  terminoBusqueda: string = ''; // La variable que pide el HTML
+  facturasBase: any[] = []; 
+  terminoBusqueda: string = ''; 
   isLoading = true;
   negocioId: number | null = null;
   private apiUrl = environment.apiUrl;
@@ -50,13 +50,16 @@ export class Facturas implements OnInit, OnDestroy {
   clienteSeleccionadoInfo: any = null;
   esConsumidorFinal: boolean = false;
 
-  // 🔥 NUEVO ESTADO DE LA FACTURA BLINDADO
+  // 🔥 NUEVA ESTRUCTURA (CON CAMPOS DE TARJETA SIMULADOS)
   nuevaFactura: any = {
     clienteId: null,
     metodoPago: 'EFECTIVO',
     numeroCuotas: 0,
-    detallesTarjeta: '', 
-    descuentoGlobal: 0, // 🔥 Acepta descuento al total de la factura
+    detallesTarjeta: '', // Cadena que se envía a BD (Ej. Terminada en 1234)
+    tarjetaNumero: '', // Campo simulado
+    tarjetaVence: '',  // Campo simulado
+    tarjetaCvc: '',    // Campo simulado
+    descuentoGlobalPorcentaje: null,
     detalles: []
   };
 
@@ -64,7 +67,7 @@ export class Facturas implements OnInit, OnDestroy {
     productoId: null,
     bodegaId: null,
     cantidad: null,
-    descuento: null, 
+    descuentoPorcentaje: null, 
     productoNombre: '' 
   };
 
@@ -81,14 +84,21 @@ export class Facturas implements OnInit, OnDestroy {
   metodoPagoConfirmado: boolean = false;
   quiereEmitirPendiente: boolean = false;
 
-  // 🔥 CÁLCULOS CORREGIDOS PARA SOPORTAR DESCUENTOS
+  productoPendientePorBodega: any = null;
+  cantidadPendientePorBodega: number = 1;
+  descuentoPendientePorBodega: number = 0;
+
   get subtotalCarrito(): number {
     return this.nuevaFactura.detalles.reduce((sum: number, item: any) => sum + (item.subtotal || 0), 0);
   }
 
+  get montoDescuentoGlobal(): number {
+    const descPct = Number(this.nuevaFactura.descuentoGlobalPorcentaje || 0);
+    return this.subtotalCarrito * (descPct / 100);
+  }
+
   get totalCarrito(): number {
-    const descGlobal = Number(this.nuevaFactura.descuentoGlobal || 0);
-    const total = this.subtotalCarrito - descGlobal;
+    const total = this.subtotalCarrito - this.montoDescuentoGlobal;
     return total > 0 ? total : 0;
   }
 
@@ -155,7 +165,7 @@ export class Facturas implements OnInit, OnDestroy {
       });
   }
 
- cargarTodasLasFacturas(id: number) {
+  cargarTodasLasFacturas(id: number) {
     this.isLoading = true;
     this.http.get<any[]>(`${this.apiUrl}/negocios/${id}/facturas`, { headers: this.getAuthHeaders() }).subscribe({
       next: (data) => {
@@ -171,7 +181,7 @@ export class Facturas implements OnInit, OnDestroy {
           detalles: f.detallesFactura || f.detalles || f.items || [] 
         }));
         
-        this.facturasBase = [...this.facturas]; // 🔥 NUEVO: Guardamos la original para buscar
+        this.facturasBase = [...this.facturas]; 
         
         this.isLoading = false;
         this.cdr.detectChanges();
@@ -180,7 +190,6 @@ export class Facturas implements OnInit, OnDestroy {
     });
   }
 
-  // 🔥 NUEVO: Función para buscar facturas en tiempo real
   buscarFacturas() {
     if (!this.terminoBusqueda.trim()) {
       this.facturas = [...this.facturasBase];
@@ -198,8 +207,18 @@ export class Facturas implements OnInit, OnDestroy {
     this.cdr.detectChanges(); 
 
     this.cargarCatalogos();
-    this.nuevaFactura = { clienteId: null, metodoPago: 'EFECTIVO', numeroCuotas: 0, detallesTarjeta: '', descuentoGlobal: 0, detalles: [] };
-    this.itemTemp = { productoId: null, bodegaId: null, cantidad: null, descuento: null, productoNombre: '' };
+    this.nuevaFactura = { 
+        clienteId: null, 
+        metodoPago: 'EFECTIVO', 
+        numeroCuotas: 0, 
+        detallesTarjeta: '', 
+        tarjetaNumero: '', 
+        tarjetaVence: '', 
+        tarjetaCvc: '', 
+        descuentoGlobalPorcentaje: null, 
+        detalles: [] 
+    };
+    this.itemTemp = { productoId: null, bodegaId: null, cantidad: null, descuentoPorcentaje: null, productoNombre: '' };
     this.terminoBusquedaCliente = '';
     this.clienteSeleccionadoInfo = null;
     this.mostrarDropdownClientes = false;
@@ -209,6 +228,8 @@ export class Facturas implements OnInit, OnDestroy {
     this.tipoOpciones = null;
     this.metodoPagoConfirmado = false;
     this.quiereEmitirPendiente = false;
+
+    this.productoPendientePorBodega = null;
 
     if (porVoz) {
       window.speechSynthesis.resume();
@@ -374,7 +395,7 @@ export class Facturas implements OnInit, OnDestroy {
     this.voiceState = VoiceStep.ESCUCHA_LIBRE;
     
     if (!this.nuevaFactura.clienteId && !this.esConsumidorFinal) {
-        this.voiceMessage = "¿A quién le facturamos y qué le agregamos?";
+        this.voiceMessage = "Hola, soy tu asistente Zoe. ¿A quién le facturamos y qué le agregamos?";
     } else if (!this.metodoPagoConfirmado) {
         this.voiceMessage = "Cliente listo. ¿Con qué paga?";
     } else {
@@ -390,6 +411,7 @@ export class Facturas implements OnInit, OnDestroy {
     this.isListening = false;
     this.isThinking = false;
     this.transcriptAcumulado = '';
+    this.productoPendientePorBodega = null;
     clearTimeout(this.silenceTimer);
     window.speechSynthesis.cancel();
     if (this.recognition) this.recognition.abort();
@@ -409,11 +431,14 @@ export class Facturas implements OnInit, OnDestroy {
         const utterance = new SpeechSynthesisUtterance(texto);
         utterance.lang = 'es-ES';
         
-        utterance.rate = 1.35; 
+        // 🔥 HABLA A UNA VELOCIDAD MEDIA-RÁPIDA (Ni tan lenta, ni inentendible)
+        utterance.rate = 1.25; 
         utterance.pitch = 1.2; 
         
         let voices = window.speechSynthesis.getVoices();
-        let femaleVoice = voices.find(v => v.lang.startsWith('es') && /(sabina|paulina|helena|monica|victoria|lucia|sofia|laura|isabel|carmen|female|mujer|google español)/i.test(v.name));
+        
+        // 🔥 OBLIGA A ZOE A USAR VOZ DE MUJER
+        let femaleVoice = voices.find(v => v.lang.startsWith('es') && /(sabina|paulina|helena|monica|victoria|lucia|sofia|laura|isabel|carmen|female|mujer)/i.test(v.name));
         
         if (!femaleVoice) {
             femaleVoice = voices.find(v => v.lang.startsWith('es') && !/(pablo|jorge|diego|carlos|male|hombre)/i.test(v.name));
@@ -444,9 +469,17 @@ export class Facturas implements OnInit, OnDestroy {
     if (comandosLimpiar.some(cmd => transcriptLimpio.includes(cmd))) {
         this.nuevaFactura.detalles = [];
         this.limpiarClienteSeleccionado();
-        this.nuevaFactura.descuentoGlobal = 0;
+        this.nuevaFactura.descuentoGlobalPorcentaje = null;
         this.nuevaFactura.detallesTarjeta = '';
+        this.nuevaFactura.tarjetaNumero = '';
+        this.nuevaFactura.tarjetaVence = '';
+        this.nuevaFactura.tarjetaCvc = '';
         this.hablar("He vaciado el ticket por completo. Empecemos de cero.", () => this.escuchar());
+        return;
+    }
+
+    if (this.voiceState === VoiceStep.ELEGIR_OPCION && this.opcionesVoz.length > 0) {
+        this.manejarDesambiguacion(transcriptLimpio);
         return;
     }
 
@@ -478,34 +511,36 @@ export class Facturas implements OnInit, OnDestroy {
 
     const listaNombresCli = this.clientesList.map(c => c.nombreCompleto || c.primerNombre).join(', ').substring(0, 600);
     const listaNombresProd = this.productosList.map(p => p.nombre).join(', ').substring(0, 600);
+    const listaBodegas = this.bodegasList.map(b => b.nombre).join(', ');
 
-    // 🔥 PROMPT CON SOPORTE PARA TARJETAS Y DESCUENTOS GLOBALES Y POR ITEM
+    // 🔥 PROMPT ESTRICTO PARA ZOE (Mujer, No pide Tarjetas)
     const promptSystem = `
-      Eres la IA veloz de un sistema POS. El usuario habla de forma natural.
-      Extrae los datos en un JSON puro.
+      Eres Zoe, la veloz asistente virtual con identidad de MUJER de un sistema POS. 
+      NUNCA pidas los datos de la tarjeta de crédito al usuario (ni numero, ni vencimiento, ni CVC). Esos campos son opcionales y manuales. Si el usuario te dicta números de tarjeta, ignóralos por seguridad y solo establece el método como TARJETA_CREDITO.
       
       Listas de BD:
       Clientes: [${listaNombresCli}]
       Productos: [${listaNombresProd}]
+      Bodegas: [${listaBodegas}]
 
       Formato EXACTO:
       {
          ${instruccionCliente}
          "metodoPago": "EFECTIVO" | "TRANSFERENCIA" | "TARJETA_CREDITO" | null,
-         "detallesTarjeta": "Ej: Visa terminada en 1234 (o null)",
          "cuotas": numero_entero_o_null,
-         "descuentoGlobal": numero_decimal_o_null,
-         "items": [ { "producto": "Nombre", "cantidad": numero_entero_o_null, "descuento": numero_decimal_o_0 } ],
+         "descuentoGlobalPorcentaje": numero_o_null,
+         "items": [ { "producto": "Nombre", "cantidad": numero_entero_o_null, "descuentoPorcentaje": numero_o_0, "bodega": "Nombre de la bodega o null" } ],
          "eliminarProducto": "Nombre del producto a quitar del carrito (o null)",
          "emitirFactura": true o false
       }
       
       REGLAS:
-      1. Si dice "Consumidor final" o "sin datos", cliente es "CONSUMIDOR_FINAL".
+      1. Si dice "Consumidor final", cliente es "CONSUMIDOR_FINAL".
       2. "emitirFactura": true SIEMPRE que insinúe terminar.
-      3. TARJETA Y CUOTAS: Si menciona "tarjeta" o "crédito" es TARJETA_CREDITO. Si menciona banco o terminación, ponlo en "detallesTarjeta". Si dice "meses" extrae el número a "cuotas".
-      4. DESCUENTOS: Si dice "pon un descuento de 5 dolares a la factura" o "bájale 2 al total", ponlo en "descuentoGlobal". Si el descuento es solo para un producto específico, ponlo en el "descuento" del "item".
-      5. NO devuelvas texto fuera del JSON.
+      3. TARJETA: Si menciona "tarjeta" o "crédito" es TARJETA_CREDITO. Si dice "meses" extrae el número a "cuotas". Recuerda, NO pidas la tarjeta.
+      4. DESCUENTOS (%): Solo extrae números puros para "descuentoGlobalPorcentaje" y "descuentoPorcentaje".
+      5. BODEGAS: Si el usuario pide explícitamente sacar de una bodega específica, escríbelo en "bodega" dentro de "items". Si no, pon null.
+      6. NO devuelvas texto fuera del JSON.
     `;
 
     const payload = {
@@ -556,7 +591,7 @@ export class Facturas implements OnInit, OnDestroy {
         if (index !== -1) {
             const nombreQuitado = this.nuevaFactura.detalles[index].productoNombre;
             this.eliminarDelCarrito(index);
-            this.hablar(`Listo, acabo de quitar ${nombreQuitado} del ticket. ¿Qué más hacemos?`, () => this.escuchar());
+            this.hablar(`Listo, quité ${nombreQuitado}. ¿Qué más hacemos?`, () => this.escuchar());
             return; 
         }
     }
@@ -564,14 +599,6 @@ export class Facturas implements OnInit, OnDestroy {
     if (datos.metodoPago && datos.metodoPago !== 'null' && datos.metodoPago !== 'NULL') {
         this.nuevaFactura.metodoPago = datos.metodoPago;
         this.metodoPagoConfirmado = true;
-    }
-
-    if (datos.detallesTarjeta && datos.detallesTarjeta !== 'null') {
-        this.nuevaFactura.detallesTarjeta = datos.detallesTarjeta;
-        if (this.nuevaFactura.metodoPago !== 'TARJETA_CREDITO') {
-            this.nuevaFactura.metodoPago = 'TARJETA_CREDITO';
-            this.metodoPagoConfirmado = true;
-        }
     }
 
     if (datos.cuotas !== undefined && datos.cuotas !== null) {
@@ -588,11 +615,10 @@ export class Facturas implements OnInit, OnDestroy {
         this.metodoPagoConfirmado = true;
     }
 
-    // 🔥 APLICAR DESCUENTO GLOBAL SI LO DICTÓ LA IA
-    if (datos.descuentoGlobal !== undefined && datos.descuentoGlobal !== null) {
-        const descGlobal = parseFloat(datos.descuentoGlobal);
+    if (datos.descuentoGlobalPorcentaje !== undefined && datos.descuentoGlobalPorcentaje !== null) {
+        const descGlobal = parseFloat(datos.descuentoGlobalPorcentaje);
         if (!isNaN(descGlobal) && descGlobal > 0) {
-            this.nuevaFactura.descuentoGlobal = descGlobal;
+            this.nuevaFactura.descuentoGlobalPorcentaje = descGlobal;
             algoAgregado = true;
         }
     }
@@ -607,6 +633,8 @@ export class Facturas implements OnInit, OnDestroy {
                 this.seleccionarCliente(matchesCli[0]); 
             } else if (matchesCli.length > 1) {
                 pedirCedula = true; 
+                this.iniciarDesambiguacion('CLIENTE', matchesCli, "Hay varios clientes con ese nombre. Dime el número del correcto: " + matchesCli.slice(0,3).map((c, i) => `${i+1}, ${c.nombreCompleto || c.primerNombre}`).join('. '));
+                return;
             } else {
                 mensajesAlerta.push(`no encontré a ${datos.cliente}`);
             }
@@ -616,12 +644,11 @@ export class Facturas implements OnInit, OnDestroy {
     if (pedirCedula) {
         this.quiereEmitirPendiente = quiereEmitir;
         this.voiceState = VoiceStep.ESCUCHA_LIBRE;
-        this.hablar("Hay varios clientes con ese nombre. Por favor, díctame su número de cédula para estar seguros.", () => this.escuchar());
+        this.hablar("Por favor, díctame la cédula de ese cliente para estar segura.", () => this.escuchar());
         return;
     }
 
     const items = datos.items || [];
-    let bodegaDefaultId = this.bodegasList.length > 0 ? this.bodegasList[0].id : null;
     let pedirAclaracionProd = null;
 
     for (let item of items) {
@@ -632,38 +659,61 @@ export class Facturas implements OnInit, OnDestroy {
             let prod = matchesProd[0]; 
             let cant = Number(item.cantidad);
             if (isNaN(cant) || cant <= 0) cant = 1;
-            
-            let desc = Number(item.descuento || 0);
+            let descPct = Number(item.descuentoPorcentaje || 0);
 
-            if (bodegaDefaultId) {
-                const stockActual = this.obtenerStock(prod.id, bodegaDefaultId);
+            const bodegasConStock = this.bodegasList.filter(b => {
+                const stock = this.obtenerStock(prod.id, b.id);
+                return stock !== null && stock > 0;
+            });
+
+            let bodegaElegidaId = null;
+
+            if (item.bodega && item.bodega !== 'null') {
+                const bodCoincidencia = this.bodegasList.find(b => this.limpiarTexto(b.nombre).includes(this.limpiarTexto(item.bodega)));
+                if (bodCoincidencia) {
+                    bodegaElegidaId = bodCoincidencia.id;
+                }
+            }
+
+            if (!bodegaElegidaId) {
+                if (bodegasConStock.length === 1) {
+                    bodegaElegidaId = bodegasConStock[0].id;
+                } else if (bodegasConStock.length > 1) {
+                    this.productoPendientePorBodega = prod;
+                    this.cantidadPendientePorBodega = cant;
+                    this.descuentoPendientePorBodega = descPct;
+                    this.iniciarDesambiguacion('BODEGA', bodegasConStock, `Ese producto está en varias bodegas. ¿De cuál quieres que lo saque? ` + bodegasConStock.map((b, i) => `${i+1}, ${b.nombre}`).join('. '));
+                    return; 
+                } else {
+                    mensajesAlerta.push(`no hay stock de ${prod.nombre}`);
+                    continue;
+                }
+            }
+
+            if (bodegaElegidaId) {
+                const stockActual = this.obtenerStock(prod.id, bodegaElegidaId);
                 
                 if (stockActual === null || stockActual <= 0) {
                     mensajesAlerta.push(`no hay stock de ${prod.nombre}`);
                 } else {
                     if (cant > stockActual) {
                         cant = stockActual;
-                        mensajesAlerta.push(`solo metí ${cant} de ${prod.nombre} porque no hay más`);
+                        mensajesAlerta.push(`solo metí ${cant} de ${prod.nombre} porque se acabó el stock`);
                     }
-                    this.agregarProductoDirecto(prod, cant, bodegaDefaultId, desc);
+                    this.agregarProductoDirecto(prod, cant, bodegaElegidaId, descPct);
                     algoAgregado = true;
                 }
             }
         } else if (matchesProd.length > 1) {
             pedirAclaracionProd = item.producto; 
+            this.iniciarDesambiguacion('PRODUCTO', matchesProd, `Tengo varios productos que suenan igual. Dime el número del correcto: ` + matchesProd.slice(0,3).map((p, i) => `${i+1}, ${p.nombre}`).join('. '));
+            return; 
         } else if (matchesProd.length === 0) {
             mensajesAlerta.push(`no tengo ${item.producto} en el catálogo`);
         }
     }
 
     this.cdr.detectChanges();
-
-    if (pedirAclaracionProd) {
-        this.quiereEmitirPendiente = quiereEmitir;
-        this.voiceState = VoiceStep.ESCUCHA_LIBRE;
-        this.hablar(`Tengo varios productos que coinciden con ${pedirAclaracionProd}. ¿Puedes ser un poco más específico?`, () => this.escuchar());
-        return;
-    }
 
     const faltaCliente = !this.nuevaFactura.clienteId && !this.esConsumidorFinal;
     const faltaItems = this.nuevaFactura.detalles.length === 0;
@@ -673,7 +723,7 @@ export class Facturas implements OnInit, OnDestroy {
     if ((quiereEmitir || this.quiereEmitirPendiente) && !faltaCliente && !faltaItems) {
         this.quiereEmitirPendiente = false;
         this.voiceState = VoiceStep.OFF;
-        this.hablar(`${prefijoAviso}¡Todo listo! Emitiendo factura.`);
+        this.hablar(`${prefijoAviso}Todo listo. Emitiendo factura ahora mismo.`);
         setTimeout(() => { this.guardarFactura(); }, 1200);
         return;
     }
@@ -682,16 +732,16 @@ export class Facturas implements OnInit, OnDestroy {
     this.voiceState = VoiceStep.ESCUCHA_LIBRE;
 
     if (faltaCliente) {
-        this.hablar(`${prefijoAviso}Para cobrar necesito el cliente. ¿A quién le facturamos?`, () => this.escuchar());
+        this.hablar(`${prefijoAviso}Me falta el cliente. ¿A quién le facturamos?`, () => this.escuchar());
     } 
     else if (faltaItems) {
-        this.hablar(`${prefijoAviso}El ticket está vacío. ¿Qué le agregamos?`, () => this.escuchar());
+        this.hablar(`${prefijoAviso}El ticket está vacío. ¿Qué agregamos?`, () => this.escuchar());
     } 
     else {
         this.voiceState = VoiceStep.CONFIRMAR;
         let msj = algoAgregado
-            ? `${prefijoAviso}Total a pagar $${this.totalCarrito.toFixed(2)}. ¿Emitimos?`
-            : `${prefijoAviso}Todo listo. Son $${this.totalCarrito.toFixed(2)}. ¿Deseas emitir ya?`;
+            ? `${prefijoAviso}A cobrar $${this.totalCarrito.toFixed(2)}. ¿Te emito la factura?`
+            : `${prefijoAviso}Todo listo, son $${this.totalCarrito.toFixed(2)}. ¿Deseas emitir ya?`;
         this.hablar(msj, () => this.escuchar());
     }
   }
@@ -715,7 +765,7 @@ export class Facturas implements OnInit, OnDestroy {
     return [];
   }
 
-  private iniciarDesambiguacion(tipo: 'CLIENTE' | 'PRODUCTO', opciones: any[], mensaje: string) {
+  private iniciarDesambiguacion(tipo: 'CLIENTE' | 'PRODUCTO' | 'BODEGA', opciones: any[], mensaje: string) {
     this.tipoOpciones = tipo;
     this.opcionesVoz = opciones.slice(0, 5); 
     this.voiceState = VoiceStep.ELEGIR_OPCION;
@@ -740,8 +790,37 @@ export class Facturas implements OnInit, OnDestroy {
               this.aplicarDatosExtraidos({}); 
           }
       } 
+      else if (this.tipoOpciones === 'PRODUCTO') {
+          let prod = seleccionado;
+          let cant = this.itemTemp.cantidad || 1;
+          this.opcionesVoz = [];
+          this.tipoOpciones = null;
+          
+          this.aplicarDatosExtraidos({
+              items: [{ producto: prod.nombre, cantidad: cant, descuentoPorcentaje: 0 }]
+          });
+      }
+      else if (this.tipoOpciones === 'BODEGA') {
+          let bodega = seleccionado;
+          let prod = this.productoPendientePorBodega;
+          let cant = this.cantidadPendientePorBodega;
+          let desc = this.descuentoPendientePorBodega;
+          
+          this.opcionesVoz = [];
+          this.tipoOpciones = null;
+          this.productoPendientePorBodega = null;
+
+          const stockActual = this.obtenerStock(prod.id, bodega.id);
+          if (stockActual !== null && stockActual > 0) {
+              if (cant > stockActual) cant = stockActual;
+              this.agregarProductoDirecto(prod, cant, bodega.id, desc);
+              this.hablar(`Listo, lo saqué de ${bodega.nombre}. ¿Qué más?`, () => this.escuchar());
+          } else {
+              this.hablar(`Uy, no hay stock de ${prod.nombre} en ${bodega.nombre}. ¿Hacemos otra cosa?`, () => this.escuchar());
+          }
+      }
     } else {
-      this.hablar("Oye, no capté la opción. ¿Qué número es?", () => this.escuchar());
+      this.hablar("No te entendí. Dime qué número es.", () => this.escuchar());
     }
   }
 
@@ -759,9 +838,6 @@ export class Facturas implements OnInit, OnDestroy {
     return -1;
   }
 
-  // =======================================================
-  // 🔥 CARRITO Y PDF
-  // =======================================================
   agregarAlCarrito() {
     if (!this.itemTemp.productoId || !this.itemTemp.bodegaId || this.itemTemp.cantidad <= 0) return;
     const prodSelect = this.productosList.find(p => p.id === this.itemTemp.productoId);
@@ -773,26 +849,22 @@ export class Facturas implements OnInit, OnDestroy {
         Swal.fire('Stock Limitado', `Solo quedan ${stockActual} unidades disponibles.`, 'info');
     }
     
-    let desc = Number(this.itemTemp.descuento || 0);
+    let descPct = Number(this.itemTemp.descuentoPorcentaje || 0);
 
     if (cant > 0) {
-        this.agregarProductoDirecto(prodSelect, cant, this.itemTemp.bodegaId, desc);
+        this.agregarProductoDirecto(prodSelect, cant, this.itemTemp.bodegaId, descPct);
     }
-    this.itemTemp = { productoId: null, bodegaId: this.itemTemp.bodegaId, cantidad: null, descuento: null, productoNombre: '' }; 
+    this.itemTemp = { productoId: null, bodegaId: this.itemTemp.bodegaId, cantidad: null, descuentoPorcentaje: null, productoNombre: '' }; 
   }
 
-  private agregarProductoDirecto(producto: any, cantidad: number, bodegaId: any, descuento: number = 0) {
+  private agregarProductoDirecto(producto: any, cantidad: number, bodegaId: any, descuentoPorcentaje: number = 0) {
     if (!producto || !bodegaId || cantidad <= 0) return;
 
     let precio = Number(producto.costoPromedioActual || 0);
     if (precio <= 0) precio = Number(producto.precioUnitario || 0);
 
-    const subtotal = (precio * cantidad) - descuento;
-
-    if (subtotal < 0) {
-        Swal.fire('Error', `El descuento no puede ser mayor al precio total de ${producto.nombre}.`, 'error');
-        return;
-    }
+    const descMonto = (precio * cantidad) * (descuentoPorcentaje / 100);
+    const subtotal = (precio * cantidad) - descMonto;
 
     const bodSelect = this.bodegasList.find(b => b.id === bodegaId);
     const bodegaNombre = bodSelect ? bodSelect.nombre : 'Principal';
@@ -804,7 +876,8 @@ export class Facturas implements OnInit, OnDestroy {
       cantidad: cantidad,
       productoNombre: producto.nombre,
       precioUnitario: precio,
-      descuento: descuento, 
+      descuentoPorcentaje: descuentoPorcentaje, 
+      descuentoMonto: descMonto, 
       subtotal: subtotal
     });
     this.cdr.detectChanges();
@@ -823,17 +896,27 @@ export class Facturas implements OnInit, OnDestroy {
     this.isSaving = true;
     Swal.fire({ title: 'Emitiendo Factura...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
+    // 🔥 PREPARAR LA TARJETA SIMULADA PARA EL RECIBO
+    if (this.nuevaFactura.metodoPago === 'TARJETA_CREDITO' && this.nuevaFactura.tarjetaNumero) {
+        const numClean = this.nuevaFactura.tarjetaNumero.replace(/\D/g, '');
+        if (numClean.length >= 4) {
+            this.nuevaFactura.detallesTarjeta = `Tarjeta terminada en ${numClean.slice(-4)}`;
+        } else {
+            this.nuevaFactura.detallesTarjeta = 'Pago con Tarjeta';
+        }
+    }
+
     const payload = {
       clienteId: this.nuevaFactura.clienteId, 
       metodoPago: this.nuevaFactura.metodoPago,
       tarjeta: this.nuevaFactura.detallesTarjeta, 
       numeroCuotas: this.nuevaFactura.numeroCuotas,
-      descuentoGlobal: this.nuevaFactura.descuentoGlobal || 0,
+      descuentoGlobal: this.montoDescuentoGlobal || 0, 
       detalles: this.nuevaFactura.detalles.map((d: any) => ({
         productoId: d.productoId,
         bodegaId: d.bodegaId,
         cantidad: d.cantidad,
-        descuento: d.descuento || 0
+        descuento: d.descuentoMonto || 0 
       }))
     };
 
@@ -850,7 +933,7 @@ export class Facturas implements OnInit, OnDestroy {
             fecha: res.fechaEmision ? new Date(res.fechaEmision).toLocaleDateString() : new Date().toLocaleDateString(),
             monto: Number(res.totalFactura || res.total || 0),
             tipo: res.formaPago || 'Manual',
-            descuentoGlobal: this.nuevaFactura.descuentoGlobal || 0, // Pasamos el descuento para que el PDF lo sepa
+            descuentoGlobal: this.montoDescuentoGlobal || 0,
             detalles: res.detallesFactura || res.detalles || this.nuevaFactura.detalles 
           };
           
@@ -874,7 +957,6 @@ export class Facturas implements OnInit, OnDestroy {
     const subtotal = total / (1 + this.ivaActual);
     const iva = total - subtotal;
     
-    // Obtenemos el descuento global desde la respuesta de la API o usamos 0
     const descuentoGlobal = Number(fac.descuentoGlobal || 0);
     
     let filasProductos = '';
@@ -885,7 +967,8 @@ export class Facturas implements OnInit, OnDestroy {
         const cantidad = item.cantidad || 1;
         const descripcion = item.producto?.nombre || item.productoNombre || item.descripcion || 'Producto / Servicio';
         const precioUnit = Number(item.precioUnitario || item.precio || 0);
-        const descItem = Number(item.descuento || 0);
+        
+        const descItem = Number(item.descuento || item.descuentoMonto || 0);
         const subtotalItem = Number(item.subtotal || item.subtotalItem || ((cantidad * precioUnit) - descItem));
         
         let descHtml = descItem > 0 ? `<br><small style="color: #ea580c; font-weight: bold;">(Descuento: -$${descItem.toFixed(2)})</small>` : '';
@@ -912,7 +995,7 @@ export class Facturas implements OnInit, OnDestroy {
 
     let htmlDescuento = descuentoGlobal > 0 ? `
         <div class="total-row">
-            <span>Descuento Aplicado a Factura</span>
+            <span>Descuento Global Adicional</span>
             <span class="font-bold" style="color: #ea580c;">-$${descuentoGlobal.toFixed(2).replace('.', ',')}</span>
         </div>` : '';
 
