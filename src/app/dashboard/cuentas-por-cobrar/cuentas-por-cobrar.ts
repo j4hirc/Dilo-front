@@ -16,6 +16,12 @@ export class CuentasPorCobrar implements OnInit {
   private cdr = inject(ChangeDetectorRef);
   
   cuentas: any[] = [];
+  cuentasBase: any[] = []; // 🔥 Guardamos el estado original para buscar y filtrar
+
+  // 🔥 Variables para filtros
+  terminoBusqueda: string = '';
+  filtroEstado: string = 'TODAS';
+
   isLoading = true;
   negocioId: number | null = null;
   private apiUrl = 'https://dilo-backend-mxlu.onrender.com/api/v1';
@@ -55,9 +61,10 @@ export class CuentasPorCobrar implements OnInit {
     this.http.get<any[]>(`${this.apiUrl}/cuentas-por-cobrar/negocio/${id}`, { headers: this.getAuthHeaders() }).subscribe({
       next: (data) => {
         setTimeout(() => {
-            // Inicializamos cada cuenta con la propiedad showCuotas en false para el acordeón
-            this.cuentas = Array.isArray(data) ? data.map(c => ({ ...c, showCuotas: false })) : [];
-            this.calcularEstadisticas();
+            // Inicializamos cada cuenta y llenamos cuentasBase
+            this.cuentasBase = Array.isArray(data) ? data.map(c => ({ ...c, showCuotas: false })) : [];
+            this.calcularEstadisticas(); // Calcula sobre las de base
+            this.aplicarFiltros(); // Aplica por si había algo filtrado
             this.isLoading = false;
             this.cdr.detectChanges();
         }, 0);
@@ -70,6 +77,33 @@ export class CuentasPorCobrar implements OnInit {
     });
   }
 
+  // 🔥 NUEVO: Función para establecer el filtro y buscar
+  setFiltro(estado: string) {
+      this.filtroEstado = estado;
+      this.aplicarFiltros();
+  }
+
+  // 🔥 NUEVO: Lógica de Filtrado y Búsqueda
+  aplicarFiltros() {
+      let filtradas = [...this.cuentasBase];
+
+      // Filtro por Chips (Botones de estado)
+      if (this.filtroEstado !== 'TODAS') {
+          filtradas = filtradas.filter(c => c.estado === this.filtroEstado);
+      }
+
+      // Buscador por Texto
+      if (this.terminoBusqueda.trim()) {
+          const term = this.terminoBusqueda.toLowerCase().trim();
+          filtradas = filtradas.filter(c => 
+              (c.numeroFactura && c.numeroFactura.toLowerCase().includes(term)) || 
+              (c.clienteNombre && c.clienteNombre.toLowerCase().includes(term))
+          );
+      }
+
+      this.cuentas = filtradas;
+  }
+
   calcularEstadisticas() {
     this.totalPorCobrar = 0;
     this.totalAbonado = 0;
@@ -77,12 +111,12 @@ export class CuentasPorCobrar implements OnInit {
 
     const hoy = new Date().getTime();
 
-    this.cuentas.forEach(c => {
+    // Las matemáticas deben hacerse siempre sobre Cuentas Base para que no varíen al filtrar
+    this.cuentasBase.forEach(c => {
       const monto = Number(c.montoTotal || 0);
       const saldo = Number(c.saldoPendiente || 0);
       
       this.totalPorCobrar += saldo;
-      // Lo recuperado es la diferencia entre el total y lo que falta por cobrar
       this.totalAbonado += (monto - saldo);
       
       const fechaVence = new Date(c.fechaVencimiento).getTime();

@@ -96,3 +96,104 @@
 
 .btn-toggle-cuotas { background: #f1f5f9; border: 1px solid #cbd5e1; padding: 4px 10px; border-radius: 6px; font-weight: 700; cursor: pointer; color: #475569; }
 .sub-table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; border: 1px solid #e2e8f0; } .sub-table th, .sub-table td { padding: 10px 15px; font-size: 0.85rem; border-bottom: 1px solid #f1f5f9; }
+/* =========================================
+   🔥 FILTROS Y BUSCADOR (NUEVO)
+   ========================================= */
+.filters-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: white;
+    padding: 16px 24px;
+    border-radius: 16px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.02);
+    border: 1px solid #e2e8f0;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-top: -5px; /* Para que quede pegadito a los stats */
+}
+
+.search-box-modern {
+    position: relative;
+    flex: 1;
+    min-width: 280px;
+}
+
+.search-box-modern svg {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: 0.7;
+}
+
+.search-box-modern input {
+    width: 100%;
+    padding: 12px 16px 12px 42px;
+    border-radius: 12px;
+    border: 1px solid #cbd5e1;
+    background-color: #f8fafc;
+    font-size: 0.95rem;
+    color: #0f172a;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-sizing: border-box;
+}
+
+.search-box-modern input:focus {
+    outline: none;
+    border-color: var(--primary-orange, #ea580c);
+    background-color: #ffffff;
+    box-shadow: 0 0 0 4px rgba(234, 88, 12, 0.1);
+}
+
+.filter-chips {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.chip {
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    color: #64748b;
+    padding: 8px 18px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.chip:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+    transform: translateY(-2px);
+}
+
+.chip.active {
+    background: #0f172a;
+    color: white;
+    border-color: #0f172a;
+    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.2);
+}
+
+/* Colores personalizados para los chips activos */
+.chip-yellow.active { background: #ca8a04; border-color: #ca8a04; box-shadow: 0 4px 10px rgba(202, 138, 4, 0.2); }
+.chip-red.active { background: #dc2626; border-color: #dc2626; box-shadow: 0 4px 10px rgba(220, 38, 38, 0.2); }
+.chip-green.active { background: #16a34a; border-color: #16a34a; box-shadow: 0 4px 10px rgba(22, 163, 74, 0.2); }
+
+/* Responsive de filtros */
+@media (max-width: 768px) {
+    .filters-container { 
+        flex-direction: column; 
+        align-items: stretch; 
+        padding: 16px;
+    }
+    .filter-chips { 
+        overflow-x: auto; 
+        flex-wrap: nowrap; 
+        padding-bottom: 5px; 
+    }
+    /* Ocultamos el scrollbar en chips para móviles pero dejamos que se deslice */
+    .filter-chips::-webkit-scrollbar { display: none; }
+}

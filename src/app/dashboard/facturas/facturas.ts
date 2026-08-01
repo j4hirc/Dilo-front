@@ -31,6 +31,7 @@ export class Facturas implements OnInit, OnDestroy {
   terminoBusqueda: string = ''; 
   isLoading = true;
   negocioId: number | null = null;
+  negocioInfo: any = null; // 🔥 NUEVO: Para guardar los datos reales del negocio
   private apiUrl = environment.apiUrl;
   private groqApiKey = environment.groqApiKey;
 
@@ -50,15 +51,14 @@ export class Facturas implements OnInit, OnDestroy {
   clienteSeleccionadoInfo: any = null;
   esConsumidorFinal: boolean = false;
 
-  // 🔥 NUEVA ESTRUCTURA (CON CAMPOS DE TARJETA SIMULADOS)
   nuevaFactura: any = {
     clienteId: null,
     metodoPago: 'EFECTIVO',
     numeroCuotas: 0,
-    detallesTarjeta: '', // Cadena que se envía a BD (Ej. Terminada en 1234)
-    tarjetaNumero: '', // Campo simulado
-    tarjetaVence: '',  // Campo simulado
-    tarjetaCvc: '',    // Campo simulado
+    detallesTarjeta: '', 
+    tarjetaNumero: '', 
+    tarjetaVence: '',  
+    tarjetaCvc: '',    
     descuentoGlobalPorcentaje: null,
     detalles: []
   };
@@ -133,6 +133,7 @@ export class Facturas implements OnInit, OnDestroy {
     this.cargarIvaDelSistema();
 
     if (this.negocioId) {
+      this.cargarDatosNegocio(); // 🔥 Carga los datos reales del negocio para el PDF
       this.cargarTodasLasFacturas(this.negocioId);
     } else {
       this.isLoading = false;
@@ -150,6 +151,17 @@ export class Facturas implements OnInit, OnDestroy {
     const rawToken = localStorage.getItem('dilo_token') || '';
     const cleanToken = rawToken.replace(/['"]+/g, ''); 
     return new HttpHeaders().set('Authorization', `Bearer ${cleanToken}`);
+  }
+
+  // 🔥 NUEVO: Función para traer los datos reales del negocio
+  cargarDatosNegocio() {
+    if (!this.negocioId) return;
+    this.http.get<any>(`${this.apiUrl}/negocios/${this.negocioId}`, { headers: this.getAuthHeaders() }).subscribe({
+      next: (data) => {
+        this.negocioInfo = data;
+      },
+      error: (err) => console.warn('No se pudo cargar la info del negocio', err)
+    });
   }
 
   cargarIvaDelSistema() {
@@ -431,13 +443,11 @@ export class Facturas implements OnInit, OnDestroy {
         const utterance = new SpeechSynthesisUtterance(texto);
         utterance.lang = 'es-ES';
         
-        // 🔥 HABLA A UNA VELOCIDAD MEDIA-RÁPIDA (Ni tan lenta, ni inentendible)
         utterance.rate = 1.25; 
         utterance.pitch = 1.2; 
         
         let voices = window.speechSynthesis.getVoices();
         
-        // 🔥 OBLIGA A ZOE A USAR VOZ DE MUJER
         let femaleVoice = voices.find(v => v.lang.startsWith('es') && /(sabina|paulina|helena|monica|victoria|lucia|sofia|laura|isabel|carmen|female|mujer)/i.test(v.name));
         
         if (!femaleVoice) {
@@ -513,10 +523,9 @@ export class Facturas implements OnInit, OnDestroy {
     const listaNombresProd = this.productosList.map(p => p.nombre).join(', ').substring(0, 600);
     const listaBodegas = this.bodegasList.map(b => b.nombre).join(', ');
 
-    // 🔥 PROMPT ESTRICTO PARA ZOE (Mujer, No pide Tarjetas)
     const promptSystem = `
       Eres Zoe, la veloz asistente virtual con identidad de MUJER de un sistema POS. 
-      NUNCA pidas los datos de la tarjeta de crédito al usuario (ni numero, ni vencimiento, ni CVC). Esos campos son opcionales y manuales. Si el usuario te dicta números de tarjeta, ignóralos por seguridad y solo establece el método como TARJETA_CREDITO.
+      NUNCA pidas los datos de la tarjeta de crédito al usuario.
       
       Listas de BD:
       Clientes: [${listaNombresCli}]
@@ -527,6 +536,7 @@ export class Facturas implements OnInit, OnDestroy {
       {
          ${instruccionCliente}
          "metodoPago": "EFECTIVO" | "TRANSFERENCIA" | "TARJETA_CREDITO" | null,
+         "detallesTarjeta": "Ej: Visa terminada en 1234 (o null)",
          "cuotas": numero_entero_o_null,
          "descuentoGlobalPorcentaje": numero_o_null,
          "items": [ { "producto": "Nombre", "cantidad": numero_entero_o_null, "descuentoPorcentaje": numero_o_0, "bodega": "Nombre de la bodega o null" } ],
@@ -537,9 +547,9 @@ export class Facturas implements OnInit, OnDestroy {
       REGLAS:
       1. Si dice "Consumidor final", cliente es "CONSUMIDOR_FINAL".
       2. "emitirFactura": true SIEMPRE que insinúe terminar.
-      3. TARJETA: Si menciona "tarjeta" o "crédito" es TARJETA_CREDITO. Si dice "meses" extrae el número a "cuotas". Recuerda, NO pidas la tarjeta.
-      4. DESCUENTOS (%): Solo extrae números puros para "descuentoGlobalPorcentaje" y "descuentoPorcentaje".
-      5. BODEGAS: Si el usuario pide explícitamente sacar de una bodega específica, escríbelo en "bodega" dentro de "items". Si no, pon null.
+      3. TARJETA: Si menciona "tarjeta" o "crédito" es TARJETA_CREDITO. Si menciona números de la tarjeta, guárdalo en "detallesTarjeta", PERO NUNCA PIDAS ESOS DATOS.
+      4. DESCUENTOS (%): Extrae números puros para "descuentoGlobalPorcentaje" y "descuentoPorcentaje".
+      5. BODEGAS: Si pide explícitamente sacar de una bodega específica, escríbelo en "bodega" dentro de "items". Si no, pon null.
       6. NO devuelvas texto fuera del JSON.
     `;
 
@@ -599,6 +609,14 @@ export class Facturas implements OnInit, OnDestroy {
     if (datos.metodoPago && datos.metodoPago !== 'null' && datos.metodoPago !== 'NULL') {
         this.nuevaFactura.metodoPago = datos.metodoPago;
         this.metodoPagoConfirmado = true;
+    }
+
+    if (datos.detallesTarjeta && datos.detallesTarjeta !== 'null') {
+        this.nuevaFactura.detallesTarjeta = datos.detallesTarjeta;
+        if (this.nuevaFactura.metodoPago !== 'TARJETA_CREDITO') {
+            this.nuevaFactura.metodoPago = 'TARJETA_CREDITO';
+            this.metodoPagoConfirmado = true;
+        }
     }
 
     if (datos.cuotas !== undefined && datos.cuotas !== null) {
@@ -952,6 +970,7 @@ export class Facturas implements OnInit, OnDestroy {
     this.imprimirFacturaPDF(fac);
   }
 
+  // 🔥 NUEVO MÉTODO PARA CARGAR DATOS REALES DEL NEGOCIO (RUC, NOMBRE, ETC)
   imprimirFacturaPDF(fac: any) {
     const total = fac.monto;
     const subtotal = total / (1 + this.ivaActual);
@@ -962,6 +981,13 @@ export class Facturas implements OnInit, OnDestroy {
     let filasProductos = '';
     const baseUrl = window.location.origin; 
     
+    // Extraemos la info del negocio (cargada en ngOnInit)
+    const nombreNegocio = this.negocioInfo?.nombreComercial || this.negocioInfo?.razonSocial || 'Mi Negocio S.A.';
+    const rucNegocio = this.negocioInfo?.ruc || '0000000000000';
+    const direccionNegocio = this.negocioInfo?.direccion || 'Dirección no registrada';
+    const emailNegocio = this.negocioInfo?.email || this.negocioInfo?.correo || 'Sin correo registrado';
+    const logoUrl = this.negocioInfo?.logo || `${baseUrl}/images/Dilo-Logo-2-.png`;
+
     if (fac.detalles && fac.detalles.length > 0) {
       fac.detalles.forEach((item: any) => {
         const cantidad = item.cantidad || 1;
@@ -1046,13 +1072,12 @@ export class Facturas implements OnInit, OnDestroy {
               <div class="header">
                   <div>
                       <div class="logo">
-                          <img src="${baseUrl}/images/Dilo-Logo-2-.png" alt="Dilo">
+                          <img src="${logoUrl}" alt="Logo Negocio">
                       </div>
                       <div class="company-details">
-                          <strong>Mi Negocio S.A.</strong><br>
-                          RUC: 0102030405001<br>
-                          Cuenca, Azuay, Ecuador<br>
-                          contacto@minegocio.com
+                          <strong>${nombreNegocio}</strong><br>
+                          RUC: ${rucNegocio}<br>
+                          ${direccionNegocio}<br>
                       </div>
                   </div>
                   <div class="invoice-title-area">

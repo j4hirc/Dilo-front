@@ -43,6 +43,21 @@
     </div>
 </section>
 
+<!-- 🔥 FILTROS Y BUSCADOR -->
+<div class="filters-container fade-in">
+    <div class="search-box-modern">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <input type="text" placeholder="Buscar por cliente o factura..." [(ngModel)]="terminoBusqueda" (input)="aplicarFiltros()">
+    </div>
+    
+    <div class="filter-chips">
+        <button class="chip" [class.active]="filtroEstado === 'TODAS'" (click)="setFiltro('TODAS')">Todas</button>
+        <button class="chip chip-yellow" [class.active]="filtroEstado === 'PENDIENTE'" (click)="setFiltro('PENDIENTE')">Pendientes</button>
+        <button class="chip chip-red" [class.active]="filtroEstado === 'VENCIDA'" (click)="setFiltro('VENCIDA')">Vencidas</button>
+        <button class="chip chip-green" [class.active]="filtroEstado === 'PAGADA'" (click)="setFiltro('PAGADA')">Pagadas</button>
+    </div>
+</div>
+
 <!-- 🔥 TABLA DE CUENTAS -->
 <div class="card premium-card fade-in mt-4">
     <div class="card-body">
@@ -71,8 +86,11 @@
                             <div class="empty-icon">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
                             </div>
-                            <p>¡Felicidades!</p>
-                            <span>No tienes cuentas pendientes por cobrar.</span>
+                            <p *ngIf="cuentasBase.length === 0">¡Felicidades!</p>
+                            <span *ngIf="cuentasBase.length === 0">No tienes cuentas pendientes por cobrar en el sistema.</span>
+                            
+                            <p *ngIf="cuentasBase.length > 0">Sin resultados</p>
+                            <span *ngIf="cuentasBase.length > 0">No se encontraron cuentas con esos filtros de búsqueda.</span>
                         </td>
                     </tr>
                     
