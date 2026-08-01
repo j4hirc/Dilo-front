@@ -4,7 +4,7 @@
 </div>
 
 <div *ngIf="!isLoading">
-    <section class="welcome-section">
+    <section class="welcome-section fade-in">
         <div class="welcome-profile">
             <div class="business-logo" [style.background-image]="negocio?.rutaImagen ? 'url(' + negocio?.rutaImagen + ')' : 'none'">
                 <span *ngIf="!negocio?.rutaImagen">
@@ -18,7 +18,7 @@
         </div>
     </section>
 
-    <div class="alert-banner">
+    <div class="alert-banner fade-in">
         <div class="alert-content">
             <div class="alert-icon">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
@@ -31,42 +31,42 @@
         </a>
     </div>
 
-    <!-- 🔥 TARJETAS DE ESTADÍSTICAS -->
-    <section class="stats-grid">
-        <div class="stat-card">
+    <!-- 🔥 TARJETAS DE ESTADÍSTICAS (AHORA CON COLORES DINÁMICOS Y PROFESIONALES) -->
+    <section class="stats-grid fade-in">
+        <div class="stat-card blue-card">
             <div class="stat-icon-wrapper bg-blue">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
             </div>
             <div class="stat-info">
-                <h3>${{ ventasMes | number:'1.2-2' }}</h3>
+                <h3 class="text-blue">${{ ventasMes | number:'1.2-2' }}</h3>
                 <p>Ventas del mes</p>
             </div>
-            <span class="badge badge-green">
+            <span class="badge badge-blue">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 2px;"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
                 +18%
             </span>
         </div>
 
-        <div class="stat-card">
+        <div class="stat-card orange-card">
             <div class="stat-icon-wrapper bg-orange">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ed8936" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
             </div>
             <div class="stat-info">
-                <h3>{{ facturasEmitidas }}</h3>
+                <h3 class="text-orange">{{ facturasEmitidas }}</h3>
                 <p>Facturas emitidas</p>
             </div>
-            <span class="badge badge-green">
+            <span class="badge badge-orange">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 2px;"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
                 +9%
             </span>
         </div>
 
-        <div class="stat-card">
+        <div class="stat-card green-card">
             <div class="stat-icon-wrapper bg-green">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
             </div>
             <div class="stat-info">
-                <h3>{{ clientesActivos }}</h3>
+                <h3 class="text-green">{{ clientesActivos }}</h3>
                 <p>Clientes activos</p>
             </div>
             <span class="badge badge-green">
@@ -76,7 +76,7 @@
         </div>
     </section>
 
-    <div class="content-grid">
+    <div class="content-grid fade-in">
         <!-- 🔥 SECCIÓN DE FACTURAS -->
         <div class="card">
             <div class="card-header">
@@ -116,7 +116,6 @@
                     <span class="badge-gray">Stock Actual</span>
                 </div>
                 
-                <!-- Buscador Interno -->
                 <div style="position: relative; width: 100%;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%);"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                     <input type="text" placeholder="Buscar producto o bodega..." 
@@ -157,7 +156,7 @@
     </div>
 
     <!-- 🔥 SECCIÓN DE EQUIPO -->
-    <section class="team-section card mt-4">
+    <section class="team-section card mt-4 fade-in">
         <div class="card-header">
             <h3>Mi equipo</h3>
             <button class="btn-outline" routerLink="/dashboard/equipo">

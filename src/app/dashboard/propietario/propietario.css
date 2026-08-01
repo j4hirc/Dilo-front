@@ -1,6 +1,15 @@
 /* =========================================
    DISEÑO PREMIUM DEL LOGO Y BIENVENIDA
    ========================================= */
+.fade-in {
+    animation: fadeIn 0.4s ease-out forwards;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
 .welcome-profile {
     display: flex;
     align-items: center;
@@ -25,8 +34,8 @@
 .dashboard-layout {
   --bg-dark: #172a46;
   --bg-light: #f4f7f9;
-  --primary-orange: #ed8936;
-  --primary-orange-hover: #dd6b20;
+  --primary-orange: #ea580c;
+  --primary-orange-hover: #c2410c;
   --text-main: #0f172a;
   --text-muted: #64748b;
   --border-color: #e2e8f0;
@@ -71,13 +80,13 @@
 }
 
 .role-badge {
-  background-color: rgba(237, 137, 54, 0.15);
+  background-color: rgba(234, 88, 12, 0.15);
   color: var(--primary-orange);
   font-size: 0.65rem;
   font-weight: 700;
   padding: 4px 8px;
   border-radius: 6px;
-  border: 1px solid rgba(237, 137, 54, 0.3);
+  border: 1px solid rgba(234, 88, 12, 0.3);
 }
 
 .sidebar-menu {
@@ -144,7 +153,7 @@
   color: white;
 }
 
-.orange-bg { background-color: var(--primary-orange); }
+.orange-bg { background: linear-gradient(135deg, #f97316, #ea580c); }
 
 .user-details h4 {
   margin: 0;
@@ -245,7 +254,7 @@
 
 .btn-primary:hover { background-color: var(--primary-orange-hover); }
 
-/* ALERTA: Ajustada para integrar el SVG de forma limpia */
+/* ALERTA */
 .alert-banner {
   background-color: #fef9c3;
   border: 1px solid #fde047;
@@ -273,6 +282,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  color: #d97706;
 }
 
 .alert-link {
@@ -288,6 +298,9 @@
 
 .alert-link:hover { color: #a16207; }
 
+/* =========================================
+   🔥 TARJETAS DE ESTADÍSTICAS PROFESIONALES
+   ========================================= */
 .stats-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr); 
@@ -297,18 +310,29 @@
 
 .stat-card {
   background: var(--card-bg);
-  padding: 20px;
+  padding: 22px;
   border-radius: 16px;
   border: 1px solid var(--border-color);
   display: flex;
   align-items: center;
   position: relative;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* Bordes laterales de color y sombras en hover */
+.stat-card.blue-card { border-left: 4px solid #3b82f6; }
+.stat-card.blue-card:hover { border-color: #93c5fd; box-shadow: 0 10px 25px rgba(59, 130, 246, 0.15); transform: translateY(-3px); }
+
+.stat-card.orange-card { border-left: 4px solid #f97316; }
+.stat-card.orange-card:hover { border-color: #fdba74; box-shadow: 0 10px 25px rgba(249, 115, 22, 0.15); transform: translateY(-3px); }
+
+.stat-card.green-card { border-left: 4px solid #10b981; }
+.stat-card.green-card:hover { border-color: #86efac; box-shadow: 0 10px 25px rgba(16, 185, 129, 0.15); transform: translateY(-3px); }
+
 .stat-icon-wrapper {
-  width: 45px;
-  height: 45px;
+  width: 48px;
+  height: 48px;
   border-radius: 12px;
   display: flex;
   align-items: center;
@@ -319,19 +343,23 @@
 .bg-blue { background-color: #eff6ff; }
 .bg-orange { background-color: #fff7ed; }
 .bg-green { background-color: #f0fdf4; }
-.bg-purple { background-color: #faf5ff; }
 
 .stat-info h3 {
-  margin: 0;
-  font-size: 1.4rem;
-  color: var(--text-main);
+  margin: 0 0 2px 0;
+  font-size: 1.5rem;
   font-weight: 800;
 }
 
+/* Colores de texto para los números */
+.text-blue { color: #1e40af; }
+.text-orange { color: #9a3412; }
+.text-green { color: #166534; }
+
 .stat-info p {
-  margin: 2px 0 0 0;
-  font-size: 0.8rem;
+  margin: 0;
+  font-size: 0.85rem;
   color: var(--text-muted);
+  font-weight: 600;
 }
 
 .badge {
@@ -346,7 +374,10 @@
   align-items: center;
 }
 
-.badge-green { background-color: #dcfce7; color: #166534; }
+/* Badges específicos por tarjeta */
+.badge-blue { background-color: #dbeafe; color: #1d4ed8; border: 1px solid #bfdbfe; }
+.badge-orange { background-color: #ffedd5; color: #c2410c; border: 1px solid #fed7aa; }
+.badge-green { background-color: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
 
 .content-grid {
   display: grid;
@@ -375,7 +406,6 @@
   color: var(--text-main);
 }
 
-/* LINK ACTION (Ver Todas): Alineación para SVG */
 .link-action {
   color: var(--primary-orange);
   text-decoration: none;
@@ -424,28 +454,18 @@
   font-weight: 600;
 }
 
-.tag-purple { background-color: #faf5ff; color: #9333ea; }
 .tag-gray { background-color: #f1f5f9; color: #64748b; }
 
 .item-amount { flex: 1; text-align: right; }
-.item-amount h4 { margin: 0 0 4px 0; font-size: 1rem; color: var(--text-main); }
+.item-amount h4 { margin: 0 0 4px 0; font-size: 1rem; color: var(--text-main); font-weight: 800; }
 
-.status { font-size: 0.7rem; font-weight: 600; padding: 2px 8px; border-radius: 12px; }
+.status { font-size: 0.7rem; font-weight: 700; padding: 3px 8px; border-radius: 12px; letter-spacing: 0.3px;}
 .status-green { background-color: #dcfce7; color: #166534; }
 .status-yellow { background-color: #fef9c3; color: #ca8a04; }
 .status-red { background-color: #fee2e2; color: #b91c1c; }
 
 .product-item { padding: 15px 0; }
 .product-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.9rem; color: var(--text-main); font-weight: 500;}
-
-.number-badge {
-  background-color: #f1f5f9;
-  color: #64748b;
-  font-size: 0.75rem;
-  padding: 2px 6px;
-  border-radius: 6px;
-  margin-right: 8px;
-}
 
 .product-qty { color: var(--text-muted); font-size: 0.85rem; }
 
@@ -459,7 +479,6 @@
 
 .progress-fill {
   height: 100%;
-  background-color: var(--primary-orange);
   border-radius: 4px;
 }
 
@@ -472,11 +491,17 @@
   padding: 6px 14px;
   border-radius: 8px;
   font-size: 0.85rem;
-  font-weight: 600;
+  font-weight: 700;
   display: flex;
   align-items: center;
   gap: 6px;
   cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-outline:hover {
+    background: #fff7ed;
+    border-color: #fdba74;
 }
 
 .team-grid {
@@ -494,6 +519,13 @@
   display: flex;
   align-items: center;
   position: relative;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.team-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.05);
 }
 
 .user-avatar-medium {
@@ -508,25 +540,27 @@
   margin-right: 15px;
 }
 
-.team-info h4 { margin: 0 0 5px 0; font-size: 0.95rem; color: var(--text-main); }
+.team-info h4 { margin: 0 0 5px 0; font-size: 0.95rem; color: var(--text-main); font-weight: 700;}
 
 .role-tag {
   background-color: #fff7ed;
   color: var(--primary-orange);
   font-size: 0.7rem;
-  font-weight: 600;
+  font-weight: 700;
   padding: 3px 8px;
   border-radius: 12px;
+  border: 1px solid #ffedd5;
 }
 
 .status-dot {
   position: absolute;
   top: 15px;
   right: 15px;
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
-  background-color: #cbd5e1; 
+  border: 2px solid white;
 }
 
 .active-dot { background-color: #22c55e; }
+.inactive-dot { background-color: #94a3b8; }

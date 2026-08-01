@@ -22,7 +22,7 @@
      SIDEBAR (Barra Lateral)
      ========================================= */
   .sidebar {
-    width: 280px; /* Un poco más ancho para respirar */
+    width: 280px; 
     background-color: var(--bg-sidebar);
     color: white;
     display: flex;
@@ -31,7 +31,7 @@
     height: 100vh;
     z-index: 100;
     border-right: 1px solid rgba(255, 255, 255, 0.05);
-    box-shadow: 4px 0 20px rgba(0,0,0,0.05); /* Sombra suave para separar del fondo */
+    box-shadow: 4px 0 20px rgba(0,0,0,0.05); 
   }
   
   .sidebar-logo {
@@ -123,7 +123,7 @@
   
   .sidebar-footer {
     padding: 20px;
-    background-color: rgba(15, 23, 42, 0.3); /* Fondo sutilmente más oscuro para separar */
+    background-color: rgba(15, 23, 42, 0.3); 
     border-top: 1px solid rgba(255,255,255,0.05);
   }
   
@@ -189,7 +189,7 @@
      ========================================= */
   .main-content {
     flex: 1;
-    margin-left: 280px; /* Igual al ancho del sidebar */
+    margin-left: 280px; 
     padding: 30px 50px;
     width: calc(100% - 280px); 
     box-sizing: border-box; 
@@ -237,10 +237,8 @@
   }
   .user-avatar:hover { transform: scale(1.05); }
   
-  /* ... (Mantengo tu CSS interno de grids, tarjetas y botones intactos porque esos vienen desde los CSS de cada componente hijo) ... */
-  
   /* =========================================
-     🔥 RESPONSIVE DEL DASHBOARD LAYOUT 🔥
+     RESPONSIVE DEL DASHBOARD LAYOUT 
      ========================================= */
   .menu-toggle-btn {
       display: none;
@@ -300,7 +298,7 @@
   }
 
   /* =========================================
-   🔥 CABECERA: BREADCRUMBS PROFESIONALES
+   CABECERA: BREADCRUMBS PROFESIONALES
    ========================================= */
 .business-badge {
     display: inline-flex;
@@ -327,23 +325,32 @@
 }
 
 /* =========================================
-   🔥 EFECTOS DE LA CAMPANITA
+   EFECTOS DE LA CAMPANITA
    ========================================= */
 .notification-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
     position: relative;
+    padding: 8px;
+    border-radius: 50%;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     transition: all 0.2s ease;
 }
 
 .notification-btn:hover {
-    color: #ea580c;
+    background: #f1f5f9;
+    color: var(--primary-orange);
 }
 
 .notification-btn.has-alerts svg {
     color: #ea580c;
-    animation: ring 4s infinite; /* Anima la campanita */
+    animation: ring 4s infinite; 
 }
 
-/* Animación sutil tipo latido/campaneo */
 @keyframes ring {
     0% { transform: rotate(0); }
     5% { transform: rotate(15deg); }
@@ -355,7 +362,7 @@
 }
 
 /* =========================================
-   🔥 MENÚ DESPLEGABLE DE USUARIO
+   MENÚ DESPLEGABLE DE USUARIO
    ========================================= */
 .user-dropdown {
     position: absolute;
@@ -432,60 +439,38 @@
 }
 
 /* =========================================
-   🔥 DISEÑO DEL MODAL DE NOTIFICACIONES
+   DISEÑO DEL MODAL DE NOTIFICACIONES
    ========================================= */
 
 .notification-wrapper {
-    position: relative; /* Permite anclar el dropdown abajo del botón */
-    margin-right: 15px; /* Separa la campanita de la foto de perfil */
+    position: relative; 
+    margin-right: 15px; 
 }
 
-/* El botón de la campanita */
-.notification-btn {
-    background: none;
-    border: none;
-    cursor: pointer;
-    position: relative;
-    padding: 8px;
-    border-radius: 50%;
-    color: #64748b;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s ease;
-}
-
-.notification-btn:hover {
-    background: #f1f5f9;
-    color: var(--primary-orange);
-}
-
-/* El globo de contador rojo */
 .notification-badge {
     position: absolute;
     top: 0;
     right: 0;
-    background-color: #ef4444; /* Rojo urgencia */
+    background-color: #ef4444; 
     color: white;
     font-size: 0.65rem;
     font-weight: 800;
     padding: 2px 6px;
     border-radius: 10px;
-    border: 2px solid white; /* Borde blanco para que resalte sobre la campana */
+    border: 2px solid white; 
     transform: translate(25%, -25%);
     box-shadow: 0 2px 4px rgba(239, 68, 68, 0.4);
 }
 
-/* El cuadro flotante (Dropdown) */
 .notification-dropdown {
     position: absolute;
-    top: 55px; /* Baja desde el header */
-    right: -20px; /* Alineado a la derecha */
-    width: 340px; /* Más ancho para que quepa bien el texto */
+    top: 55px; 
+    right: -20px; 
+    width: 340px; 
     background-color: #ffffff;
     border-radius: 12px;
     border: 1px solid #e2e8f0;
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1); /* Sombra pesada pero suave */
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
     z-index: 1000;
     overflow: hidden;
     animation: slideDownFade 0.25s cubic-bezier(0.16, 1, 0.3, 1);
@@ -496,7 +481,6 @@
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* Cabecera del Dropdown */
 .dropdown-header {
     display: flex;
     justify-content: space-between;
@@ -522,17 +506,14 @@
     border-radius: 12px;
 }
 
-/* Cuerpo interno (donde van las listas) */
 .dropdown-body {
-    max-height: 380px; /* Límite de altura antes de hacer scroll */
+    max-height: 380px; 
     overflow-y: auto;
 }
 
-/* Scrollbar interno elegante */
 .dropdown-body::-webkit-scrollbar { width: 6px; }
 .dropdown-body::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 10px; }
 
-/* Estado vacío (Todo óptimo) */
 .alert-empty {
     padding: 40px 20px;
     text-align: center;
@@ -541,7 +522,6 @@
     font-weight: 500;
 }
 
-/* Cada ítem de alerta */
 .alert-item {
     display: flex;
     gap: 15px;
@@ -553,10 +533,9 @@
 }
 
 .alert-item:hover {
-    background-color: #f8fafc; /* Efecto hover sutil */
+    background-color: #f8fafc; 
 }
 
-/* Ícono de alerta según gravedad */
 .alert-icon {
     width: 36px;
     height: 36px;
@@ -564,7 +543,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    flex-shrink: 0; /* Para que no se aplaste si hay mucho texto */
+    flex-shrink: 0; 
 }
 
 .alert-icon.critical {
@@ -579,7 +558,6 @@
     border: 1px solid #fde68a;
 }
 
-/* Textos de la alerta */
 .alert-content {
     flex: 1;
 }
@@ -607,7 +585,6 @@
 .text-red { color: #dc2626; }
 .text-orange { color: #ea580c; }
 
-/* Pie del modal */
 .dropdown-footer {
     padding: 12px;
     background-color: #f8fafc;
@@ -621,26 +598,24 @@
 }
 
 .dropdown-footer:hover {
-    background-color: #fffbeb; /* Hover color sutilmente naranja */
+    background-color: #fffbeb; 
 }
 
-/* Asegurar que el layout responsivo no rompa el dropdown */
 @media (max-width: 480px) {
     .notification-dropdown {
         width: 300px;
-        right: -80px; /* Lo centramos un poco en móviles */
+        right: -80px; 
     }
 }
 
 /* =========================================
-   🔥 SKELETON LOADER PARA IMÁGENES LENTAS
+   SKELETON LOADER PARA IMÁGENES LENTAS
    ========================================= */
 .avatar-img {
     width: 100%; 
     height: 100%; 
     object-fit: cover; 
     border-radius: 50%;
-    /* Fondo de carga animado */
     background: linear-gradient(90deg, #e2e8f0 25%, #f8fafc 50%, #e2e8f0 75%);
     background-size: 200% 100%;
     animation: skeletonPulse 1.5s infinite;
@@ -652,7 +627,7 @@
 }
 
 /* =========================================
-   🔥 ASISTENTE VIRTUAL (DILO AI)
+   ASISTENTE VIRTUAL (DILO AI)
    ========================================= */
 
 .chat-widget {
@@ -665,7 +640,6 @@
     align-items: flex-end;
 }
 
-/* 🔥 Botón flotante (FAB) Extra Grande (Se achica en pantallas pequeñas) */
 .chat-fab {
     width: 85px; 
     height: 85px; 
@@ -712,12 +686,11 @@
     transform: scale(1.3);
 }
 
-/* 🔥 Ventana del Chat Fluida y Responsiva */
 .chat-window {
-    width: 420px; /* Tamaño máximo en PC grandes */
+    width: 420px; 
     height: 620px; 
-    max-width: calc(100vw - 40px); /* Nunca será más ancha que la pantalla */
-    max-height: calc(100vh - 140px); /* 🔥 MAGIA: Nunca se saldrá por arriba */
+    max-width: calc(100vw - 40px); 
+    max-height: calc(100vh - 140px); 
     background-color: #ffffff;
     border-radius: 20px;
     border: 1px solid #e2e8f0;
@@ -827,7 +800,7 @@
 }
 
 .chat-bubble {
-    max-width: 85%; /* Se ajusta mejor en pantallas chicas */
+    max-width: 85%; 
     padding: 16px 22px; 
     border-radius: 20px;
     font-size: 1.05rem; 
@@ -867,7 +840,7 @@
     outline: none;
     font-size: 1rem; 
     transition: all 0.2s;
-    min-width: 0; /* Previene desbordamiento en flexbox */
+    min-width: 0; 
 }
 
 .chat-input-area input:focus { 
@@ -917,9 +890,7 @@
     40% { transform: scale(1); opacity: 1; }
 }
 
-/* =========================================
-   🔥 BURBUJA DE AYUDA FLOTANTE (HINT)
-   ========================================= */
+/* BURBUJA DE AYUDA FLOTANTE (HINT) */
 .chat-hint-bubble {
     background-color: #ffffff;
     color: #0f172a;
@@ -934,7 +905,11 @@
     white-space: nowrap; 
 }
 
-.chat-hint-bubble p { margin: 0; }
+.chat-hint-bubble p { 
+    margin: 0; 
+    display: flex; 
+    align-items: center; 
+}
 
 .chat-hint-arrow {
     position: absolute;
@@ -953,11 +928,7 @@
     50% { transform: translateX(-8px); }
 }
 
-/* =========================================
-   🔥 MEDIA QUERIES (LAPTOPS, TABLETS, MÓVILES)
-   ========================================= */
-
-/* Laptops y Pantallas medianas (1200px o menos) */
+/* MEDIA QUERIES (LAPTOPS, TABLETS, MÓVILES) */
 @media (max-width: 1200px) {
     .chat-fab { width: 70px; height: 70px; }
     .chat-fab.fab-open svg { width: 32px; height: 32px; }
@@ -968,7 +939,6 @@
     .close-chat { width: 32px; height: 32px; }
 }
 
-/* Tablets e iPads (768px o menos) */
 @media (max-width: 768px) {
     .chat-fab { width: 60px; height: 60px; }
     .chat-fab.fab-open svg { width: 28px; height: 28px; }
@@ -978,12 +948,11 @@
     .chat-hint-bubble { display: none; }
 }
 
-/* Teléfonos (480px o menos) */
 @media (max-width: 480px) {
     .chat-widget { bottom: 15px; right: 15px; }
     .chat-window { 
         width: calc(100vw - 30px); 
-        height: calc(100vh - 100px); /* Usa el máximo espacio vertical del teléfono */
+        height: calc(100vh - 100px); 
         max-height: 550px; 
         margin-bottom: 15px; 
     }
