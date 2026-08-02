@@ -1,7 +1,13 @@
 import { Injectable, NgZone, inject } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+import { Router } from '@angular/router';
 import { environment } from '../../environments/environment';
+
+export interface ModuloNavegable {
+  nombre: string;
+  ruta: string;
+}
 
 export interface ChatMessage {
   role: 'user' | 'assistant';
@@ -16,6 +22,7 @@ export class ZoeAiService {
   private http = inject(HttpClient);
   private sanitizer = inject(DomSanitizer);
   private zone = inject(NgZone); 
+  private router = inject(Router);
 
   private groqApiKey = environment.groqApiKey;
 
@@ -30,6 +37,14 @@ export class ZoeAiService {
   private contextoGlobal = '';
   private promptSistemaBase = '';
 
+  // 🔥 Lista blanca de módulos a los que Zoe puede navegar de verdad.
+  // Se llena SOLO con los módulos reales y permitidos para el rol del usuario (ver dashboard-default.ts).
+  // Cualquier ruta que el modelo proponga y no esté aquí se ignora: nunca se navega "a ciegas".
+  private modulosNavegables: ModuloNavegable[] = [];
+
+  // Regex del comando de navegación que el modelo debe emitir: [[NAVEGAR:/dashboard/xxx]]
+  private readonly REGEX_NAVEGACION = /\[\[NAVEGAR:\s*(\/[a-zA-Z0-9\-\/]*)\s*\]\]/;
+
   // Control de Voz
   private recognition: any;
   private silenceTimer: any;
@@ -43,9 +58,9 @@ export class ZoeAiService {
   }
 
   // 1. INICIALIZAR EL CHAT Y EL CONTEXTO
-  inicializarChat(nombreUsuario: string, rol: string, negocio: string) {
+  inicializarChat(nombreUsuario: string, rol: string) {
     if (this.chatMensajes.length === 0) {
-      const textoBienvenida = `¡Hola! Soy **Zoe**, tu asistente virtual en Dilo.\n\nSi es tu primera vez aquí, solo pregúntame o dime por voz: *"¿Por dónde empiezo?"* y te guiaré paso a paso.\n\n¿En qué te puedo ayudar hoy, ${nombreUsuario}?`;
+      const textoBienvenida = `¡Hola! Soy **Zoe**, tu asistente virtual en Dilo.\n\nSi es tu primera vez aquí, solo pregúntame o dime por voz: *"¿Por dónde empiezo?"* y te guiaré paso a paso. También puedo **llevarte directo** a cualquier módulo si me lo pides, por ejemplo: *"llévame a Productos"*.\n\n¿En qué te puedo ayudar hoy, ${nombreUsuario}?`;
       this.chatMensajes.push({
         role: 'assistant',
         text: textoBienvenida,
@@ -54,45 +69,45 @@ export class ZoeAiService {
     }
   }
 
-  actualizarContexto(contextoTexto: string, modulosPermitidos: string, modulosRestringidos: string, roles: string, nombreUsuario: string, rolUsuario: string, negocioNombre: string, alertasTexto: string) {
+ actualizarContexto(
+    contextoTexto: string,
+    modulosPermitidos: string,
+    modulosRestringidos: string,
+    roles: string,
+    nombreUsuario: string,
+    rolUsuario: string,
+    negocioNombre: string,
+    alertasTexto: string,
+    modulosNavegables: ModuloNavegable[] = [],
+    modulosEnConstruccion: string = 'Ninguno por el momento'
+  ) {
     this.contextoGlobal = contextoTexto;
-    this.promptSistemaBase = `
-      Eres "Zoe", la asistente virtual del sistema de Facturación e Inventario "Dilo".
-      Tu personalidad es simpática, muy humana, cercana y positiva, pero siempre profesional.
-      Hablas con ${nombreUsuario}, quien tiene el rol de **${rolUsuario}** en el negocio "${negocioNombre}".
+    this.modulosNavegables = modulosNavegables;
 
-      SISTEMA DE ROLES DE DILO:
-      ${roles}
+    const listaRutasParaComando = modulosNavegables.map(m => `${m.ruta}`).join(', ');
 
-      MÓDULOS QUE ${nombreUsuario} PUEDE USAR:
-      ${modulosPermitidos}
+    // 🔥 FIX ANTICOLAPSO 6: Prompt ultra resumido. Directo al grano.
+    this.promptSistemaBase = `Eres "Zoe", asistente virtual en "Dilo".
+Hablas con ${nombreUsuario} (${rolUsuario}) del negocio "${negocioNombre}".
 
-      MÓDULOS RESTRINGIDOS PARA SU ROL:
-      ${modulosRestringidos}
+MÓDULOS DE SU ROL:
+${modulosPermitidos}
+(Ignora pedidos a módulos restringidos o en construcción).
 
-      DATOS DEL NEGOCIO:
-      ${this.contextoGlobal}
+NEGOCIO Y DATOS:
+${this.contextoGlobal}
+Alertas: ${alertasTexto}
 
-      ALERTAS DE CADUCIDAD: ${alertasTexto}
+NAVEGACIÓN:
+Si te pide ir a un módulo permitido, responde brevemente y agrega AL FINAL este comando en una nueva línea: [[NAVEGAR:/ruta/exacta]]. Rutas válidas: ${listaRutasParaComando || 'ninguna'}.
 
-      🔥 GUÍA DE INICIO (ONBOARDING) 🔥
-      Si te pregunta "¿Por dónde empiezo?", "Soy nuevo" o pide ayuda general, explícale de forma MUY AMIGABLE esta ruta:
-      1. Bodegas.
-      2. Categorías.
-      3. Productos.
-      4. Proveedores y Abastecimiento.
-      5. Clientes.
-      6. Facturación.
-
-      🔥 REGLAS IMPORTANTES:
-      1. Sé MUY BREVE, conversacional y directa. Máximo 2 o 3 párrafos cortos.
-      2. Usa **negrita** para resaltar módulos.
-      3. Si pregunta por un módulo restringido, dile amablemente que es exclusivo de otro rol.
-      4. SOBRE EL IVA: El IVA actual del sistema es fijo (generalmente 15%). Desde "Configuración" NO se puede cambiar el porcentaje del IVA de forma manual, solo se puede activar o desactivar la contabilidad. Si un usuario te pide cambiar el IVA general, dile que esa configuración no está disponible.
-    `;
+REGLAS:
+1. SÉ MUY BREVE Y DIRECTA. 1 a 2 párrafos máximo.
+2. Usa **negrita** para resaltar info clave.
+3. El IVA (15%) es fijo.`;
   }
 
-  // 2. ENVIAR MENSAJES (TEXTO O VOZ)
+  // En la función enviarMensaje(), busca la parte del payload y actualízala así:
   enviarMensaje(texto: string, responderConVoz: boolean = false) {
     if (!texto.trim() || this.isChatLoading) return;
 
@@ -104,7 +119,6 @@ export class ZoeAiService {
 
     this.isChatLoading = true;
     
-    // Detenemos temporalmente el micro mientras Zoe "piensa" y responde para evitar bucles
     if (this.recognition) {
         try { this.recognition.stop(); } catch(e){}
     }
@@ -114,28 +128,44 @@ export class ZoeAiService {
       'Content-Type': 'application/json'
     });
 
-    const historial = this.chatMensajes.map(msg => ({
+    // 🔥 Solo mandamos los últimos 4 mensajes (ida y vuelta x2) en lugar de 6
+    const historial = this.chatMensajes.slice(-4).map(msg => ({
       role: msg.role,
       content: msg.text
     }));
 
+    const rutaActual = this.router.url;
+    const promptConUbicacion = `${this.promptSistemaBase}\n\nUBICACIÓN ACTUAL: ${rutaActual}`;
+
     const payload = {
       model: 'llama-3.1-8b-instant',
-      messages: [{ role: 'system', content: this.promptSistemaBase }, ...historial],
+      messages: [{ role: 'system', content: promptConUbicacion }, ...historial],
       temperature: 0.5,
-      max_tokens: 600
+      max_tokens: 250 // 🔥 FIX ANTICOLAPSO 7: Forzamos a que Zoe responda más corto, ahorrando cientos de tokens en la respuesta.
     };
 
     this.http.post<any>('https://api.groq.com/openai/v1/chat/completions', payload, { headers })
+      // ... EL RESTO SIGUE IGUAL ...
       .subscribe({
         next: (res) => {
-          const respuestaBot = res.choices[0].message.content;
+          const respuestaCruda = res.choices[0].message.content;
+
+          // 🔥 Detectamos si Zoe pidió navegar a algún módulo, y limpiamos el comando
+          // para que el usuario NUNCA vea ni escuche "[[NAVEGAR:...]]" en el chat.
+          const { textoLimpio: respuestaBot, ruta: rutaSolicitada } = this.extraerComandoNavegacion(respuestaCruda);
+
           this.chatMensajes.push({
             role: 'assistant',
             text: respuestaBot,
             safeHtml: this.formatearMensaje(respuestaBot)
           });
           this.isChatLoading = false;
+
+          // 🔥 Solo navegamos si la ruta está en la lista blanca de módulos permitidos para este rol.
+          // Así evitamos que el modelo "alucine" o mande al usuario a una pantalla inexistente o restringida.
+          if (rutaSolicitada && this.modulosNavegables.some(m => m.ruta === rutaSolicitada)) {
+            setTimeout(() => this.zone.run(() => this.router.navigate([rutaSolicitada])), 600);
+          }
 
           if (responderConVoz) {
             this.hablar(respuestaBot.replace(/\*\*/g, ''), () => {
@@ -205,7 +235,7 @@ export class ZoeAiService {
               this.enviarMensaje(this.transcriptAcumulado.trim(), true);
               this.transcriptAcumulado = '';
             }
-          }, 2500); 
+          }, 3000); 
         });
       }
     };
@@ -275,6 +305,17 @@ export class ZoeAiService {
   }
 
   // 4. UTILIDADES
+
+  // Busca el patrón [[NAVEGAR:/ruta]] en la respuesta del modelo, lo quita del texto
+  // (el usuario nunca debe ver el comando) y devuelve la ruta solicitada, si existe.
+  private extraerComandoNavegacion(texto: string): { textoLimpio: string; ruta: string | null } {
+    if (!texto) return { textoLimpio: texto, ruta: null };
+    const match = texto.match(this.REGEX_NAVEGACION);
+    if (!match) return { textoLimpio: texto, ruta: null };
+    const textoLimpio = texto.replace(this.REGEX_NAVEGACION, '').trim();
+    return { textoLimpio, ruta: match[1].trim() };
+  }
+
   toggleChat() {
     this.isChatOpen = !this.isChatOpen;
   }

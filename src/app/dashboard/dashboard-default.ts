@@ -46,21 +46,27 @@ export class DashboardDefault implements OnInit, OnDestroy, AfterViewChecked {
 
   nuevoMensajeTexto = '';
 
-  private readonly modulosSistema: { nombre: string; roles: string[]; descripcion: string }[] = [
-    { nombre: 'Dashboard (Propietario)', roles: ['PROPIETARIO'], descripcion: 'Gráficas y resumen general del negocio (ventas, stock, ganancias).' },
-    { nombre: 'Facturas', roles: ['PROPIETARIO', 'VENDEDOR'], descripcion: 'Registrar nuevas ventas, cobrar a clientes y emitir comprobantes (facturación tradicional y por voz).' },
-    { nombre: 'Cuentas por Cobrar', roles: ['PROPIETARIO', 'VENDEDOR'], descripcion: 'Ver y gestionar los saldos pendientes de clientes (crédito).' },
-    { nombre: 'Abastecimiento', roles: ['PROPIETARIO', 'BODEGUERO'], descripcion: 'Registrar compras de mercadería a proveedores.' },
-    { nombre: 'Clientes', roles: ['PROPIETARIO', 'VENDEDOR'], descripcion: 'Directorio para registrar y consultar la información de los clientes.' },
-    { nombre: 'Proveedores', roles: ['PROPIETARIO', 'BODEGUERO'], descripcion: 'Directorio de empresas y contactos que abastecen al negocio.' },
-    { nombre: 'Productos', roles: ['PROPIETARIO', 'BODEGUERO'], descripcion: 'Catálogo de mercadería: precios (PVP), códigos, IVA (15%) y control de caducidad.' },
-    { nombre: 'Categorías', roles: ['PROPIETARIO', 'BODEGUERO'], descripcion: 'Organizar los productos por categoría.' },
-    { nombre: 'Bodegas', roles: ['PROPIETARIO', 'BODEGUERO'], descripcion: 'Creación de sucursales o cuartos de almacenamiento.' },
-    { nombre: 'Inventario', roles: ['PROPIETARIO', 'BODEGUERO'], descripcion: 'Stock actual por bodega y alertas de productos.' },
-    { nombre: 'Kardex (Movimientos)', roles: ['PROPIETARIO', 'BODEGUERO'], descripcion: 'Historial contable detallado de entradas y salidas.' },
-    { nombre: 'Mi Equipo', roles: ['PROPIETARIO'], descripcion: 'Agregar empleados/cajeros y cambiar roles.' },
-    { nombre: 'Configuración', roles: ['PROPIETARIO'], descripcion: 'Cambiar Logo, RUC, y definir método de costeo.' },
-    { nombre: 'Mi Perfil', roles: ['PROPIETARIO', 'VENDEDOR', 'BODEGUERO'], descripcion: 'Datos personales, foto y contraseña del usuario.' },
+  // 🔥 FUENTE DE VERDAD ÚNICA de los módulos del dashboard.
+  // "ruta" debe coincidir EXACTO con los routerLink reales del sidebar (dashboard-default.html)
+  // para que Zoe nunca invente ni confunda una URL de navegación.
+  // "disponible: false" = el módulo existe en el código pero aún no está terminado/enlazado
+  // (ej. Reportes es solo un componente placeholder todavía sin ruta en el menú).
+  private readonly modulosSistema: { nombre: string; ruta: string | null; roles: string[]; descripcion: string; disponible?: boolean }[] = [
+    { nombre: 'Dashboard', ruta: '/dashboard/propietario', roles: ['PROPIETARIO'], descripcion: 'Pantalla de inicio con resumen general del negocio: ventas del mes, número de facturas emitidas, clientes activos y un vistazo rápido al inventario.' },
+    { nombre: 'Facturas', ruta: '/dashboard/facturas', roles: ['PROPIETARIO', 'VENDEDOR'], descripcion: 'Registrar nuevas ventas, cobrar a clientes y emitir comprobantes. Permite crear facturas de forma tradicional (formulario) o por voz, dictando los productos a un asistente de dictado.' },
+    { nombre: 'Cuentas por Cobrar', ruta: '/dashboard/cuentas-cobrar', roles: ['PROPIETARIO', 'VENDEDOR'], descripcion: 'Ver y gestionar los saldos pendientes de clientes a crédito: registrar abonos/pagos parciales y detectar cuentas vencidas.' },
+    { nombre: 'Abastecimiento', ruta: '/dashboard/compras', roles: ['PROPIETARIO', 'BODEGUERO'], descripcion: 'Registrar compras de mercadería a proveedores: elegir proveedor, bodega de ingreso, número de comprobante y, si aplica, fecha de caducidad del lote.' },
+    { nombre: 'Clientes', ruta: '/dashboard/clientes', roles: ['PROPIETARIO', 'VENDEDOR'], descripcion: 'Directorio para registrar y consultar clientes: cédula/DNI, nombres, correo, teléfono y dirección.' },
+    { nombre: 'Proveedores', ruta: '/dashboard/proveedores', roles: ['PROPIETARIO', 'BODEGUERO'], descripcion: 'Directorio de empresas y contactos que abastecen al negocio, organizados por categoría y con estado activo/inactivo.' },
+    { nombre: 'Productos', ruta: '/dashboard/productos', roles: ['PROPIETARIO', 'BODEGUERO'], descripcion: 'Catálogo de mercadería: nombre, código, marca, precio (PVP), categoría, si graba IVA (15%) y si el producto maneja control de caducidad.' },
+    { nombre: 'Categorías', ruta: '/dashboard/categorias', roles: ['PROPIETARIO', 'BODEGUERO'], descripcion: 'Organizar los productos por categoría (nombre y descripción de cada una).' },
+    { nombre: 'Bodegas', ruta: '/dashboard/bodegas', roles: ['PROPIETARIO', 'BODEGUERO'], descripcion: 'Creación y administración de sucursales o cuartos de almacenamiento del negocio.' },
+    { nombre: 'Inventario', ruta: '/dashboard/inventario', roles: ['PROPIETARIO', 'BODEGUERO'], descripcion: 'Stock actual por bodega, valor total invertido y detalle de lotes por producto (incluye alertas de próxima caducidad).' },
+    { nombre: 'Movimientos (Kardex)', ruta: '/dashboard/kardex', roles: ['PROPIETARIO', 'BODEGUERO'], descripcion: 'Historial contable detallado de movimientos de inventario: ingresos, salidas y transferencias entre bodegas, con filtros por producto, tipo, bodega y fecha. En el menú aparece como "Movimientos".' },
+    { nombre: 'Mi Equipo', ruta: '/dashboard/equipo', roles: ['PROPIETARIO'], descripcion: 'Agregar empleados/cajeros mediante un código de invitación del negocio, revisar solicitudes de ingreso y cambiar roles del personal.' },
+    { nombre: 'Configuración', ruta: '/dashboard/configuracion', roles: ['PROPIETARIO'], descripcion: 'Editar los datos del negocio: RUC, razón social, nombre comercial, logo, dirección, si es obligado a llevar contabilidad y el método de costeo de inventario.' },
+    { nombre: 'Mi Perfil', ruta: '/dashboard/perfil', roles: ['PROPIETARIO', 'VENDEDOR', 'BODEGUERO'], descripcion: 'Ver y editar los datos personales del usuario, su foto de perfil y cambiar la contraseña.' },
+    { nombre: 'Reportes', ruta: null, roles: ['PROPIETARIO', 'VENDEDOR', 'BODEGUERO'], descripcion: 'Módulo de reportes del negocio.', disponible: false },
   ];
 
   private readonly rolesSistema: { rol: string; descripcion: string }[] = [
@@ -85,7 +91,7 @@ export class DashboardDefault implements OnInit, OnDestroy, AfterViewChecked {
     this.inicialesUsuario = nombre ? nombre.substring(0, 2).toUpperCase() : 'EC';
     this.negocioId = this.usuarioLogueado?.negocioId || this.usuarioLogueado?.idNegocio;
 
-    this.zoeService.inicializarChat(this.usuarioLogueado?.primerNombre || 'Usuario', this.rolUsuario, this.negocioNombre);
+    this.zoeService.inicializarChat(this.usuarioLogueado?.primerNombre || 'Usuario', this.rolUsuario);
 
     if (this.negocioId) {
        this.cargarDatosNegocio();
@@ -182,7 +188,7 @@ export class DashboardDefault implements OnInit, OnDestroy, AfterViewChecked {
     this.isSidebarOpen = !this.isSidebarOpen;
   }
 
-  cargarContextoNegocioParaIA() {
+ cargarContextoNegocioParaIA() {
     if (!this.negocioId) return;
 
     const rawToken = localStorage.getItem('dilo_token') || '';
@@ -196,54 +202,105 @@ export class DashboardDefault implements OnInit, OnDestroy, AfterViewChecked {
       this.http.get<any[]>(`${this.apiUrl}/negocios/${id}/clientes`, { headers }).pipe(catchError(() => of([]))),
       this.http.get<any[]>(`${this.apiUrl}/negocios/${id}/proveedores`, { headers }).pipe(catchError(() => of([]))),
       this.http.get<any[]>(`${this.apiUrl}/negocios/${id}/inventario`, { headers }).pipe(catchError(() => of([]))),
-      this.http.get<any[]>(`${this.apiUrl}/negocios/${id}/facturas`, { headers }).pipe(catchError(() => of([])))
+      this.http.get<any[]>(`${this.apiUrl}/negocios/${id}/facturas`, { headers }).pipe(catchError(() => of([]))),
+      this.http.get<any[]>(`${this.apiUrl}/negocios/${id}/bodegas`, { headers }).pipe(catchError(() => of([]))),
+      this.http.get<any[]>(`${this.apiUrl}/negocios/${id}/miembros`, { headers }).pipe(catchError(() => of([]))),
+      this.http.get<any[]>(`${this.apiUrl}/cuentas-por-cobrar/negocio/${id}`, { headers }).pipe(catchError(() => of([]))),
+      this.http.get<any>(`${this.apiUrl}/negocios/${id}`, { headers }).pipe(catchError(() => of(null)))
     ])
     .pipe(takeUntil(this.destroy$))
-    .subscribe(([productos, categorias, clientes, proveedores, inventario, facturas]) => {
+    .subscribe(([productos, categorias, clientes, proveedores, inventario, facturas, bodegas, miembros, cuentasPorCobrar, negocioInfo]) => {
         this.contextoNegocioTexto = this.construirResumenDelNegocio(
           Array.isArray(productos) ? productos : [], Array.isArray(categorias) ? categorias : [],
           Array.isArray(clientes) ? clientes : [], Array.isArray(proveedores) ? proveedores : [],
-          Array.isArray(inventario) ? inventario : [], Array.isArray(facturas) ? facturas : []
+          Array.isArray(inventario) ? inventario : [], Array.isArray(facturas) ? facturas : [],
+          Array.isArray(bodegas) ? bodegas : [], Array.isArray(miembros) ? miembros : [],
+          Array.isArray(cuentasPorCobrar) ? cuentasPorCobrar : [], negocioInfo
         );
 
-        const modulosPerm = this.modulosSistema.filter(m => this.tieneRol(m.roles)).map(m => `- ${m.nombre}: ${m.descripcion}`).join('\n');
-        const modulosRest = this.modulosSistema.filter(m => !this.tieneRol(m.roles)).map(m => `${m.nombre}`).join(', ');
-        const resumenRoles = this.rolesSistema.map(r => `- ${r.rol}: ${r.descripcion}`).join('\n');
-        const alertasStr = this.alertasCaducidad.slice(0, 10).map((a: any) => `${a.productoNombre} caduca el ${a.fechaCaducidad}`).join('; ');
+        if (negocioInfo?.nombreComercial || negocioInfo?.razonSocial) {
+          this.negocioNombre = negocioInfo.nombreComercial || negocioInfo.razonSocial;
+          this.cdr.detectChanges();
+        }
+
+        const modulosDisponiblesParaRol = this.modulosSistema.filter(m => m.disponible !== false && this.tieneRol(m.roles));
+
+        // 🔥 FIX ANTICOLAPSO 1: Quitamos m.descripcion. Zoe ya sabe deducir qué hace cada pantalla por su nombre.
+        const modulosPerm = modulosDisponiblesParaRol
+          .map(m => `- ${m.nombre} (ruta: ${m.ruta})`)
+          .join('\n');
+
+        const modulosRest = this.modulosSistema
+          .filter(m => m.disponible !== false && !this.tieneRol(m.roles))
+          .map(m => m.nombre).join(', ');
+
+        const modulosEnConstruccion = this.modulosSistema
+          .filter(m => m.disponible === false)
+          .map(m => m.nombre).join(', ') || 'Ninguno';
+
+        const resumenRoles = this.rolesSistema.map(r => `- ${r.rol}`).join('\n');
+        
+        // 🔥 FIX ANTICOLAPSO 2: Máximo 3 alertas para no gastar tokens
+        const alertasStr = this.alertasCaducidad.slice(0, 3).map((a: any) => `${a.productoNombre} caduca ${a.fechaCaducidad}`).join('; ');
+
+        const rutasNavegables = modulosDisponiblesParaRol.map(m => ({ nombre: m.nombre, ruta: m.ruta as string }));
 
         this.zoeService.actualizarContexto(
           this.contextoNegocioTexto, modulosPerm, modulosRest, resumenRoles,
-          this.usuarioLogueado?.primerNombre || 'Usuario', this.rolUsuario, this.negocioNombre, alertasStr
+          this.usuarioLogueado?.primerNombre || 'Usuario', this.rolUsuario, this.negocioNombre, alertasStr,
+          rutasNavegables, modulosEnConstruccion
         );
     });
-  }
+  } 
 
-  construirResumenDelNegocio(productos: any[], categorias: any[], clientes: any[], proveedores: any[], inventario: any[], facturas: any[]): string {
+  construirResumenDelNegocio(
+    productos: any[], categorias: any[], clientes: any[], proveedores: any[],
+    inventario: any[], facturas: any[], bodegas: any[], miembros: any[],
+    cuentasPorCobrar: any[], negocioInfo: any
+  ): string {
     const nombresCategorias = categorias.map(c => c.nombre).filter(Boolean).join(', ') || 'Ninguna registrada';
-    const listaProductos = productos.slice(0, 30).map(p => `${p.nombre} (PVP: $${Number(p.precioUnitario || 0).toFixed(2)})`).join('; ');
+    
+    // 🔥 FIX ANTICOLAPSO 3: Reducimos a máximo 10 productos como muestra general
+    const listaProductos = productos.slice(0, 10).map(p => `${p.nombre} (Costo: $${Number(p.costoPromedioActual || p.costoPromedio || 0).toFixed(2)})`).join('; ');
 
     const bodegasMap = new Map<string, string[]>();
+    
     inventario.forEach(i => {
       const bodega = i.bodegaNombre || 'Bodega Principal';
       if (!bodegasMap.has(bodega)) bodegasMap.set(bodega, []);
-      bodegasMap.get(bodega)!.push(`${i.productoNombre}: ${i.cantidadActual} unids`);
+      
+      const prod = productos.find(p => p.id === i.productoId || p.id === i.producto?.id);
+      const costo = prod ? Number(prod.costoPromedioActual || prod.costoPromedio || 0).toFixed(2) : '0.00';
+
+      bodegasMap.get(bodega)!.push(`${i.productoNombre}: ${i.cantidadActual} uds disp. (Costo: $${costo})`);
     });
 
     let inventarioPorBodegaTexto = '';
-    bodegasMap.forEach((items, bodega) => { inventarioPorBodegaTexto += `\n       - ${bodega}: ${items.slice(0, 25).join(', ')}`; });
+    bodegasMap.forEach((items, bodega) => {
+        // 🔥 FIX ANTICOLAPSO 4: Muestra solo los primeros 10 productos por bodega, si hay más, pone una alerta simple.
+        const itemsSeguros = items.slice(0, 10); 
+        const avisoMas = items.length > 10 ? `...(+${items.length - 10} más)` : '';
+        
+        inventarioPorBodegaTexto += `\n       - ${bodega} (${items.length} prods totales): ${itemsSeguros.join(' | ')} ${avisoMas}`;
+    });
 
     const totalVentas = facturas.reduce((acc, f) => acc + Number(f.totalFactura || f.total || 0), 0);
-
+    const contabilidadTexto = negocioInfo?.obligadoContabilidad ? 'SÍ' : 'NO';
+    const nombresBodegas = bodegas.map(b => b.nombre).filter(Boolean).join(', ') || 'Ninguna';
+    const miembrosActivos = miembros.filter(m => m.estadoInvitacion !== 'PENDIENTE');
+    const listaMiembros = miembrosActivos.map(m => `${m.nombreUsuario} (${m.rol})`).join(', ') || 'Solo propietario';
+    const totalPorCobrar = cuentasPorCobrar.reduce((acc, c) => acc + Number(c.saldoPendiente || 0), 0);
+    
+    // 🔥 FIX ANTICOLAPSO 5: Redacción ultracorta para ahorrar tokens
     return `
-      DATOS REALES DEL NEGOCIO "${this.negocioNombre}":
-      - Categorías (${categorias.length}): ${nombresCategorias}.
-      - Productos (${productos.length}): ${listaProductos}.
-      - Existencias por Bodega: ${inventarioPorBodegaTexto || 'Sin stock'}
-      - Clientes: ${clientes.length} | Proveedores: ${proveedores.length}
-      - Total Histórico de Ventas: $${totalVentas.toFixed(2)} (${facturas.length} facturas emitidas).
+      NEGOCIO: "${this.negocioNombre}"
+      - Bodegas: ${nombresBodegas}
+      - Catálogo Muestra: ${listaProductos}
+      - STOCK BODEGAS: ${inventarioPorBodegaTexto || 'Vacío'}
+      - Totales: ${clientes.length} Clientes | ${proveedores.length} Proveedores | ${miembros.length} Miembros: ${listaMiembros}
+      - Finanzas: Cuentas por cobrar $${totalPorCobrar.toFixed(2)}. Ventas Históricas $${totalVentas.toFixed(2)}.
     `;
   }
-
   cerrarSesion() {
     this.cerrarSesionForzada();
   }
