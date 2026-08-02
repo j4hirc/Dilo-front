@@ -31,7 +31,7 @@ export class Facturas implements OnInit, OnDestroy {
   terminoBusqueda: string = ''; 
   isLoading = true;
   negocioId: number | null = null;
-  negocioInfo: any = null; // 🔥 NUEVO: Para guardar los datos reales del negocio
+  negocioInfo: any = null; 
   private apiUrl = environment.apiUrl;
   private groqApiKey = environment.groqApiKey;
 
@@ -133,7 +133,7 @@ export class Facturas implements OnInit, OnDestroy {
     this.cargarIvaDelSistema();
 
     if (this.negocioId) {
-      this.cargarDatosNegocio(); // 🔥 Carga los datos reales del negocio para el PDF
+      this.cargarDatosNegocio(); 
       this.cargarTodasLasFacturas(this.negocioId);
     } else {
       this.isLoading = false;
@@ -153,7 +153,6 @@ export class Facturas implements OnInit, OnDestroy {
     return new HttpHeaders().set('Authorization', `Bearer ${cleanToken}`);
   }
 
-  // 🔥 NUEVO: Función para traer los datos reales del negocio
   cargarDatosNegocio() {
     if (!this.negocioId) return;
     this.http.get<any>(`${this.apiUrl}/negocios/${this.negocioId}`, { headers: this.getAuthHeaders() }).subscribe({
@@ -181,24 +180,30 @@ export class Facturas implements OnInit, OnDestroy {
     this.isLoading = true;
     this.http.get<any[]>(`${this.apiUrl}/negocios/${id}/facturas`, { headers: this.getAuthHeaders() }).subscribe({
       next: (data) => {
-        const arregloSeguro = Array.isArray(data) ? data : [];
-        this.facturas = arregloSeguro.map(f => ({
-          id: f.id,
-          numero: f.numeroFactura || 'S/N',
-          cliente: f.clienteNombre || f.cliente?.nombre || f.cliente?.razonSocial || 'Consumidor Final',
-          tipo: f.formaPago || 'Manual',
-          fecha: f.fechaEmision || new Date().toLocaleDateString(),
-          monto: Number(f.totalFactura || f.total || 0),
-          estado: f.estadoSri || 'Emitida',
-          detalles: f.detallesFactura || f.detalles || f.items || [] 
-        }));
-        
-        this.facturasBase = [...this.facturas]; 
-        
-        this.isLoading = false;
-        this.cdr.detectChanges();
+        setTimeout(() => {
+            const arregloSeguro = Array.isArray(data) ? data : [];
+            this.facturas = arregloSeguro.map(f => ({
+              id: f.id,
+              numero: f.numeroFactura || 'S/N',
+              cliente: f.clienteNombre || f.cliente?.nombre || f.cliente?.razonSocial || 'Consumidor Final',
+              tipo: f.formaPago || 'Manual',
+              fecha: f.fechaEmision || new Date().toLocaleDateString(),
+              monto: Number(f.totalFactura || f.total || 0),
+              estado: f.estadoSri || 'Emitida',
+              detalles: f.detallesFactura || f.detalles || f.items || [] 
+            }));
+            
+            this.facturasBase = [...this.facturas]; 
+            this.isLoading = false;
+            this.cdr.detectChanges();
+        }, 0);
       },
-      error: () => this.isLoading = false
+      error: () => {
+          setTimeout(() => {
+              this.isLoading = false;
+              this.cdr.detectChanges();
+          }, 0);
+      }
     });
   }
 
@@ -291,34 +296,40 @@ export class Facturas implements OnInit, OnDestroy {
 
   private limpiarTexto(texto: any): string {
     if (!texto) return '';
-    return String(texto).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+    return String(texto)
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "") 
+        .replace(/[^a-zA-Z0-9 ]/g, "") 
+        .toLowerCase()
+        .trim();
   }
 
   private buscarClientesUniversales(textoBuscado: string): any[] {
     const txt = this.limpiarTexto(textoBuscado);
     if (!txt) return [...this.clientesList];
     
-    let exact = this.clientesList.filter(cli => 
-        this.limpiarTexto(cli.nombreCompleto) === txt || this.limpiarTexto(cli.primerNombre) === txt ||
-        this.limpiarTexto(cli.apellidoPaterno) === txt || this.limpiarTexto(cli.dni) === txt ||
-        this.limpiarTexto(cli.identificacion) === txt || this.limpiarTexto(cli.email) === txt || this.limpiarTexto(cli.correo) === txt
-    );
+    let exact = this.clientesList.filter(cli => {
+        const nomCompleto = this.limpiarTexto(cli.nombreCompleto || `${cli.primerNombre || ''} ${cli.apellidoPaterno || ''}`);
+        return nomCompleto === txt || this.limpiarTexto(cli.dni) === txt || this.limpiarTexto(cli.identificacion) === txt || this.limpiarTexto(cli.email) === txt;
+    });
     if (exact.length > 0) return exact;
 
     let partial = this.clientesList.filter(cli => {
         const nom = this.limpiarTexto(cli.nombreCompleto || `${cli.primerNombre || ''} ${cli.apellidoPaterno || ''}`);
         const doc = this.limpiarTexto(cli.dni || cli.identificacion || '');
-        const corr = this.limpiarTexto(cli.email || cli.correo || '');
-        return nom.includes(txt) || txt.includes(nom) || (doc && doc.includes(txt)) || (corr && corr.includes(txt));
+        return nom.includes(txt) || txt.includes(nom) || (doc && doc.includes(txt));
     });
     if (partial.length > 0) return partial;
 
     const palabras = txt.split(' ').filter(p => p.length > 2);
     if (palabras.length === 0) return [];
-    return this.clientesList.filter(cli => {
+    
+    let flexible = this.clientesList.filter(cli => {
         const nom = this.limpiarTexto(cli.nombreCompleto || `${cli.primerNombre || ''} ${cli.apellidoPaterno || ''}`);
-        return palabras.every(pal => nom.includes(pal));
+        return palabras.every(pal => nom.includes(pal)); 
     });
+
+    return flexible;
   }
 
   filtrarClientes() {
@@ -407,9 +418,9 @@ export class Facturas implements OnInit, OnDestroy {
     this.voiceState = VoiceStep.ESCUCHA_LIBRE;
     
     if (!this.nuevaFactura.clienteId && !this.esConsumidorFinal) {
-        this.voiceMessage = "Hola, soy tu asistente Zoe. ¿A quién le facturamos y qué le agregamos?";
+        this.voiceMessage = "Hola, soy Zoe. ¿A quién le facturamos y qué productos agregamos?";
     } else if (!this.metodoPagoConfirmado) {
-        this.voiceMessage = "Cliente listo. ¿Con qué paga?";
+        this.voiceMessage = "Cliente listo. ¿Con qué método van a pagar?";
     } else {
         this.voiceMessage = "¿Qué productos deseas agregar o modificar?";
     }
@@ -441,21 +452,29 @@ export class Facturas implements OnInit, OnDestroy {
         this.cdr.detectChanges();
 
         const utterance = new SpeechSynthesisUtterance(texto);
-        utterance.lang = 'es-ES';
-        
-        utterance.rate = 1.25; 
-        utterance.pitch = 1.2; 
         
         let voices = window.speechSynthesis.getVoices();
         
-        let femaleVoice = voices.find(v => v.lang.startsWith('es') && /(sabina|paulina|helena|monica|victoria|lucia|sofia|laura|isabel|carmen|female|mujer)/i.test(v.name));
+        let femaleVoice = voices.find(v => 
+            v.lang.startsWith('es') && 
+            (v.name.includes('Google español') || v.name.includes('Sabina') || v.name.includes('Paulina') || v.name.includes('Monica'))
+        );
+        
+        if (!femaleVoice) {
+            femaleVoice = voices.find(v => v.lang.startsWith('es') && /(female|mujer)/i.test(v.name));
+        }
         
         if (!femaleVoice) {
             femaleVoice = voices.find(v => v.lang.startsWith('es') && !/(pablo|jorge|diego|carlos|male|hombre)/i.test(v.name));
         }
+
         if (femaleVoice) {
             utterance.voice = femaleVoice;
         }
+
+        utterance.lang = 'es-ES'; // Asegura pronunciación española correcta
+        utterance.rate = 1.05;    // Apenas un toque más rápido de lo normal, pero no robótico (antes estaba en 1.25)
+        utterance.pitch = 1.0;    // Tono normal, 1.0 es el de un ser humano estándar (antes 1.2 era muy agudo)
 
         utterance.onend = () => { if (callback && this.voiceState !== VoiceStep.OFF) callback(); };
         utterance.onerror = () => { if (callback && this.voiceState !== VoiceStep.OFF) callback(); };
@@ -498,7 +517,7 @@ export class Facturas implements OnInit, OnDestroy {
 
     if (this.voiceState === VoiceStep.CONFIRMAR && (quiereEmitir || transcriptLimpio.includes('si') || transcriptLimpio.includes('sí') || transcriptLimpio.includes('ok') || transcriptLimpio.includes('dale'))) {
         this.voiceState = VoiceStep.OFF;
-        this.hablar("¡Listo! Emitiendo Factura de inmediato.");
+        this.hablar("¡Excelente! Emitiendo la factura de inmediato.");
         setTimeout(() => { this.guardarFactura(); }, 800);
         return;
     }
@@ -517,17 +536,18 @@ export class Facturas implements OnInit, OnDestroy {
 
     const instruccionCliente = (this.nuevaFactura.clienteId || this.esConsumidorFinal)
       ? `"cliente": null,` 
-      : `"cliente": "Extrae el nombre, cédula, o pon 'CONSUMIDOR_FINAL'",`;
+      : `"cliente": "Extrae el nombre del cliente lo más exacto posible",`;
 
-    const listaNombresCli = this.clientesList.map(c => c.nombreCompleto || c.primerNombre).join(', ').substring(0, 600);
-    const listaNombresProd = this.productosList.map(p => p.nombre).join(', ').substring(0, 600);
+    const listaNombresCli = this.clientesList.map(c => c.nombreCompleto || `${c.primerNombre} ${c.apellidoPaterno}`).join(', ').substring(0, 1000);
+    const listaNombresProd = this.productosList.map(p => p.nombre).join(', ').substring(0, 1000);
     const listaBodegas = this.bodegasList.map(b => b.nombre).join(', ');
 
     const promptSystem = `
-      Eres Zoe, la veloz asistente virtual con identidad de MUJER de un sistema POS. 
-      NUNCA pidas los datos de la tarjeta de crédito al usuario.
+      Eres Zoe, la asistente virtual de un sistema de punto de venta. 
+      Extrae los datos solicitados en formato JSON estricto basándote en lo que dice el usuario.
+      NUNCA pidas los datos de la tarjeta de crédito al usuario. Si los dicta, ignóralos y solo pon "metodoPago": "TARJETA_CREDITO".
       
-      Listas de BD:
+      Listas referenciales de tu BD (Úsalas para corregir errores tipográficos):
       Clientes: [${listaNombresCli}]
       Productos: [${listaNombresProd}]
       Bodegas: [${listaBodegas}]
@@ -539,18 +559,17 @@ export class Facturas implements OnInit, OnDestroy {
          "detallesTarjeta": "Ej: Visa terminada en 1234 (o null)",
          "cuotas": numero_entero_o_null,
          "descuentoGlobalPorcentaje": numero_o_null,
-         "items": [ { "producto": "Nombre", "cantidad": numero_entero_o_null, "descuentoPorcentaje": numero_o_0, "bodega": "Nombre de la bodega o null" } ],
+         "items": [ { "producto": "Nombre exacto de la lista referencial", "cantidad": numero_entero_o_null, "descuentoPorcentaje": numero_o_0, "bodega": "Nombre exacto de la bodega o null" } ],
          "eliminarProducto": "Nombre del producto a quitar del carrito (o null)",
          "emitirFactura": true o false
       }
       
       REGLAS:
       1. Si dice "Consumidor final", cliente es "CONSUMIDOR_FINAL".
-      2. "emitirFactura": true SIEMPRE que insinúe terminar.
-      3. TARJETA: Si menciona "tarjeta" o "crédito" es TARJETA_CREDITO. Si menciona números de la tarjeta, guárdalo en "detallesTarjeta", PERO NUNCA PIDAS ESOS DATOS.
-      4. DESCUENTOS (%): Extrae números puros para "descuentoGlobalPorcentaje" y "descuentoPorcentaje".
-      5. BODEGAS: Si pide explícitamente sacar de una bodega específica, escríbelo en "bodega" dentro de "items". Si no, pon null.
-      6. NO devuelvas texto fuera del JSON.
+      2. "emitirFactura": true SIEMPRE que insinúe terminar la venta.
+      3. TARJETA: Si menciona "tarjeta" o "crédito" es TARJETA_CREDITO.
+      4. BODEGAS: Si pide explícitamente sacar de una bodega específica, escríbelo en "bodega". Si no, pon null.
+      5. NO devuelvas texto fuera del JSON.
     `;
 
     const payload = {
@@ -580,12 +599,12 @@ export class Facturas implements OnInit, OnDestroy {
             this.aplicarDatosExtraidos(datosExtraidos, intencionEmitir);
           } catch (e) {
             console.error("Error parseando JSON:", e);
-            this.hablar("Uy, me enredé con esa frase. ¿Me lo repites?", () => this.escuchar());
+            this.hablar("Perdón, no procesé bien eso. ¿Podrías repetirlo?", () => this.escuchar());
           }
         },
         error: () => {
           this.isThinking = false;
-          this.hablar("Hubo un fallo de conexión. Repite, por favor.", () => this.escuchar());
+          this.hablar("Tuve un problema de conexión. ¿Me lo repites?", () => this.escuchar());
         }
       });
   }
@@ -601,7 +620,7 @@ export class Facturas implements OnInit, OnDestroy {
         if (index !== -1) {
             const nombreQuitado = this.nuevaFactura.detalles[index].productoNombre;
             this.eliminarDelCarrito(index);
-            this.hablar(`Listo, quité ${nombreQuitado}. ¿Qué más hacemos?`, () => this.escuchar());
+            this.hablar(`Listo, acabo de quitar ${nombreQuitado}. ¿Qué más necesitas?`, () => this.escuchar());
             return; 
         }
     }
@@ -651,10 +670,12 @@ export class Facturas implements OnInit, OnDestroy {
                 this.seleccionarCliente(matchesCli[0]); 
             } else if (matchesCli.length > 1) {
                 pedirCedula = true; 
-                this.iniciarDesambiguacion('CLIENTE', matchesCli, "Hay varios clientes con ese nombre. Dime el número del correcto: " + matchesCli.slice(0,3).map((c, i) => `${i+1}, ${c.nombreCompleto || c.primerNombre}`).join('. '));
+                // 🔥 ZOE HACE PREGUNTAS MÁS CONVERSACIONALES
+                const nombresStr = matchesCli.slice(0,3).map(c => c.nombreCompleto || c.primerNombre).join(' y ');
+                this.iniciarDesambiguacion('CLIENTE', matchesCli, `Tengo varios clientes similares, como ${nombresStr}. Dime el apellido completo o la cédula de a quién le facturamos.`);
                 return;
             } else {
-                mensajesAlerta.push(`no encontré a ${datos.cliente}`);
+                mensajesAlerta.push(`no tengo a ${datos.cliente} en la base de datos`);
             }
         }
     }
@@ -662,7 +683,7 @@ export class Facturas implements OnInit, OnDestroy {
     if (pedirCedula) {
         this.quiereEmitirPendiente = quiereEmitir;
         this.voiceState = VoiceStep.ESCUCHA_LIBRE;
-        this.hablar("Por favor, díctame la cédula de ese cliente para estar segura.", () => this.escuchar());
+        this.hablar("Por favor, díctame la cédula de ese cliente para estar completamente segura.", () => this.escuchar());
         return;
     }
 
@@ -700,10 +721,12 @@ export class Facturas implements OnInit, OnDestroy {
                     this.productoPendientePorBodega = prod;
                     this.cantidadPendientePorBodega = cant;
                     this.descuentoPendientePorBodega = descPct;
-                    this.iniciarDesambiguacion('BODEGA', bodegasConStock, `Ese producto está en varias bodegas. ¿De cuál quieres que lo saque? ` + bodegasConStock.map((b, i) => `${i+1}, ${b.nombre}`).join('. '));
+                    // 🔥 ZOE HACE PREGUNTAS MÁS CONVERSACIONALES
+                    const bodegasStr = bodegasConStock.map(b => b.nombre).join(' y en la bodega ');
+                    this.iniciarDesambiguacion('BODEGA', bodegasConStock, `Tengo ese producto en la bodega ${bodegasStr}. ¿De cuál te gustaría sacarlo? Puedes decirme su ubicación o nombre.`);
                     return; 
                 } else {
-                    mensajesAlerta.push(`no hay stock de ${prod.nombre}`);
+                    mensajesAlerta.push(`no nos queda stock de ${prod.nombre}`);
                     continue;
                 }
             }
@@ -712,11 +735,11 @@ export class Facturas implements OnInit, OnDestroy {
                 const stockActual = this.obtenerStock(prod.id, bodegaElegidaId);
                 
                 if (stockActual === null || stockActual <= 0) {
-                    mensajesAlerta.push(`no hay stock de ${prod.nombre}`);
+                    mensajesAlerta.push(`no nos queda stock de ${prod.nombre}`);
                 } else {
                     if (cant > stockActual) {
                         cant = stockActual;
-                        mensajesAlerta.push(`solo metí ${cant} de ${prod.nombre} porque se acabó el stock`);
+                        mensajesAlerta.push(`solo pude agregar ${cant} de ${prod.nombre} porque es lo único que nos queda`);
                     }
                     this.agregarProductoDirecto(prod, cant, bodegaElegidaId, descPct);
                     algoAgregado = true;
@@ -724,10 +747,12 @@ export class Facturas implements OnInit, OnDestroy {
             }
         } else if (matchesProd.length > 1) {
             pedirAclaracionProd = item.producto; 
-            this.iniciarDesambiguacion('PRODUCTO', matchesProd, `Tengo varios productos que suenan igual. Dime el número del correcto: ` + matchesProd.slice(0,3).map((p, i) => `${i+1}, ${p.nombre}`).join('. '));
+            // 🔥 ZOE HACE PREGUNTAS MÁS CONVERSACIONALES
+            const prodsStr = matchesProd.slice(0,2).map(p => p.nombre).join(' y ');
+            this.iniciarDesambiguacion('PRODUCTO', matchesProd, `Encontré varios similares, como ${prodsStr}. Dime alguna marca o característica para elegir el correcto.`);
             return; 
         } else if (matchesProd.length === 0) {
-            mensajesAlerta.push(`no tengo ${item.producto} en el catálogo`);
+            mensajesAlerta.push(`no encontré ${item.producto} en tu catálogo`);
         }
     }
 
@@ -736,12 +761,12 @@ export class Facturas implements OnInit, OnDestroy {
     const faltaCliente = !this.nuevaFactura.clienteId && !this.esConsumidorFinal;
     const faltaItems = this.nuevaFactura.detalles.length === 0;
 
-    let prefijoAviso = mensajesAlerta.length > 0 ? `A ver, ${mensajesAlerta.join(', y ')}. ` : '';
+    let prefijoAviso = mensajesAlerta.length > 0 ? `A ver, te comento que ${mensajesAlerta.join(' y ')}. ` : '';
 
     if ((quiereEmitir || this.quiereEmitirPendiente) && !faltaCliente && !faltaItems) {
         this.quiereEmitirPendiente = false;
         this.voiceState = VoiceStep.OFF;
-        this.hablar(`${prefijoAviso}Todo listo. Emitiendo factura ahora mismo.`);
+        this.hablar(`${prefijoAviso}Todo listo. Estoy emitiendo tu factura ahora mismo.`);
         setTimeout(() => { this.guardarFactura(); }, 1200);
         return;
     }
@@ -750,22 +775,23 @@ export class Facturas implements OnInit, OnDestroy {
     this.voiceState = VoiceStep.ESCUCHA_LIBRE;
 
     if (faltaCliente) {
-        this.hablar(`${prefijoAviso}Me falta el cliente. ¿A quién le facturamos?`, () => this.escuchar());
+        this.hablar(`${prefijoAviso}Aún me falta el cliente. ¿A quién le hacemos la factura?`, () => this.escuchar());
     } 
     else if (faltaItems) {
-        this.hablar(`${prefijoAviso}El ticket está vacío. ¿Qué agregamos?`, () => this.escuchar());
+        this.hablar(`${prefijoAviso}El carrito está vacío. ¿Qué productos vas a agregar?`, () => this.escuchar());
     } 
     else {
         this.voiceState = VoiceStep.CONFIRMAR;
         let msj = algoAgregado
-            ? `${prefijoAviso}A cobrar $${this.totalCarrito.toFixed(2)}. ¿Te emito la factura?`
-            : `${prefijoAviso}Todo listo, son $${this.totalCarrito.toFixed(2)}. ¿Deseas emitir ya?`;
+            ? `${prefijoAviso}A cobrar $${this.totalCarrito.toFixed(2)}. ¿Te parece bien si la emito ya?`
+            : `${prefijoAviso}Todo en orden. Son $${this.totalCarrito.toFixed(2)}. ¿Quieres que cobre la factura?`;
         this.hablar(msj, () => this.escuchar());
     }
   }
 
   private buscarProductos(textoBuscado: string): any[] {
     const txt = this.limpiarTexto(textoBuscado);
+    
     let exact = this.productosList.filter(p => this.limpiarTexto(p.nombre) === txt);
     if (exact.length > 0) return exact;
 
@@ -774,11 +800,11 @@ export class Facturas implements OnInit, OnDestroy {
 
     const palabras = txt.split(' ').filter(p => p.length > 2); 
     if (palabras.length > 0) {
-        let agresivo = this.productosList.filter(p => {
+        let flexible = this.productosList.filter(p => {
             const nom = this.limpiarTexto(p.nombre);
-            return palabras.some(pal => nom.includes(pal)); 
+            return palabras.every(pal => nom.includes(pal)); 
         });
-        if (agresivo.length > 0) return agresivo;
+        if (flexible.length > 0) return flexible;
     }
     return [];
   }
@@ -792,11 +818,48 @@ export class Facturas implements OnInit, OnDestroy {
   }
 
   private manejarDesambiguacion(transcript: string) {
-    const num = this.extraerIndice(transcript, this.opcionesVoz.length);
+    const transcriptLimpio = this.limpiarTexto(transcript);
+    let seleccionado = null;
 
+    const num = this.extraerIndice(transcriptLimpio, this.opcionesVoz.length);
     if (num >= 0 && num < this.opcionesVoz.length) {
-      const seleccionado = this.opcionesVoz[num];
-      
+      seleccionado = this.opcionesVoz[num];
+    } else {
+      const palabrasUsuario = transcriptLimpio.split(' ').filter(p => p.length > 2);
+      let maxScore = 0;
+
+      for (let opt of this.opcionesVoz) {
+        // 🔥 EVALÚA DIRECCIONES, NOMBRES, CORREOS Y MARCAS PARA SER SUPER FLEXIBLE
+        let stringDeComparacion = "";
+        
+        if (this.tipoOpciones === 'CLIENTE') {
+            stringDeComparacion = `${opt.nombreCompleto} ${opt.primerNombre} ${opt.razonSocial} ${opt.dni}`;
+        } else if (this.tipoOpciones === 'PRODUCTO') {
+            stringDeComparacion = `${opt.nombre} ${opt.descripcion || ''}`;
+        } else if (this.tipoOpciones === 'BODEGA') {
+            stringDeComparacion = `${opt.nombre} ${opt.ubicacion || ''} ${opt.direccion || ''}`;
+        }
+
+        const textoACompararLimpio = this.limpiarTexto(stringDeComparacion);
+        
+        if (textoACompararLimpio.includes(transcriptLimpio) || transcriptLimpio.includes(textoACompararLimpio)) {
+          seleccionado = opt;
+          break;
+        }
+
+        let score = 0;
+        for (let pal of palabrasUsuario) {
+          if (textoACompararLimpio.includes(pal)) score++;
+        }
+
+        if (score > maxScore) {
+          maxScore = score;
+          seleccionado = opt;
+        }
+      }
+    }
+
+    if (seleccionado) {
       if (this.tipoOpciones === 'CLIENTE') {
           this.seleccionarCliente(seleccionado);
           this.opcionesVoz = [];
@@ -832,13 +895,13 @@ export class Facturas implements OnInit, OnDestroy {
           if (stockActual !== null && stockActual > 0) {
               if (cant > stockActual) cant = stockActual;
               this.agregarProductoDirecto(prod, cant, bodega.id, desc);
-              this.hablar(`Listo, lo saqué de ${bodega.nombre}. ¿Qué más?`, () => this.escuchar());
+              this.hablar(`Listo, lo saco de la bodega ${bodega.nombre}. ¿Qué más hacemos?`, () => this.escuchar());
           } else {
-              this.hablar(`Uy, no hay stock de ${prod.nombre} en ${bodega.nombre}. ¿Hacemos otra cosa?`, () => this.escuchar());
+              this.hablar(`Uy, revisé y no queda stock de ${prod.nombre} en ${bodega.nombre}. ¿Hacemos otra cosa?`, () => this.escuchar());
           }
       }
     } else {
-      this.hablar("No te entendí. Dime qué número es.", () => this.escuchar());
+      this.hablar("Perdón, no te escuché bien. Dime el nombre o el número de la opción que prefieras.", () => this.escuchar());
     }
   }
 
@@ -914,7 +977,6 @@ export class Facturas implements OnInit, OnDestroy {
     this.isSaving = true;
     Swal.fire({ title: 'Emitiendo Factura...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
-    // 🔥 PREPARAR LA TARJETA SIMULADA PARA EL RECIBO
     if (this.nuevaFactura.metodoPago === 'TARJETA_CREDITO' && this.nuevaFactura.tarjetaNumero) {
         const numClean = this.nuevaFactura.tarjetaNumero.replace(/\D/g, '');
         if (numClean.length >= 4) {
@@ -970,7 +1032,6 @@ export class Facturas implements OnInit, OnDestroy {
     this.imprimirFacturaPDF(fac);
   }
 
-  // 🔥 NUEVO MÉTODO PARA CARGAR DATOS REALES DEL NEGOCIO (RUC, NOMBRE, ETC)
   imprimirFacturaPDF(fac: any) {
     const total = fac.monto;
     const subtotal = total / (1 + this.ivaActual);
@@ -981,7 +1042,6 @@ export class Facturas implements OnInit, OnDestroy {
     let filasProductos = '';
     const baseUrl = window.location.origin; 
     
-    // Extraemos la info del negocio (cargada en ngOnInit)
     const nombreNegocio = this.negocioInfo?.nombreComercial || this.negocioInfo?.razonSocial || 'Mi Negocio S.A.';
     const rucNegocio = this.negocioInfo?.ruc || '0000000000000';
     const direccionNegocio = this.negocioInfo?.direccion || 'Dirección no registrada';
@@ -1078,6 +1138,7 @@ export class Facturas implements OnInit, OnDestroy {
                           <strong>${nombreNegocio}</strong><br>
                           RUC: ${rucNegocio}<br>
                           ${direccionNegocio}<br>
+                          ${emailNegocio}
                       </div>
                   </div>
                   <div class="invoice-title-area">
