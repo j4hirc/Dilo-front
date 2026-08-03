@@ -87,7 +87,7 @@ export class Facturas implements OnInit, OnDestroy {
   cantidadPendientePorBodega: number = 1;
   descuentoPendientePorBodega: number = 0;
   
-  hoverIndex: number = -1; // 🔥 Para el hover de los botones de opciones
+  hoverIndex: number = -1; 
 
   get subtotalCarrito(): number {
     return this.nuevaFactura.detalles.reduce((sum: number, item: any) => sum + (item.subtotal || 0), 0);
@@ -500,9 +500,11 @@ export class Facturas implements OnInit, OnDestroy {
         return;
     }
 
+    // 🔥 SI ESTAMOS EN CONFIRMACIÓN, EVALUAMOS EL SÍ O EL NO EXCLUSIVAMENTE
     if (this.voiceState === VoiceStep.CONFIRMAR) {
-        const afirmativo = ['si', 'sí', 'dale', 'ok', 'claro', 'confirmo', 'emite', 'emitir', 'ya', 'por supuesto', 'correcto', 'procede'].some(cmd => transcriptLimpio.includes(cmd) || transcriptLimpio === cmd);
-        const negativo = ['no', 'espera', 'cancela', 'todavia no', 'aguanta', 'detente', 'pausa', 'todavía no'].some(cmd => transcriptLimpio.includes(cmd));
+        // Expresión regular fuerte para confirmaciones exactas
+        const afirmativo = /\b(si|sí|dale|ok|claro|confirmo|emite|emitir|ya|correcto|procede|listo)\b/.test(transcriptLimpio);
+        const negativo = /\b(no|espera|cancela|todavia no|aguanta|detente|pausa)\b/.test(transcriptLimpio);
 
         if (negativo) {
             this.voiceState = VoiceStep.ESCUCHA_LIBRE;
@@ -510,9 +512,12 @@ export class Facturas implements OnInit, OnDestroy {
             return;
         } else if (afirmativo) {
             this.voiceState = VoiceStep.OFF;
-            this.hablar("¡Perfecto! Emitiendo la factura ahora mismo.", () => {
-                 setTimeout(() => { this.guardarFactura(); }, 500);
-            });
+            this.isListening = false;
+            if (this.recognition) { try { this.recognition.stop(); } catch(e){} }
+            
+            // 🔥 SOLUCIÓN DEL ERROR "NO SE FACTURÓ": Se dispara directamente sin esperar a Zoe
+            this.guardarFactura(); 
+            this.hablar("¡Perfecto! Emitiendo la factura ahora mismo.");
             return;
         } else {
             this.voiceState = VoiceStep.ESCUCHA_LIBRE;
@@ -539,14 +544,14 @@ export class Facturas implements OnInit, OnDestroy {
     const listaNombresProd = this.productosList.map(p => p.nombre).join(', ').substring(0, 1000);
     const listaBodegas = this.bodegasList.map(b => b.nombre).join(', ');
 
+    // 🔥 PROMPT MEJORADO PARA DETECTAR LA INTENCIÓN REAL DE EMITIR
     const promptSystem = `
       Eres Zoe, la asistente virtual de un sistema de punto de venta. 
       Extrae los datos solicitados en formato JSON estricto basándote en la petición del usuario.
       
       🔥 REGLA VITAL DE PRODUCTOS:
       - TIENES que intentar emparejar lo que el usuario dice con un producto EXACTO de la Lista Referencial de Productos proporcionada abajo.
-      - Si el usuario menciona un nombre incompleto, pluralizado o mal escrito, usa el nombre EXACTO de la lista. (Ejemplo: Si dice "zapatos", y en la lista hay "Zapatos Nike", devuelve "Zapatos Nike").
-      - NO inventes productos que no estén en la lista. Si definitivamente no se parece a nada de la lista, devuelve el nombre que escuchaste tal cual.
+      - NO inventes productos que no estén en la lista.
       
       Listas referenciales de tu BD:
       Clientes: [${listaNombresCli}]
@@ -561,13 +566,15 @@ export class Facturas implements OnInit, OnDestroy {
          "cuotas": numero_entero_o_null,
          "descuentoGlobalPorcentaje": numero_o_null,
          "items": [ { "producto": "Nombre extraído o corregido según la lista", "cantidad": numero_entero_o_null, "descuentoPorcentaje": numero_o_0, "bodega": "Nombre exacto de la bodega o null" } ],
-         "eliminarProducto": "Nombre del producto a quitar del carrito (o null)"
+         "eliminarProducto": "Nombre del producto a quitar del carrito (o null)",
+         "emitirFactura": boolean
       }
       
       REGLAS SECUNDARIAS:
       1. CLIENTE: Si no menciona a nadie, DEBE SER "NO_MENCIONADO". 
       2. PAGO: Si no menciona tarjeta, efectivo o transferencia, DEBE SER "NO_MENCIONADO".
-      3. NO devuelvas NADA MÁS que el JSON puro.
+      3. EMITIR FACTURA: Si el usuario dice frases como "eso es todo", "cóbrame", "listo", o si SOLAMENTE indica el método de pago sin agregar productos, asume "emitirFactura": true.
+      4. NO devuelvas NADA MÁS que el JSON puro.
     `;
 
     const payload = {
@@ -736,7 +743,6 @@ export class Facturas implements OnInit, OnDestroy {
                 }
             }
         } else if (matchesProd.length > 1) {
-            // 🔥 GUARDAMOS ESTADO POR SI EL USUARIO DA CLIC MANUAL
             this.itemTemp.cantidad = Number(item.cantidad) > 0 ? Number(item.cantidad) : 1;
             this.itemTemp.descuentoPorcentaje = Number(item.descuentoPorcentaje) > 0 ? Number(item.descuentoPorcentaje) : 0;
 
@@ -756,7 +762,8 @@ export class Facturas implements OnInit, OnDestroy {
 
     let prefijoAviso = mensajesAlerta.length > 0 ? `Atención, ${mensajesAlerta.join(' y ')}. ` : '';
 
-    const intencionEmitir = ['emite', 'emitir', 'factura ya', 'cobrar ya', 'guarda la factura', 'todo bien', 'listo', 'cobra', 'cobrar', 'termina'].some(cmd => fraseUsuarioReal.includes(cmd));
+    // Nueva validación combinada de intención de emitir
+    const intencionEmitir = ['emite', 'emitir', 'factura ya', 'cobrar ya', 'guarda la factura', 'todo bien', 'listo', 'cobra', 'cobrar', 'termina', 'eso es todo'].some(cmd => fraseUsuarioReal.toLowerCase().includes(cmd)) || String(datos.emitirFactura).toLowerCase() === 'true';
 
     if (faltaCliente) {
         this.voiceState = VoiceStep.ESCUCHA_LIBRE;
@@ -779,9 +786,8 @@ export class Facturas implements OnInit, OnDestroy {
         if (algoAgregado) {
             this.hablar(`${prefijoAviso}Añadido al carrito. ¿Qué más deseas agregar?`, () => this.escuchar());
         } else if (mensajesAlerta.length > 0) {
-            this.hablar(`${prefijoAviso}¿Modificamos algo más?`, () => this.escuchar());
+            this.hablar(`${prefijoAviso}¿Buscamos otra cosa?`, () => this.escuchar());
         } else {
-            // 🔥 EVITA QUE ZOE SE QUEDE CALLADA Y TRABADA SI NO HAY ALERTAS NI PRODUCTOS AÑADIDOS
             this.hablar(`Listo. ¿Qué más hacemos?`, () => this.escuchar());
         }
     }
@@ -816,16 +822,14 @@ export class Facturas implements OnInit, OnDestroy {
     this.hablar(mensaje, () => this.escuchar());
   }
 
-  // 🔥 CLICK MANUAL REFORZADO CONTRA ERRORES
   seleccionarOpcionManual(opcion: any) {
-    this.isThinking = true; // Previene que el evento onend del micrófono lo vuelva a activar
+    this.isThinking = true; 
     if (this.recognition) {
         try { this.recognition.stop(); } catch(e){}
     }
     this.isListening = false;
     this.hoverIndex = -1; 
 
-    // Damos un respiro mínimo para evitar la carrera del micrófono
     setTimeout(() => {
         this.isThinking = false;
         this.ejecutarSeleccion(opcion, '');
@@ -835,7 +839,6 @@ export class Facturas implements OnInit, OnDestroy {
   private manejarDesambiguacion(transcript: string) {
     const transcriptLimpio = this.limpiarTexto(transcript);
     
-    // 🔥 PERMITIR CANCELAR LA ELECCIÓN
     if (['cancelar', 'ninguno', 'ninguna', 'me equivoque', 'salir', 'atras'].some(cmd => transcriptLimpio.includes(cmd))) {
         this.voiceState = VoiceStep.ESCUCHA_LIBRE;
         this.opcionesVoz = [];
@@ -891,7 +894,6 @@ export class Facturas implements OnInit, OnDestroy {
     }
   }
 
-  // 🔥 LÓGICA CENTRALIZADA PARA CLIC Y VOZ
   private ejecutarSeleccion(seleccionado: any, transcriptContext: string) {
       if (this.tipoOpciones === 'CLIENTE') {
           this.seleccionarCliente(seleccionado);
@@ -932,7 +934,6 @@ export class Facturas implements OnInit, OnDestroy {
       }
   }
 
-  // 🔥 DETECCIÓN NÚMERICA MEJORADA IGNORANDO PALABRAS DE RELLENO
   private extraerIndice(texto: string, maxOpciones: number): number {
     const txtLimpio = texto.replace(/\b(la|el|las|los|opcion|opción|numero|número|quiero|dame|selecciona|escoge)\b/g, '').trim();
 
@@ -969,29 +970,54 @@ export class Facturas implements OnInit, OnDestroy {
     this.itemTemp = { productoId: null, bodegaId: this.itemTemp.bodegaId, cantidad: null, descuentoPorcentaje: null, productoNombre: '' }; 
   }
 
+  // 🔥 SOLUCIÓN PARA PRODUCTOS REPETIDOS: Súmalo a la fila existente si es el mismo
   private agregarProductoDirecto(producto: any, cantidad: number, bodegaId: any, descuentoPorcentaje: number = 0) {
     if (!producto || !bodegaId || cantidad <= 0) return;
 
     let precio = Number(producto.costoPromedioActual || 0);
     if (precio <= 0) precio = Number(producto.precioUnitario || 0);
 
-    const descMonto = (precio * cantidad) * (descuentoPorcentaje / 100);
-    const subtotal = (precio * cantidad) - descMonto;
+    const indexEnCarrito = this.nuevaFactura.detalles.findIndex((d: any) => d.productoId === producto.id && d.bodegaId === bodegaId);
 
-    const bodSelect = this.bodegasList.find(b => b.id === bodegaId);
-    const bodegaNombre = bodSelect ? bodSelect.nombre : 'Principal';
-    
-    this.nuevaFactura.detalles.push({
-      productoId: producto.id,
-      bodegaId: bodegaId,
-      bodegaNombre: bodegaNombre,
-      cantidad: cantidad,
-      productoNombre: producto.nombre,
-      precioUnitario: precio,
-      descuentoPorcentaje: descuentoPorcentaje, 
-      descuentoMonto: descMonto, 
-      subtotal: subtotal
-    });
+    if (indexEnCarrito !== -1) {
+        // Ya existe en el carrito, se suma la cantidad inteligentemente
+        let nuevaCantidadTotal = this.nuevaFactura.detalles[indexEnCarrito].cantidad + cantidad;
+        
+        // Verificación de stock para la nueva suma total
+        const stockActual = this.obtenerStock(producto.id, bodegaId);
+        if (stockActual !== null && nuevaCantidadTotal > stockActual) {
+            nuevaCantidadTotal = stockActual;
+        }
+
+        const descMonto = (precio * nuevaCantidadTotal) * (descuentoPorcentaje / 100);
+        const subtotal = (precio * nuevaCantidadTotal) - descMonto;
+
+        this.nuevaFactura.detalles[indexEnCarrito].cantidad = nuevaCantidadTotal;
+        this.nuevaFactura.detalles[indexEnCarrito].descuentoPorcentaje = descuentoPorcentaje; // actualiza descuento
+        this.nuevaFactura.detalles[indexEnCarrito].descuentoMonto = descMonto;
+        this.nuevaFactura.detalles[indexEnCarrito].subtotal = subtotal;
+
+    } else {
+        // Producto totalmente nuevo en el carrito
+        const descMonto = (precio * cantidad) * (descuentoPorcentaje / 100);
+        const subtotal = (precio * cantidad) - descMonto;
+
+        const bodSelect = this.bodegasList.find(b => b.id === bodegaId);
+        const bodegaNombre = bodSelect ? bodSelect.nombre : 'Principal';
+        
+        this.nuevaFactura.detalles.push({
+          productoId: producto.id,
+          bodegaId: bodegaId,
+          bodegaNombre: bodegaNombre,
+          cantidad: cantidad,
+          productoNombre: producto.nombre,
+          precioUnitario: precio,
+          descuentoPorcentaje: descuentoPorcentaje, 
+          descuentoMonto: descMonto, 
+          subtotal: subtotal
+        });
+    }
+
     this.cdr.detectChanges();
   }
 
