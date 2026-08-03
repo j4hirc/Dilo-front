@@ -86,6 +86,8 @@ export class Facturas implements OnInit, OnDestroy {
   productoPendientePorBodega: any = null;
   cantidadPendientePorBodega: number = 1;
   descuentoPendientePorBodega: number = 0;
+  
+  hoverIndex: number = -1; // 🔥 Para el hover de los botones de opciones
 
   get subtotalCarrito(): number {
     return this.nuevaFactura.detalles.reduce((sum: number, item: any) => sum + (item.subtotal || 0), 0);
@@ -734,7 +736,10 @@ export class Facturas implements OnInit, OnDestroy {
                 }
             }
         } else if (matchesProd.length > 1) {
-            // 🔥 OFRECE OPCIONES CLARAS CUANDO SE REPITEN
+            // 🔥 GUARDAMOS ESTADO POR SI EL USUARIO DA CLIC MANUAL
+            this.itemTemp.cantidad = Number(item.cantidad) > 0 ? Number(item.cantidad) : 1;
+            this.itemTemp.descuentoPorcentaje = Number(item.descuentoPorcentaje) > 0 ? Number(item.descuentoPorcentaje) : 0;
+
             const prodsStr = matchesProd.slice(0,3).map((p, index) => `Opción ${index + 1}: ${p.nombre}`).join('. ');
             this.iniciarDesambiguacion('PRODUCTO', matchesProd, `Encontré varios similares. Dime el número de la opción o haz clic en pantalla: ${prodsStr}.`);
             return; 
@@ -774,7 +779,10 @@ export class Facturas implements OnInit, OnDestroy {
         if (algoAgregado) {
             this.hablar(`${prefijoAviso}Añadido al carrito. ¿Qué más deseas agregar?`, () => this.escuchar());
         } else if (mensajesAlerta.length > 0) {
-            this.hablar(`${prefijoAviso}¿Buscamos otra cosa?`, () => this.escuchar());
+            this.hablar(`${prefijoAviso}¿Modificamos algo más?`, () => this.escuchar());
+        } else {
+            // 🔥 EVITA QUE ZOE SE QUEDE CALLADA Y TRABADA SI NO HAY ALERTAS NI PRODUCTOS AÑADIDOS
+            this.hablar(`Listo. ¿Qué más hacemos?`, () => this.escuchar());
         }
     }
   }
@@ -783,20 +791,16 @@ export class Facturas implements OnInit, OnDestroy {
     const txt = this.limpiarTexto(textoBuscado);
     if (!txt) return [];
     
-    // 1. Búsqueda Exacta
     let exact = this.productosList.filter(p => this.limpiarTexto(p.nombre) === txt);
     if (exact.length > 0) return exact;
 
-    // 2. Búsqueda Parcial Directa (Si "llanta" está dentro de "Llanta Auto")
     let partial = this.productosList.filter(p => this.limpiarTexto(p.nombre).includes(txt) || txt.includes(this.limpiarTexto(p.nombre)));
     if (partial.length > 0) return partial;
 
-    // 3. Búsqueda Flexible por Palabras Clave (Ignorando conectores)
     const palabras = txt.split(' ').filter(p => p.length > 2); 
     if (palabras.length > 0) {
         let flexible = this.productosList.filter(p => {
             const nom = this.limpiarTexto(p.nombre);
-            // Si tiene TODAS las palabras clave importantes
             return palabras.every(pal => nom.includes(pal)); 
         });
         if (flexible.length > 0) return flexible;
@@ -812,14 +816,20 @@ export class Facturas implements OnInit, OnDestroy {
     this.hablar(mensaje, () => this.escuchar());
   }
 
-  // 🔥 NUEVO MÉTODO PARA CLICS MANUALES EN LA UI
+  // 🔥 CLICK MANUAL REFORZADO CONTRA ERRORES
   seleccionarOpcionManual(opcion: any) {
-    // Apagamos la escucha de voz porque el usuario ya eligió con el mouse
+    this.isThinking = true; // Previene que el evento onend del micrófono lo vuelva a activar
     if (this.recognition) {
         try { this.recognition.stop(); } catch(e){}
     }
     this.isListening = false;
-    this.ejecutarSeleccion(opcion, '');
+    this.hoverIndex = -1; 
+
+    // Damos un respiro mínimo para evitar la carrera del micrófono
+    setTimeout(() => {
+        this.isThinking = false;
+        this.ejecutarSeleccion(opcion, '');
+    }, 100);
   }
 
   private manejarDesambiguacion(transcript: string) {
@@ -892,11 +902,13 @@ export class Facturas implements OnInit, OnDestroy {
       else if (this.tipoOpciones === 'PRODUCTO') {
           let prod = seleccionado;
           let cant = this.itemTemp.cantidad || 1;
+          let desc = this.itemTemp.descuentoPorcentaje || 0;
+          
           this.opcionesVoz = [];
           this.tipoOpciones = null;
           
           this.aplicarDatosExtraidos({
-              items: [{ producto: prod.nombre, cantidad: cant, descuentoPorcentaje: 0 }]
+              items: [{ producto: prod.nombre, cantidad: cant, descuentoPorcentaje: desc }]
           }, transcriptContext);
       }
       else if (this.tipoOpciones === 'BODEGA') {
