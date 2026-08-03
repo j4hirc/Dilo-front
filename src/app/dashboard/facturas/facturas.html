@@ -1,322 +1,494 @@
-<div class="page-header">
-    <div class="header-titles">
-        <h2>
-            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 8px; color: #ed8936;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-            Historial de Facturas
-        </h2>
-        <p>Visualiza, emite y descarga los comprobantes de tus ventas.</p>
-    </div>
-    <div style="display: flex; gap: 12px;">
-        <button class="btn-voice-premium" (click)="abrirModalNuevo(true)">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line></svg>
-            Zoe: Voz Inteligente
-        </button>
-        <button class="btn-primary" (click)="abrirModalNuevo(false)">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-            Factura Manual
-        </button>
-    </div>
-</div>
+<div class="dashboard-layout">
+    
+    <!-- Precarga silenciosa de imágenes -->
+    <img *ngIf="fotoPerfilUrl" [src]="fotoPerfilUrl" style="display: none;" aria-hidden="true" fetchpriority="high">
+    <img src="images/IA.png" style="display: none;" aria-hidden="true" fetchpriority="high">
 
-<!-- 🔥 BUSCADOR -->
-<div class="search-container fade-in">
-    <div class="search-box">
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-        <input type="text" placeholder="Buscar por número o cliente..." 
-               [(ngModel)]="terminoBusqueda" (keyup.enter)="buscarFacturas()" (input)="terminoBusqueda === '' ? buscarFacturas() : null">
-    </div>
-    <button class="btn-secondary" (click)="buscarFacturas()">Buscar</button>
-</div>
+    <div class="mobile-overlay" *ngIf="isSidebarOpen" (click)="toggleSidebar()"></div>
 
-<div *ngIf="isLoading" class="loading-container" style="background: white; border-radius: 20px; margin-top: 20px; padding: 60px 0;">
-    <div class="spinner"></div>
-    <p>Sincronizando con el servidor...</p>
-</div>
-
-<div class="card full-height-card premium-card">
-    <div class="card-body">
-        <div class="table-responsive" *ngIf="!isLoading">
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Número</th>
-                        <th>Cliente</th>
-                        <th>Método</th>
-                        <th>Monto Total</th>
-                        <th>Estado SRI</th>
-                        <th style="text-align: center;">Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr *ngIf="facturas.length === 0">
-                        <td colspan="6" class="empty-state">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="9" y1="15" x2="15" y2="15"></line></svg>
-                            <p>No hay facturas registradas</p>
-                            <span>Comienza emitiendo una nueva factura manual o con Zoe.</span>
-                        </td>
-                    </tr>
-                    <tr *ngFor="let fac of facturas">
-                        <td class="td-bold">{{ fac.numero }}</td>
-                        <td class="td-muted">{{ fac.cliente }}</td>
-                        <td><span class="tag-modern">{{ fac.tipo }}</span></td>
-                        <td class="td-price">${{ fac.monto | number:'1.2-2' }}</td>
-                        <td>
-                            <span class="status-modern" [ngClass]="{
-                                's-yellow': fac.estado === 'PENDIENTE' || fac.estado === 'CREADA',
-                                's-green': fac.estado === 'AUTORIZADA',
-                                's-red': fac.estado === 'ANULADA' || fac.estado === 'ERROR_SRI' 
-                            }">{{ fac.estado }}</span>
-                        </td>
-                        <td class="action-cells">
-                            <button class="btn-action-icon" title="Imprimir PDF" (click)="descargarPDF(fac)">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                            </button>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+    <aside class="sidebar" [class.open]="isSidebarOpen">
+        <div class="sidebar-header">
+            <img src="images/Dilo-Blanco.png" alt="Logo Dilo" class="sidebar-logo">
+            <span class="role-badge">{{ rolUsuario }}</span>
         </div>
-    </div>
-</div>
+        
+        <div class="sidebar-menu">
+            <p class="menu-label">GENERAL</p>
 
-<!-- =========================================
-   🔥 MODAL PUNTO DE VENTA (FONDO)
-   ========================================= -->
-<div class="modal-overlay" *ngIf="showModal">
-    <div class="modal-layout-wrapper">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3>Punto de Venta</h3>
-            <button class="close-btn" (click)="cerrarModal()">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-            </button>
+            <a *ngIf="tieneRol(['PROPIETARIO'])" routerLink="/dashboard/propietario" routerLinkActive="active" class="menu-item" (click)="isSidebarOpen = false">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                Dashboard
+            </a>
+
+            <a *ngIf="tieneRol(['PROPIETARIO', 'VENDEDOR'])" routerLink="/dashboard/facturas" routerLinkActive="active" class="menu-item" (click)="isSidebarOpen = false">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                Facturas
+            </a>
+
+            <a *ngIf="tieneRol(['PROPIETARIO', 'VENDEDOR'])" routerLink="/dashboard/cuentas-cobrar" routerLinkActive="active" class="menu-item" (click)="isSidebarOpen = false">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg>
+                Cuentas por Cobrar
+            </a>
+
+            <a *ngIf="tieneRol(['PROPIETARIO', 'BODEGUERO'])" routerLink="/dashboard/compras" routerLinkActive="active" class="menu-item" (click)="isSidebarOpen = false">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
+                Abastecimiento
+            </a>
+
+            <a *ngIf="tieneRol(['PROPIETARIO', 'VENDEDOR'])" routerLink="/dashboard/clientes" routerLinkActive="active" class="menu-item" (click)="isSidebarOpen = false">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                Clientes
+            </a>
+
+            <a *ngIf="tieneRol(['PROPIETARIO', 'BODEGUERO'])" routerLink="/dashboard/proveedores" routerLinkActive="active" class="menu-item" (click)="isSidebarOpen = false">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
+                Proveedores
+            </a>
+
+            <a *ngIf="tieneRol(['PROPIETARIO', 'BODEGUERO'])" routerLink="/dashboard/productos" routerLinkActive="active" class="menu-item" (click)="isSidebarOpen = false">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>
+                Productos
+            </a>
+
+            <a *ngIf="tieneRol(['PROPIETARIO', 'BODEGUERO'])" routerLink="/dashboard/categorias" routerLinkActive="active" class="menu-item" (click)="isSidebarOpen = false">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                Categorías
+            </a>
+
+            <a *ngIf="tieneRol(['PROPIETARIO', 'BODEGUERO'])" routerLink="/dashboard/bodegas" routerLinkActive="active" class="menu-item" (click)="isSidebarOpen = false">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                Bodegas
+            </a>
+
+            <a *ngIf="tieneRol(['PROPIETARIO', 'BODEGUERO'])" routerLink="/dashboard/inventario" routerLinkActive="active" class="menu-item" (click)="isSidebarOpen = false">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                Inventario
+            </a>
+
+            <a *ngIf="tieneRol(['PROPIETARIO', 'BODEGUERO'])" routerLink="/dashboard/kardex" routerLinkActive="active" class="menu-item" (click)="isSidebarOpen = false">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"></polyline><polyline points="23 20 23 14 17 14"></polyline><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path></svg>
+                Movimientos
+            </a>
+            
+            <p *ngIf="tieneRol(['PROPIETARIO'])" class="menu-label mt-4">ADMINISTRACIÓN</p>
+            
+            <a *ngIf="tieneRol(['PROPIETARIO'])" routerLink="/dashboard/equipo" routerLinkActive="active" class="menu-item" (click)="isSidebarOpen = false">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                Mi Equipo
+            </a>
+
+            <a *ngIf="tieneRol(['PROPIETARIO'])" routerLink="/dashboard/configuracion" routerLinkActive="active" class="menu-item" (click)="isSidebarOpen = false">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                Configuración
+            </a>
+
+            <a *ngIf="tieneRol(['PROPIETARIO', 'VENDEDOR', 'BODEGUERO'])" routerLink="/dashboard/perfil" routerLinkActive="active" class="menu-item" (click)="isSidebarOpen = false">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                Mi Perfil
+            </a>
         </div>
 
-        <div class="modal-body modal-grid-layout">
-            <!-- COLUMNA IZQUIERDA: CONTROLES -->
-            <div class="modal-col">
-                <div class="section-badge">Cliente y Pago</div>
+        <div class="sidebar-footer">
+            <div class="user-info">
+                <div class="user-avatar-small" [ngClass]="{'orange-bg': !fotoPerfilUrl}">
+                    <img *ngIf="fotoPerfilUrl" [src]="fotoPerfilUrl" alt="Foto Perfil" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+                    <span *ngIf="!fotoPerfilUrl">{{ inicialesUsuario }}</span>
+                </div>
                 
-                <div class="form-group mt-2">
-                    <label>Cliente a Facturar *</label>
-                    <div style="display: flex; gap: 10px; align-items: flex-start;">
-                        <!-- BUSCADOR -->
-                        <div class="search-dropdown-container" *ngIf="!clienteSeleccionadoInfo" style="position: relative; flex: 1;">
-                            <input type="text" id="buscadorCliente" class="modern-input" placeholder="Buscar por nombre, DNI o correo..." [(ngModel)]="terminoBusquedaCliente" (input)="filtrarClientes()" (focus)="mostrarDropdownClientes = true" (blur)="ocultarDropdown()" autocomplete="off">
-                            
-                            <div class="dropdown-list shadow-sm" *ngIf="mostrarDropdownClientes" style="position: absolute; top: 100%; left: 0; right: 0; z-index: 50; background: white; border: 1px solid #e2e8f0; border-radius: 8px; margin-top: 4px; max-height: 250px; overflow-y: auto;">
-                                <div class="dropdown-item" *ngIf="clientesFiltrados.length === 0" style="padding: 12px 15px; color: #64748b; font-size: 14px; text-align: center;">No se encontraron clientes.</div>
-                                
-                                <div class="dropdown-item" *ngFor="let cli of clientesFiltrados" (mousedown)="seleccionarCliente(cli)" style="padding: 12px 15px; border-bottom: 1px solid #f1f5f9; cursor: pointer;">
-                                    <div style="font-weight: 600; color: #0f172a; margin-bottom: 2px;">{{ cli.nombreCompleto || cli.primerNombre || cli.razonSocial }}</div>
-                                    <div style="display: flex; gap: 15px; font-size: 12px; color: #64748b;">
-                                        <span>
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: text-top; margin-right: 2px;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                                            {{ cli.dni || cli.identificacion || 'Sin DNI' }}
-                                        </span>
-                                        <span>
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: text-top; margin-right: 2px;"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
-                                            {{ cli.email || cli.correo || 'Sin correo' }}
-                                        </span>
+                <div class="user-details">
+                    <h4>{{ usuarioLogueado?.primerNombre || 'Mi Negocio' }}</h4>
+                    <p>{{ usuarioLogueado?.email }}</p>
+                </div>
+                <button class="logout-btn" (click)="cerrarSesion()" title="Cerrar sesión">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                </button>
+            </div>
+        </div>
+    </aside>
+
+   <main class="main-content">
+        <header class="top-header">
+            <div class="header-left">
+                <button class="menu-toggle-btn" (click)="toggleSidebar()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                </button>
+                
+                <div class="breadcrumbs hide-on-mobile">
+                    <span class="business-badge">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
+                        {{ negocioNombre }}
+                    </span>
+                    <span class="separator">/</span>
+                    <span class="current">Facturas</span>
+                </div>
+            </div>
+            
+            <div class="header-actions">
+                <div class="user-menu-wrapper" style="position: relative;">
+                    <div class="user-avatar" [ngClass]="{'orange-bg': !fotoPerfilUrl}" (click)="toggleUserMenu()" style="cursor: pointer;">
+                        <img *ngIf="fotoPerfilUrl" [src]="fotoPerfilUrl" alt="Foto Perfil" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+                        <span *ngIf="!fotoPerfilUrl">{{ inicialesUsuario }}</span>
+                    </div>
+
+                    <div class="user-dropdown shadow-lg" *ngIf="showUserMenu">
+                        <div class="user-dropdown-header">
+                            <p class="user-name">{{ usuarioLogueado?.primerNombre }} {{ usuarioLogueado?.apellidoPaterno }}</p>
+                            <p class="user-email">{{ usuarioLogueado?.email }}</p>
+                        </div>
+                        <a routerLink="/dashboard/perfil" class="user-dropdown-item" (click)="showUserMenu = false">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                            Mi Perfil
+                        </a>
+                        <div class="user-dropdown-divider"></div>
+                        <button class="user-dropdown-item text-red" (click)="cerrarSesion()">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                            Cerrar Sesión
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="page-header">
+            <div class="header-titles">
+                <h2>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 8px; color: #ed8936;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                    Historial de Facturas
+                </h2>
+                <p>Visualiza, emite y descarga los comprobantes de tus ventas.</p>
+            </div>
+            <div style="display: flex; gap: 12px;">
+                <button class="btn-voice-premium" (click)="abrirModalNuevo(true)">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line></svg>
+                    Zoe: Voz Inteligente
+                </button>
+                <button class="btn-primary" (click)="abrirModalNuevo(false)">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    Factura Manual
+                </button>
+            </div>
+        </div>
+
+        <!-- 🔥 BUSCADOR -->
+        <div class="search-container fade-in">
+            <div class="search-box">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input type="text" placeholder="Buscar por número o cliente..." 
+                       [(ngModel)]="terminoBusqueda" (keyup.enter)="buscarFacturas()" (input)="terminoBusqueda === '' ? buscarFacturas() : null">
+            </div>
+            <button class="btn-secondary" (click)="buscarFacturas()">Buscar</button>
+        </div>
+
+        <div *ngIf="isLoading" class="loading-container" style="background: white; border-radius: 20px; margin-top: 20px; padding: 60px 0;">
+            <div class="spinner"></div>
+            <p>Sincronizando con el servidor...</p>
+        </div>
+
+        <div class="card full-height-card premium-card">
+            <div class="card-body">
+                <div class="table-responsive" *ngIf="!isLoading">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Número</th>
+                                <th>Cliente</th>
+                                <th>Método</th>
+                                <th>Monto Total</th>
+                                <th>Estado SRI</th>
+                                <th style="text-align: center;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr *ngIf="facturas.length === 0">
+                                <td colspan="6" class="empty-state">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+                                    <p>No hay facturas registradas</p>
+                                    <span>Comienza emitiendo una nueva factura manual o con Zoe.</span>
+                                </td>
+                            </tr>
+                            <tr *ngFor="let fac of facturas">
+                                <td class="td-bold">{{ fac.numero }}</td>
+                                <td class="td-muted">{{ fac.cliente }}</td>
+                                <td><span class="tag-modern">{{ fac.tipo }}</span></td>
+                                <td class="td-price">${{ fac.monto | number:'1.2-2' }}</td>
+                                <td>
+                                    <span class="status-modern" [ngClass]="{
+                                        's-yellow': fac.estado === 'PENDIENTE' || fac.estado === 'CREADA',
+                                        's-green': fac.estado === 'AUTORIZADA',
+                                        's-red': fac.estado === 'ANULADA' || fac.estado === 'ERROR_SRI' 
+                                    }">{{ fac.estado }}</span>
+                                </td>
+                                <td class="action-cells">
+                                    <button class="btn-action-icon" title="Imprimir PDF" (click)="descargarPDF(fac)">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- =========================================
+           🔥 MODAL PUNTO DE VENTA (FONDO)
+           ========================================= -->
+        <div class="modal-overlay" *ngIf="showModal">
+            <div class="modal-layout-wrapper">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Punto de Venta</h3>
+                    <button class="close-btn" (click)="cerrarModal()">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                </div>
+
+                <div class="modal-body modal-grid-layout">
+                    <!-- COLUMNA IZQUIERDA: CONTROLES -->
+                    <div class="modal-col">
+                        <div class="section-badge">Cliente y Pago</div>
+                        
+                        <div class="form-group mt-2">
+                            <label>Cliente a Facturar *</label>
+                            <div style="display: flex; gap: 10px; align-items: flex-start;">
+                                <!-- BUSCADOR -->
+                                <div class="search-dropdown-container" *ngIf="!clienteSeleccionadoInfo" style="position: relative; flex: 1;">
+                                    <input type="text" id="buscadorCliente" class="modern-input" placeholder="Buscar por nombre, DNI o correo..." [(ngModel)]="terminoBusquedaCliente" (input)="filtrarClientes()" (focus)="mostrarDropdownClientes = true" (blur)="ocultarDropdown()" autocomplete="off">
+                                    
+                                    <div class="dropdown-list shadow-sm" *ngIf="mostrarDropdownClientes" style="position: absolute; top: 100%; left: 0; right: 0; z-index: 50; background: white; border: 1px solid #e2e8f0; border-radius: 8px; margin-top: 4px; max-height: 250px; overflow-y: auto;">
+                                        <div class="dropdown-item" *ngIf="clientesFiltrados.length === 0" style="padding: 12px 15px; color: #64748b; font-size: 14px; text-align: center;">No se encontraron clientes.</div>
+                                        
+                                        <div class="dropdown-item" *ngFor="let cli of clientesFiltrados" (mousedown)="seleccionarCliente(cli)" style="padding: 12px 15px; border-bottom: 1px solid #f1f5f9; cursor: pointer;">
+                                            <div style="font-weight: 600; color: #0f172a; margin-bottom: 2px;">{{ cli.nombreCompleto || cli.primerNombre || cli.razonSocial }}</div>
+                                            <div style="display: flex; gap: 15px; font-size: 12px; color: #64748b;">
+                                                <span>
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: text-top; margin-right: 2px;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                                    {{ cli.dni || cli.identificacion || 'Sin DNI' }}
+                                                </span>
+                                                <span>
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: text-top; margin-right: 2px;"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                                                    {{ cli.email || cli.correo || 'Sin correo' }}
+                                                </span>
+                                            </div>
+                                        </div>
                                     </div>
+                                </div>
+                                
+                                <!-- BOTÓN CONSUMIDOR FINAL -->
+                                <button *ngIf="!clienteSeleccionadoInfo" class="btn-outline-secondary" (click)="setConsumidorFinal()" style="height: 48px; border-radius: 8px; white-space: nowrap; font-size: 0.85rem; padding: 0 15px;" title="Facturar rápido sin datos">
+                                    Consumidor Final
+                                </button>
+                            </div>
+
+                            <div class="selected-client-card" *ngIf="clienteSeleccionadoInfo" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: flex-start; transition: all 0.3s ease;">
+                                <div>
+                                    <div style="font-weight: 700; color: #0f172a; font-size: 15px;">
+                                        {{ clienteSeleccionadoInfo.nombreCompleto || clienteSeleccionadoInfo.primerNombre || clienteSeleccionadoInfo.razonSocial }}
+                                        <span *ngIf="esConsumidorFinal" style="background: #e2e8f0; color: #475569; font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; margin-left: 5px; vertical-align: middle;">DEFAULT</span>
+                                    </div>
+                                    <div style="font-size: 13px; color: #475569; margin-top: 5px; display: flex; flex-direction: column; gap: 3px;">
+                                        <span><strong>CI/RUC:</strong> {{ clienteSeleccionadoInfo.dni || clienteSeleccionadoInfo.identificacion || 'N/A' }}</span>
+                                        <span><strong>Correo:</strong> {{ clienteSeleccionadoInfo.email || clienteSeleccionadoInfo.correo || 'N/A' }}</span>
+                                    </div>
+                                </div>
+                                <button class="btn-action-icon" (click)="limpiarClienteSeleccionado()" style="color: #ef4444; border: 1px solid #e2e8f0; border-radius: 6px; padding: 5px; cursor: pointer; background: white;"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+                            </div>
+                        </div>
+
+                        <div class="form-row mt-3">
+                            <div class="form-group w-50">
+                                <label>Método de Pago *</label>
+                                <select [(ngModel)]="nuevaFactura.metodoPago" class="custom-select modern-input" style="transition: all 0.3s ease;">
+                                    <option value="EFECTIVO">Efectivo</option>
+                                    <option value="TRANSFERENCIA">Transferencia</option>
+                                    <option value="TARJETA_CREDITO">Tarjeta de Crédito</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group w-50" *ngIf="nuevaFactura.metodoPago === 'TARJETA_CREDITO'">
+                                <label>Meses (Cuotas)</label>
+                                <input type="number" [(ngModel)]="nuevaFactura.numeroCuotas" min="0" class="modern-input" placeholder="Ej. 3">
+                            </div>
+                        </div>
+
+                        <!-- 🔥 SIMULADOR DE TARJETA -->
+                        <div class="form-row mt-2" *ngIf="nuevaFactura.metodoPago === 'TARJETA_CREDITO'">
+                            <div class="form-group" style="width: 50%;">
+                                <label>Nº Tarjeta (Opcional)</label>
+                                <input type="text" [(ngModel)]="nuevaFactura.tarjetaNumero" class="modern-input" placeholder="0000 0000 0000 0000" maxlength="19">
+                            </div>
+                            <div class="form-group" style="width: 25%;">
+                                <label>Venc.</label>
+                                <input type="text" [(ngModel)]="nuevaFactura.tarjetaVence" class="modern-input" placeholder="MM/YY" maxlength="5">
+                            </div>
+                            <div class="form-group" style="width: 25%;">
+                                <label>CVC</label>
+                                <input type="text" [(ngModel)]="nuevaFactura.tarjetaCvc" class="modern-input" placeholder="123" maxlength="4">
+                            </div>
+                        </div>
+                        <div class="form-row mt-1" *ngIf="nuevaFactura.metodoPago === 'TARJETA_CREDITO'">
+                            <small style="color: #94a3b8; font-size: 0.75rem; width: 100%;">* Estos datos son simulados y <b>NO se guardan</b> por seguridad.</small>
+                        </div>
+
+                        <div class="section-badge mt-4">Buscador de Productos</div>
+                        
+                        <div class="add-product-box mt-2 shadow-sm">
+                            <div class="form-row">
+                                <div class="form-group" style="width: 40%">
+                                    <label>Bodega *</label>
+                                    <select [(ngModel)]="itemTemp.bodegaId" class="custom-select modern-input" style="transition: all 0.3s ease;">
+                                        <option [ngValue]="null" disabled>Seleccionar bodega</option>
+                                        <option *ngFor="let bod of bodegasList" [ngValue]="bod.id">{{ bod.nombre }}</option>
+                                    </select>
+                                </div>
+                                <div class="form-group" style="width: 30%">
+                                    <label>Cantidad *</label>
+                                    <div style="position: relative;">
+                                        <input type="number" [(ngModel)]="itemTemp.cantidad" min="1" class="modern-input text-center" style="transition: all 0.3s ease;">
+                                        <small *ngIf="stockDisponible !== null" style="position: absolute; right: 5px; bottom: -20px; font-size: 0.75rem; font-weight: 700; color: #059669;">Disp: {{ stockDisponible }}</small>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-group" style="width: 30%">
+                                    <label>Desc. (%)</label>
+                                    <input type="number" [(ngModel)]="itemTemp.descuentoPorcentaje" min="0" max="100" class="modern-input text-center" placeholder="0%">
+                                </div>
+                            </div>
+
+                            <div class="form-group" style="margin-top: 24px;">
+                                <label>Producto *</label>
+                                <div class="input-with-button">
+                                    <select [(ngModel)]="itemTemp.productoId" class="custom-select modern-input" style="flex: 1; transition: all 0.3s ease;">
+                                        <option [ngValue]="null" disabled>Seleccionar...</option>
+                                        <option *ngFor="let prod of productosList" [ngValue]="prod.id">{{ prod.nombre }} - ${{ prod.precioUnitario }}</option>
+                                    </select>
+                                    <button class="btn-primary" style="padding: 0 20px; height: 44px; margin-top: 0; border-radius: 8px;" (click)="agregarAlCarrito()">Agregar</button>
                                 </div>
                             </div>
                         </div>
+                    </div>
+
+                    <!-- COLUMNA DERECHA: CARRITO -->
+                    <div class="modal-col cart-col shadow-sm">
+                        <div class="cart-header">
+                            <h4>Resumen del Ticket</h4>
+                            <span class="badge">{{ nuevaFactura.detalles.length }} items</span>
+                        </div>
+
+                        <div class="cart-items-container">
+                            <div class="empty-cart-premium" *ngIf="nuevaFactura.detalles.length === 0">
+                                <p>Ticket Vacío</p>
+                            </div>
+
+                            <div class="cart-item-ticket fade-in" *ngFor="let d of nuevaFactura.detalles; let i = index">
+                                <div class="ticket-info">
+                                    <p class="t-name">{{ d.productoNombre }}</p>
+                                    <p class="t-qty">
+                                        {{ d.cantidad }} un. x ${{ d.precioUnitario | number:'1.2-2' }} 
+                                        <span *ngIf="d.descuentoPorcentaje > 0" style="color: #ea580c; font-weight: 800; font-size: 0.8rem; margin-left: 5px;">(-{{ d.descuentoPorcentaje }}%)</span>
+                                        <span style="color: #94a3b8; font-size: 0.75rem; margin-left: 5px;">(Bodega: {{ d.bodegaNombre }})</span>
+                                    </p>
+                                </div>
+                                <div class="ticket-price">
+                                    <strong>${{ d.subtotal | number:'1.2-2' }}</strong>
+                                    <button class="delete-icon" (click)="eliminarDelCarrito(i)"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="cart-footer">
+                            <!-- 🔥 SE MUESTRA LA TARJETA VISUALMENTE -->
+                            <div *ngIf="nuevaFactura.metodoPago === 'TARJETA_CREDITO'" style="margin-bottom: 10px; font-size: 0.8rem; color: #64748b; font-weight: 600;">
+                                💳 Pago con Tarjeta
+                                <span *ngIf="nuevaFactura.tarjetaNumero"> (**** {{ nuevaFactura.tarjetaNumero | slice:-4 }})</span>
+                            </div>
+
+                            <div class="discount-box" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                <span style="font-size: 0.9rem; font-weight: 600; color: #475569;">Descuento Factura (%)</span>
+                                <input type="number" [(ngModel)]="nuevaFactura.descuentoGlobalPorcentaje" min="0" max="100" class="modern-input text-right" style="width: 100px; padding: 6px 12px; height: auto;" placeholder="0%">
+                            </div>
+
+                            <div class="cart-total-box" [ngClass]="{'active': nuevaFactura.detalles.length > 0}">
+                                <span>A COBRAR</span>
+                                <span class="cart-total-amount">${{ totalCarrito | number:'1.2-2' }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button class="btn-outline-secondary" (click)="cerrarModal()" [disabled]="isSaving">Cerrar</button>
+                    <button class="btn-primary btn-large" (click)="guardarFactura()" [disabled]="isSaving || nuevaFactura.detalles.length === 0">
+                        Emitir Factura
+                    </button>
+                </div>
+            </div>
+            
+            <!-- ZOE SIDE PANEL -->
+            <div class="zoe-side-panel fade-in" *ngIf="voiceState !== 'OFF'">
+                    <div class="zoe-widget">
                         
-                        <!-- BOTÓN CONSUMIDOR FINAL -->
-                        <button *ngIf="!clienteSeleccionadoInfo" class="btn-outline-secondary" (click)="setConsumidorFinal()" style="height: 48px; border-radius: 8px; white-space: nowrap; font-size: 0.85rem; padding: 0 15px;" title="Facturar rápido sin datos">
-                            Consumidor Final
+                        <button class="close-zoe-btn" (click)="cancelarAsistenteVoz()" title="Detener a Zoe">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                         </button>
-                    </div>
 
-                    <div class="selected-client-card" *ngIf="clienteSeleccionadoInfo" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: flex-start; transition: all 0.3s ease;">
-                        <div>
-                            <div style="font-weight: 700; color: #0f172a; font-size: 15px;">
-                                {{ clienteSeleccionadoInfo.nombreCompleto || clienteSeleccionadoInfo.primerNombre || clienteSeleccionadoInfo.razonSocial }}
-                                <span *ngIf="esConsumidorFinal" style="background: #e2e8f0; color: #475569; font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; margin-left: 5px; vertical-align: middle;">DEFAULT</span>
+                        <div class="zoe-header">
+                            <div class="mic-container-small" [ngClass]="{'is-listening': isListening}">
+                                <div class="mic-ring-small" *ngIf="isListening"></div>
+                                <div class="mic-icon-small">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line></svg>
+                                </div>
                             </div>
-                            <div style="font-size: 13px; color: #475569; margin-top: 5px; display: flex; flex-direction: column; gap: 3px;">
-                                <span><strong>CI/RUC:</strong> {{ clienteSeleccionadoInfo.dni || clienteSeleccionadoInfo.identificacion || 'N/A' }}</span>
-                                <span><strong>Correo:</strong> {{ clienteSeleccionadoInfo.email || clienteSeleccionadoInfo.correo || 'N/A' }}</span>
-                            </div>
-                        </div>
-                        <button class="btn-action-icon" (click)="limpiarClienteSeleccionado()" style="color: #ef4444; border: 1px solid #e2e8f0; border-radius: 6px; padding: 5px; cursor: pointer; background: white;"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
-                    </div>
-                </div>
-
-                <div class="form-row mt-3">
-                    <div class="form-group w-50">
-                        <label>Método de Pago *</label>
-                        <select [(ngModel)]="nuevaFactura.metodoPago" class="custom-select modern-input" style="transition: all 0.3s ease;">
-                            <option value="EFECTIVO">Efectivo</option>
-                            <option value="TRANSFERENCIA">Transferencia</option>
-                            <option value="TARJETA_CREDITO">Tarjeta de Crédito</option>
-                        </select>
-                    </div>
-                    
-                    <div class="form-group w-50" *ngIf="nuevaFactura.metodoPago === 'TARJETA_CREDITO'">
-                        <label>Meses (Cuotas)</label>
-                        <input type="number" [(ngModel)]="nuevaFactura.numeroCuotas" min="0" class="modern-input" placeholder="Ej. 3">
-                    </div>
-                </div>
-
-                <!-- 🔥 SIMULADOR DE TARJETA -->
-                <div class="form-row mt-2" *ngIf="nuevaFactura.metodoPago === 'TARJETA_CREDITO'">
-                    <div class="form-group" style="width: 50%;">
-                        <label>Nº Tarjeta (Opcional)</label>
-                        <input type="text" [(ngModel)]="nuevaFactura.tarjetaNumero" class="modern-input" placeholder="0000 0000 0000 0000" maxlength="19">
-                    </div>
-                    <div class="form-group" style="width: 25%;">
-                        <label>Venc.</label>
-                        <input type="text" [(ngModel)]="nuevaFactura.tarjetaVence" class="modern-input" placeholder="MM/YY" maxlength="5">
-                    </div>
-                    <div class="form-group" style="width: 25%;">
-                        <label>CVC</label>
-                        <input type="text" [(ngModel)]="nuevaFactura.tarjetaCvc" class="modern-input" placeholder="123" maxlength="4">
-                    </div>
-                </div>
-                <div class="form-row mt-1" *ngIf="nuevaFactura.metodoPago === 'TARJETA_CREDITO'">
-                    <small style="color: #94a3b8; font-size: 0.75rem; width: 100%;">* Estos datos son simulados y <b>NO se guardan</b> por seguridad.</small>
-                </div>
-
-                <div class="section-badge mt-4">Buscador de Productos</div>
-                
-                <div class="add-product-box mt-2 shadow-sm">
-                    <div class="form-row">
-                        <div class="form-group" style="width: 40%">
-                            <label>Bodega *</label>
-                            <select [(ngModel)]="itemTemp.bodegaId" class="custom-select modern-input" style="transition: all 0.3s ease;">
-                                <option [ngValue]="null" disabled>Seleccionar bodega</option>
-                                <option *ngFor="let bod of bodegasList" [ngValue]="bod.id">{{ bod.nombre }}</option>
-                            </select>
-                        </div>
-                        <div class="form-group" style="width: 30%">
-                            <label>Cantidad *</label>
-                            <div style="position: relative;">
-                                <input type="number" [(ngModel)]="itemTemp.cantidad" min="1" class="modern-input text-center" style="transition: all 0.3s ease;">
-                                <small *ngIf="stockDisponible !== null" style="position: absolute; right: 5px; bottom: -20px; font-size: 0.75rem; font-weight: 700; color: #059669;">Disp: {{ stockDisponible }}</small>
+                            <div>
+                                <h4 style="margin: 0; font-size: 1rem; color: #0f172a;">Zoe Activa ✨</h4>
+                                <span class="listening-indicator" *ngIf="isListening" style="font-size: 0.75rem;">Te escucho...</span>
+                                <span class="thinking-indicator" *ngIf="isThinking" style="font-size: 0.75rem; color: #f59e0b;">Pensando...</span>
                             </div>
                         </div>
-                        
-                        <div class="form-group" style="width: 30%">
-                            <label>Desc. (%)</label>
-                            <input type="number" [(ngModel)]="itemTemp.descuentoPorcentaje" min="0" max="100" class="modern-input text-center" placeholder="0%">
-                        </div>
-                    </div>
 
-                    <div class="form-group" style="margin-top: 24px;">
-                        <label>Producto *</label>
-                        <div class="input-with-button">
-                            <select [(ngModel)]="itemTemp.productoId" class="custom-select modern-input" style="flex: 1; transition: all 0.3s ease;">
-                                <option [ngValue]="null" disabled>Seleccionar...</option>
-                                <option *ngFor="let prod of productosList" [ngValue]="prod.id">{{ prod.nombre }} - ${{ prod.precioUnitario }}</option>
-                            </select>
-                            <button class="btn-primary" style="padding: 0 20px; height: 44px; margin-top: 0; border-radius: 8px;" (click)="agregarAlCarrito()">Agregar</button>
+                        <div class="zoe-body">
+                            <div class="bot-message" *ngIf="voiceMessage">
+                                <p>{{ voiceMessage }}</p>
+                            </div>
+
+                            <!-- 🔥 OPCIONES INTERACTIVAS MEJORADAS -->
+                            <div class="voice-options-list fade-in" *ngIf="opcionesVoz.length > 0">
+                                <p class="voice-options-title" style="font-size: 0.9rem; font-weight: 600; margin-bottom: 10px; color: #475569;">Di el número o haz clic en la opción:</p>
+                                
+                                <div class="voice-option-item" *ngFor="let opt of opcionesVoz; let i = index" 
+                                     (click)="seleccionarOpcionManual(opt)" 
+                                     style="cursor: pointer; transition: all 0.2s; background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; margin-bottom: 8px; display: flex; align-items: center; gap: 10px;"
+                                     onmouseover="this.style.backgroundColor='#f1f5f9'; this.style.borderColor='#f97316'" 
+                                     onmouseout="this.style.backgroundColor='white'; this.style.borderColor='#e2e8f0'">
+                                    
+                                    <span class="voice-opt-number" style="background: #f97316; color: white; width: 24px; height: 24px; display: flex; justify-content: center; align-items: center; border-radius: 50%; font-weight: bold; font-size: 0.85rem; flex-shrink: 0;">{{ i + 1 }}</span>
+                                    
+                                    <span class="voice-opt-text" *ngIf="tipoOpciones === 'CLIENTE'" style="font-size: 0.95rem; font-weight: 500; color: #0f172a; width: 100%;">
+                                        {{ opt.nombreCompleto || opt.primerNombre || opt.razonSocial }} 
+                                        <span style="color:#64748b; font-size:0.8rem; margin-left: 5px;">(CI: {{ opt.dni || opt.identificacion || 'N/A' }})</span>
+                                    </span>
+                                    
+                                    <span class="voice-opt-text" *ngIf="tipoOpciones === 'BODEGA'" style="font-size: 0.95rem; font-weight: 500; color: #0f172a; width: 100%;">
+                                        {{ opt.nombre }} 
+                                        <!-- Stock visual en tiempo real para bodegas -->
+                                        <span style="color:#64748b; font-size:0.8rem; margin-left: 5px;">
+                                            (Stock disponible)
+                                        </span>
+                                    </span>
+                                    
+                                    <span class="voice-opt-text" *ngIf="tipoOpciones === 'PRODUCTO'" style="font-size: 0.95rem; font-weight: 500; color: #0f172a; width: 100%;">
+                                        {{ opt.nombre }} <span style="color:#10b981; font-size:0.85rem; margin-left: 5px; font-weight: 700;">${{ opt.precioUnitario }}</span>
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <div class="user-message" *ngIf="userTranscript && opcionesVoz.length === 0">
+                                <p>"{{ userTranscript }}"</p>
+                            </div>
                         </div>
                     </div>
-                </div>
             </div>
-
-            <!-- COLUMNA DERECHA: CARRITO -->
-            <div class="modal-col cart-col shadow-sm">
-                <div class="cart-header">
-                    <h4>Resumen del Ticket</h4>
-                    <span class="badge">{{ nuevaFactura.detalles.length }} items</span>
-                </div>
-
-                <div class="cart-items-container">
-                    <div class="empty-cart-premium" *ngIf="nuevaFactura.detalles.length === 0">
-                        <p>Ticket Vacío</p>
-                    </div>
-
-                    <div class="cart-item-ticket fade-in" *ngFor="let d of nuevaFactura.detalles; let i = index">
-                        <div class="ticket-info">
-                            <p class="t-name">{{ d.productoNombre }}</p>
-                            <p class="t-qty">
-                                {{ d.cantidad }} un. x ${{ d.precioUnitario | number:'1.2-2' }} 
-                                <span *ngIf="d.descuentoPorcentaje > 0" style="color: #ea580c; font-weight: 800; font-size: 0.8rem; margin-left: 5px;">(-{{ d.descuentoPorcentaje }}%)</span>
-                                <span style="color: #94a3b8; font-size: 0.75rem; margin-left: 5px;">(Bodega: {{ d.bodegaNombre }})</span>
-                            </p>
-                        </div>
-                        <div class="ticket-price">
-                            <strong>${{ d.subtotal | number:'1.2-2' }}</strong>
-                            <button class="delete-icon" (click)="eliminarDelCarrito(i)"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="cart-footer">
-                    <!-- 🔥 SE MUESTRA LA TARJETA VISUALMENTE -->
-                    <div *ngIf="nuevaFactura.metodoPago === 'TARJETA_CREDITO'" style="margin-bottom: 10px; font-size: 0.8rem; color: #64748b; font-weight: 600;">
-                        💳 Pago con Tarjeta
-                        <span *ngIf="nuevaFactura.tarjetaNumero"> (**** {{ nuevaFactura.tarjetaNumero | slice:-4 }})</span>
-                    </div>
-
-                    <div class="discount-box" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                        <span style="font-size: 0.9rem; font-weight: 600; color: #475569;">Descuento Factura (%)</span>
-                        <input type="number" [(ngModel)]="nuevaFactura.descuentoGlobalPorcentaje" min="0" max="100" class="modern-input text-right" style="width: 100px; padding: 6px 12px; height: auto;" placeholder="0%">
-                    </div>
-
-                    <div class="cart-total-box" [ngClass]="{'active': nuevaFactura.detalles.length > 0}">
-                        <span>A COBRAR</span>
-                        <span class="cart-total-amount">${{ totalCarrito | number:'1.2-2' }}</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="modal-footer">
-            <button class="btn-outline-secondary" (click)="cerrarModal()" [disabled]="isSaving">Cerrar</button>
-            <button class="btn-primary btn-large" (click)="guardarFactura()" [disabled]="isSaving || nuevaFactura.detalles.length === 0">
-                Emitir Factura
-            </button>
-        </div>
     </div>
-    
-    <!-- ZOE SIDE PANEL -->
-    <div class="zoe-side-panel fade-in" *ngIf="voiceState !== 'OFF'">
-            <div class="zoe-widget">
-                
-                <button class="close-zoe-btn" (click)="cancelarAsistenteVoz()" title="Detener a Zoe">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                </button>
-
-                <div class="zoe-header">
-                    <div class="mic-container-small" [ngClass]="{'is-listening': isListening}">
-                        <div class="mic-ring-small" *ngIf="isListening"></div>
-                        <div class="mic-icon-small">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line></svg>
-                        </div>
-                    </div>
-                    <div>
-                        <h4 style="margin: 0; font-size: 1rem; color: #0f172a;">Zoe Activa ✨</h4>
-                        <span class="listening-indicator" *ngIf="isListening" style="font-size: 0.75rem;">Te escucho...</span>
-                        <span class="thinking-indicator" *ngIf="isThinking" style="font-size: 0.75rem; color: #f59e0b;">Pensando...</span>
-                    </div>
-                </div>
-
-                <div class="zoe-body">
-                    <div class="bot-message" *ngIf="voiceMessage">
-                        <p>{{ voiceMessage }}</p>
-                    </div>
-
-                    <div class="voice-options-list fade-in" *ngIf="opcionesVoz.length > 0">
-                        <p class="voice-options-title">Di el número:</p>
-                        <div class="voice-option-item" *ngFor="let opt of opcionesVoz; let i = index">
-                            <span class="voice-opt-number">{{ i + 1 }}</span>
-                            <span class="voice-opt-text" *ngIf="tipoOpciones === 'CLIENTE'">
-                                {{ opt.nombreCompleto || opt.primerNombre }} <span style="color:#64748b; font-size:0.8rem;">(CI: {{ opt.dni || opt.identificacion || 'N/A' }})</span>
-                            </span>
-                            <span class="voice-opt-text" *ngIf="tipoOpciones === 'BODEGA'">{{ opt.nombre }}</span>
-                            <span class="voice-opt-text" *ngIf="tipoOpciones === 'PRODUCTO'">{{ opt.nombre }}</span>
-                        </div>
-                    </div>
-                    
-                    <div class="user-message" *ngIf="userTranscript && opcionesVoz.length === 0">
-                        <p>"{{ userTranscript }}"</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-</div>
+    </div>
+    </main>
 </div>
