@@ -53,7 +53,7 @@ export class Facturas implements OnInit, OnDestroy {
 
   nuevaFactura: any = {
     clienteId: null,
-    metodoPago: 'EFECTIVO',
+    metodoPago: null, 
     numeroCuotas: 0,
     detallesTarjeta: '', 
     tarjetaNumero: '', 
@@ -82,7 +82,6 @@ export class Facturas implements OnInit, OnDestroy {
   opcionesVoz: any[] = [];
   tipoOpciones: 'CLIENTE' | 'BODEGA' | 'PRODUCTO' | null = null;
   metodoPagoConfirmado: boolean = false;
-  quiereEmitirPendiente: boolean = false;
 
   productoPendientePorBodega: any = null;
   cantidadPendientePorBodega: number = 1;
@@ -140,7 +139,10 @@ export class Facturas implements OnInit, OnDestroy {
     }
 
     this.initSpeechRecognition();
-    window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+    if (window.speechSynthesis) {
+        window.speechSynthesis.getVoices();
+        window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+    }
   }
 
   ngOnDestroy(): void {
@@ -170,9 +172,7 @@ export class Facturas implements OnInit, OnDestroy {
                   this.ivaActual = parseFloat(res.ivaActual);
               }
           },
-          error: (err) => {
-              console.warn("No se pudo cargar el IVA, usando 15%", err);
-          }
+          error: (err) => console.warn("No se pudo cargar el IVA, usando 15%", err)
       });
   }
 
@@ -199,10 +199,7 @@ export class Facturas implements OnInit, OnDestroy {
         }, 0);
       },
       error: () => {
-          setTimeout(() => {
-              this.isLoading = false;
-              this.cdr.detectChanges();
-          }, 0);
+          setTimeout(() => { this.isLoading = false; this.cdr.detectChanges(); }, 0);
       }
     });
   }
@@ -214,8 +211,7 @@ export class Facturas implements OnInit, OnDestroy {
     }
     const term = this.terminoBusqueda.toLowerCase().trim();
     this.facturas = this.facturasBase.filter(f => 
-      f.numero.toLowerCase().includes(term) || 
-      f.cliente.toLowerCase().includes(term)
+      f.numero.toLowerCase().includes(term) || f.cliente.toLowerCase().includes(term)
     );
   }
 
@@ -226,7 +222,7 @@ export class Facturas implements OnInit, OnDestroy {
     this.cargarCatalogos();
     this.nuevaFactura = { 
         clienteId: null, 
-        metodoPago: 'EFECTIVO', 
+        metodoPago: null,
         numeroCuotas: 0, 
         detallesTarjeta: '', 
         tarjetaNumero: '', 
@@ -244,7 +240,6 @@ export class Facturas implements OnInit, OnDestroy {
     this.opcionesVoz = [];
     this.tipoOpciones = null;
     this.metodoPagoConfirmado = false;
-    this.quiereEmitirPendiente = false;
 
     this.productoPendientePorBodega = null;
 
@@ -284,16 +279,13 @@ export class Facturas implements OnInit, OnDestroy {
   setConsumidorFinal() {
     this.esConsumidorFinal = true;
     this.nuevaFactura.clienteId = null; 
-    this.clienteSeleccionadoInfo = {
-        nombreCompleto: 'Consumidor Final',
-        dni: '9999999999999',
-        email: 'N/A'
-    };
+    this.clienteSeleccionadoInfo = { nombreCompleto: 'Consumidor Final', dni: '9999999999999', email: 'N/A' };
     this.terminoBusquedaCliente = 'Consumidor Final';
     this.mostrarDropdownClientes = false;
     this.cdr.detectChanges();
   }
 
+  // 🔥 MEJORA DE DETECCIÓN: Limpia acentos, símbolos y palabras basura que confunden al sistema
   private limpiarTexto(texto: any): string {
     if (!texto) return '';
     return String(texto)
@@ -301,6 +293,8 @@ export class Facturas implements OnInit, OnDestroy {
         .replace(/[\u0300-\u036f]/g, "") 
         .replace(/[^a-zA-Z0-9 ]/g, "") 
         .toLowerCase()
+        .replace(/\b(de|la|el|los|las|un|una|unos|unas|para|con)\b/g, '') // Quita conectores
+        .replace(/\s+/g, ' ') // Quita espacios dobles
         .trim();
   }
 
@@ -310,7 +304,7 @@ export class Facturas implements OnInit, OnDestroy {
     
     let exact = this.clientesList.filter(cli => {
         const nomCompleto = this.limpiarTexto(cli.nombreCompleto || `${cli.primerNombre || ''} ${cli.apellidoPaterno || ''}`);
-        return nomCompleto === txt || this.limpiarTexto(cli.dni) === txt || this.limpiarTexto(cli.identificacion) === txt || this.limpiarTexto(cli.email) === txt;
+        return nomCompleto === txt || this.limpiarTexto(cli.dni) === txt || this.limpiarTexto(cli.identificacion) === txt;
     });
     if (exact.length > 0) return exact;
 
@@ -324,12 +318,10 @@ export class Facturas implements OnInit, OnDestroy {
     const palabras = txt.split(' ').filter(p => p.length > 2);
     if (palabras.length === 0) return [];
     
-    let flexible = this.clientesList.filter(cli => {
+    return this.clientesList.filter(cli => {
         const nom = this.limpiarTexto(cli.nombreCompleto || `${cli.primerNombre || ''} ${cli.apellidoPaterno || ''}`);
         return palabras.every(pal => nom.includes(pal)); 
     });
-
-    return flexible;
   }
 
   filtrarClientes() {
@@ -368,16 +360,11 @@ export class Facturas implements OnInit, OnDestroy {
       let final = '';
 
       for (let i = event.resultIndex; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) {
-              final += event.results[i][0].transcript + ' ';
-          } else {
-              interim += event.results[i][0].transcript;
-          }
+          if (event.results[i].isFinal) final += event.results[i][0].transcript + ' ';
+          else interim += event.results[i][0].transcript;
       }
 
-      if (final) {
-          this.transcriptAcumulado += final;
-      }
+      if (final) this.transcriptAcumulado += final;
 
       this.userTranscript = (this.transcriptAcumulado + interim).toLowerCase().trim().replace(/\.$/, '');
       this.cdr.detectChanges();
@@ -391,7 +378,7 @@ export class Facturas implements OnInit, OnDestroy {
           } else {
               this.escuchar();
           }
-      }, 5000); 
+      }, 4000); 
     };
 
     this.recognition.onerror = (event: any) => {
@@ -441,6 +428,7 @@ export class Facturas implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
+  // 🔥 FORZAR VOZ DE MUJER Y TONO HUMANO
   private hablar(texto: string, callback?: () => void) {
     window.speechSynthesis.cancel(); 
     clearTimeout(this.silenceTimer);
@@ -452,29 +440,29 @@ export class Facturas implements OnInit, OnDestroy {
         this.cdr.detectChanges();
 
         const utterance = new SpeechSynthesisUtterance(texto);
-        
         let voices = window.speechSynthesis.getVoices();
         
+        // Buscamos estrictamente voces femeninas conocidas
         let femaleVoice = voices.find(v => 
             v.lang.startsWith('es') && 
-            (v.name.includes('Google español') || v.name.includes('Sabina') || v.name.includes('Paulina') || v.name.includes('Monica'))
+            /(sabina|paulina|monica|laura|helena|elena|victoria|mujer|female)/i.test(v.name)
         );
         
+        // Si no encuentra los nombres, agarra cualquiera que NO sea hombre explícitamente
         if (!femaleVoice) {
-            femaleVoice = voices.find(v => v.lang.startsWith('es') && /(female|mujer)/i.test(v.name));
-        }
-        
-        if (!femaleVoice) {
-            femaleVoice = voices.find(v => v.lang.startsWith('es') && !/(pablo|jorge|diego|carlos|male|hombre)/i.test(v.name));
+            femaleVoice = voices.find(v => 
+                v.lang.startsWith('es') && 
+                !/(pablo|jorge|diego|carlos|david|male|hombre)/i.test(v.name)
+            );
         }
 
         if (femaleVoice) {
             utterance.voice = femaleVoice;
         }
 
-        utterance.lang = 'es-ES'; // Asegura pronunciación española correcta
-        utterance.rate = 1.05;    // Apenas un toque más rápido de lo normal, pero no robótico (antes estaba en 1.25)
-        utterance.pitch = 1.0;    // Tono normal, 1.0 es el de un ser humano estándar (antes 1.2 era muy agudo)
+        utterance.lang = 'es-ES'; 
+        utterance.rate = 1.05;    
+        utterance.pitch = 1.1; // Un toque agudo, muy natural y femenino  
 
         utterance.onend = () => { if (callback && this.voiceState !== VoiceStep.OFF) callback(); };
         utterance.onerror = () => { if (callback && this.voiceState !== VoiceStep.OFF) callback(); };
@@ -490,6 +478,7 @@ export class Facturas implements OnInit, OnDestroy {
     try { this.recognition.start(); } catch (e) {}
   }
 
+  // 🔥 SEPARACIÓN DEL COMANDO EMITIR (NO FACTURA DE UNA, PIDE CONFIRMACIÓN STRICTA)
   private procesarComandoVoz(transcript: string) {
     this.transcriptAcumulado = ''; 
     const transcriptLimpio = transcript.toLowerCase().trim();
@@ -503,7 +492,9 @@ export class Facturas implements OnInit, OnDestroy {
         this.nuevaFactura.tarjetaNumero = '';
         this.nuevaFactura.tarjetaVence = '';
         this.nuevaFactura.tarjetaCvc = '';
-        this.hablar("He vaciado el ticket por completo. Empecemos de cero.", () => this.escuchar());
+        this.nuevaFactura.metodoPago = null;
+        this.metodoPagoConfirmado = false;
+        this.hablar("De acuerdo, he vaciado todo el ticket. Empecemos de cero.", () => this.escuchar());
         return;
     }
 
@@ -512,20 +503,32 @@ export class Facturas implements OnInit, OnDestroy {
         return;
     }
 
-    const comandosEmitir = ['emite', 'emitir', 'factura ya', 'cobrar ya', 'guarda la factura', 'guardar factura', 'todo bien', 'listo', 'cobra', 'cobrar'];
-    const quiereEmitir = comandosEmitir.some(cmd => transcriptLimpio.includes(cmd));
+    // 🔥 SI ESTAMOS EN CONFIRMACIÓN, EVALUAMOS EL SÍ O EL NO EXCLUSIVAMENTE
+    if (this.voiceState === VoiceStep.CONFIRMAR) {
+        const afirmativo = ['si', 'sí', 'dale', 'ok', 'claro', 'confirmo', 'emite', 'emitir', 'ya', 'por supuesto'].some(cmd => transcriptLimpio.includes(cmd) || transcriptLimpio === cmd);
+        const negativo = ['no', 'espera', 'cancela', 'todavia no', 'aguanta', 'detente'].some(cmd => transcriptLimpio.includes(cmd));
 
-    if (this.voiceState === VoiceStep.CONFIRMAR && (quiereEmitir || transcriptLimpio.includes('si') || transcriptLimpio.includes('sí') || transcriptLimpio.includes('ok') || transcriptLimpio.includes('dale'))) {
-        this.voiceState = VoiceStep.OFF;
-        this.hablar("¡Excelente! Emitiendo la factura de inmediato.");
-        setTimeout(() => { this.guardarFactura(); }, 800);
-        return;
+        if (negativo) {
+            this.voiceState = VoiceStep.ESCUCHA_LIBRE;
+            this.hablar("Entendido, esperaré. Dime qué más modificamos o agregamos.", () => this.escuchar());
+            return;
+        } else if (afirmativo) {
+            this.voiceState = VoiceStep.OFF;
+            this.hablar("¡Perfecto! Emitiendo la factura ahora mismo.", () => {
+                 setTimeout(() => { this.guardarFactura(); }, 500);
+            });
+            return;
+        } else {
+            // Si dijo algo random, asumimos que quiere seguir modificando cosas.
+            this.voiceState = VoiceStep.ESCUCHA_LIBRE;
+        }
     }
 
-    this.analizarConGroq(transcriptLimpio, quiereEmitir);
+    this.analizarConGroq(transcriptLimpio);
   }
 
-  private analizarConGroq(fraseUsuario: string, quiereEmitirPalabra: boolean) {
+  // 🔥 GROQ AHORA ACTÚA COMO CORRECTOR ORTOGRÁFICO EXPERTO
+  private analizarConGroq(fraseUsuario: string) {
     this.isThinking = true;
     this.cdr.detectChanges();
 
@@ -536,7 +539,7 @@ export class Facturas implements OnInit, OnDestroy {
 
     const instruccionCliente = (this.nuevaFactura.clienteId || this.esConsumidorFinal)
       ? `"cliente": null,` 
-      : `"cliente": "Extrae el nombre del cliente lo más exacto posible",`;
+      : `"cliente": "Extrae el nombre del cliente. Si no menciona ningún cliente o persona, devuelve 'NO_MENCIONADO'. Si dice Consumidor Final, devuelve 'CONSUMIDOR_FINAL'",`;
 
     const listaNombresCli = this.clientesList.map(c => c.nombreCompleto || `${c.primerNombre} ${c.apellidoPaterno}`).join(', ').substring(0, 1000);
     const listaNombresProd = this.productosList.map(p => p.nombre).join(', ').substring(0, 1000);
@@ -547,7 +550,10 @@ export class Facturas implements OnInit, OnDestroy {
       Extrae los datos solicitados en formato JSON estricto basándote en lo que dice el usuario.
       NUNCA pidas los datos de la tarjeta de crédito al usuario. Si los dicta, ignóralos y solo pon "metodoPago": "TARJETA_CREDITO".
       
-      Listas referenciales de tu BD (Úsalas para corregir errores tipográficos):
+      🔥 MUY IMPORTANTE: Usa las listas referenciales de abajo para corregir errores tipográficos, plurales o similitudes de pronunciación. 
+      Si el usuario dice "llantas de carro", y en la lista tienes "Llanta para Auto", devuelve exactamente "Llanta para Auto".
+      
+      Listas referenciales de tu BD:
       Clientes: [${listaNombresCli}]
       Productos: [${listaNombresProd}]
       Bodegas: [${listaBodegas}]
@@ -555,21 +561,18 @@ export class Facturas implements OnInit, OnDestroy {
       Formato EXACTO:
       {
          ${instruccionCliente}
-         "metodoPago": "EFECTIVO" | "TRANSFERENCIA" | "TARJETA_CREDITO" | null,
+         "metodoPago": "EFECTIVO" | "TRANSFERENCIA" | "TARJETA_CREDITO" | "NO_MENCIONADO",
          "detallesTarjeta": "Ej: Visa terminada en 1234 (o null)",
          "cuotas": numero_entero_o_null,
          "descuentoGlobalPorcentaje": numero_o_null,
          "items": [ { "producto": "Nombre exacto de la lista referencial", "cantidad": numero_entero_o_null, "descuentoPorcentaje": numero_o_0, "bodega": "Nombre exacto de la bodega o null" } ],
-         "eliminarProducto": "Nombre del producto a quitar del carrito (o null)",
-         "emitirFactura": true o false
+         "eliminarProducto": "Nombre del producto a quitar del carrito (o null)"
       }
       
       REGLAS:
-      1. Si dice "Consumidor final", cliente es "CONSUMIDOR_FINAL".
-      2. "emitirFactura": true SIEMPRE que insinúe terminar la venta.
-      3. TARJETA: Si menciona "tarjeta" o "crédito" es TARJETA_CREDITO.
-      4. BODEGAS: Si pide explícitamente sacar de una bodega específica, escríbelo en "bodega". Si no, pon null.
-      5. NO devuelvas texto fuera del JSON.
+      1. CLIENTE: Si no menciona a nadie, DEBE SER "NO_MENCIONADO". No asumas Consumidor Final por defecto.
+      2. PAGO: Si no menciona tarjeta, efectivo o transferencia, DEBE SER "NO_MENCIONADO".
+      3. NO devuelvas texto fuera del JSON.
     `;
 
     const payload = {
@@ -594,9 +597,7 @@ export class Facturas implements OnInit, OnDestroy {
             jsonStr = jsonStr.replace(/```json/gi, '').replace(/```/g, '').trim();
             
             const datosExtraidos = JSON.parse(jsonStr);
-            const intencionEmitir = quiereEmitirPalabra || String(datosExtraidos.emitirFactura).toLowerCase() === 'true';
-            
-            this.aplicarDatosExtraidos(datosExtraidos, intencionEmitir);
+            this.aplicarDatosExtraidos(datosExtraidos, fraseUsuario);
           } catch (e) {
             console.error("Error parseando JSON:", e);
             this.hablar("Perdón, no procesé bien eso. ¿Podrías repetirlo?", () => this.escuchar());
@@ -609,23 +610,23 @@ export class Facturas implements OnInit, OnDestroy {
       });
   }
 
-  private aplicarDatosExtraidos(datos: any, quiereEmitir: boolean = false) {
+  private aplicarDatosExtraidos(datos: any, fraseUsuarioReal: string) {
     let algoAgregado = false;
     let mensajesAlerta: string[] = []; 
 
     if (datos.eliminarProducto && datos.eliminarProducto !== 'null') {
         const index = this.nuevaFactura.detalles.findIndex((d: any) => 
-            d.productoNombre.toLowerCase().includes(datos.eliminarProducto.toLowerCase())
+            this.limpiarTexto(d.productoNombre).includes(this.limpiarTexto(datos.eliminarProducto))
         );
         if (index !== -1) {
             const nombreQuitado = this.nuevaFactura.detalles[index].productoNombre;
             this.eliminarDelCarrito(index);
-            this.hablar(`Listo, acabo de quitar ${nombreQuitado}. ¿Qué más necesitas?`, () => this.escuchar());
+            this.hablar(`Claro, acabo de quitar ${nombreQuitado}. ¿Qué más hacemos?`, () => this.escuchar());
             return; 
         }
     }
 
-    if (datos.metodoPago && datos.metodoPago !== 'null' && datos.metodoPago !== 'NULL') {
+    if (datos.metodoPago && datos.metodoPago !== 'null' && datos.metodoPago !== 'NULL' && datos.metodoPago !== 'NO_MENCIONADO') {
         this.nuevaFactura.metodoPago = datos.metodoPago;
         this.metodoPagoConfirmado = true;
     }
@@ -647,9 +648,6 @@ export class Facturas implements OnInit, OnDestroy {
                 this.metodoPagoConfirmado = true;
             }
         }
-    } else if (quiereEmitir && !this.metodoPagoConfirmado) {
-        this.nuevaFactura.metodoPago = 'EFECTIVO'; 
-        this.metodoPagoConfirmado = true;
     }
 
     if (datos.descuentoGlobalPorcentaje !== undefined && datos.descuentoGlobalPorcentaje !== null) {
@@ -661,7 +659,8 @@ export class Facturas implements OnInit, OnDestroy {
     }
 
     let pedirCedula = false;
-    if (datos.cliente && datos.cliente !== 'null' && !this.nuevaFactura.clienteId && !this.esConsumidorFinal) {
+    
+    if (datos.cliente && datos.cliente !== 'null' && datos.cliente !== 'NO_MENCIONADO' && !this.nuevaFactura.clienteId && !this.esConsumidorFinal) {
         if (datos.cliente === 'CONSUMIDOR_FINAL' || String(datos.cliente).toLowerCase().includes('consumidor')) {
             this.setConsumidorFinal();
         } else {
@@ -670,7 +669,6 @@ export class Facturas implements OnInit, OnDestroy {
                 this.seleccionarCliente(matchesCli[0]); 
             } else if (matchesCli.length > 1) {
                 pedirCedula = true; 
-                // 🔥 ZOE HACE PREGUNTAS MÁS CONVERSACIONALES
                 const nombresStr = matchesCli.slice(0,3).map(c => c.nombreCompleto || c.primerNombre).join(' y ');
                 this.iniciarDesambiguacion('CLIENTE', matchesCli, `Tengo varios clientes similares, como ${nombresStr}. Dime el apellido completo o la cédula de a quién le facturamos.`);
                 return;
@@ -681,7 +679,6 @@ export class Facturas implements OnInit, OnDestroy {
     }
 
     if (pedirCedula) {
-        this.quiereEmitirPendiente = quiereEmitir;
         this.voiceState = VoiceStep.ESCUCHA_LIBRE;
         this.hablar("Por favor, díctame la cédula de ese cliente para estar completamente segura.", () => this.escuchar());
         return;
@@ -721,12 +718,11 @@ export class Facturas implements OnInit, OnDestroy {
                     this.productoPendientePorBodega = prod;
                     this.cantidadPendientePorBodega = cant;
                     this.descuentoPendientePorBodega = descPct;
-                    // 🔥 ZOE HACE PREGUNTAS MÁS CONVERSACIONALES
-                    const bodegasStr = bodegasConStock.map(b => b.nombre).join(' y en la bodega ');
-                    this.iniciarDesambiguacion('BODEGA', bodegasConStock, `Tengo ese producto en la bodega ${bodegasStr}. ¿De cuál te gustaría sacarlo? Puedes decirme su ubicación o nombre.`);
+                    const bodegasStr = bodegasConStock.map(b => b.nombre).join(' y en ');
+                    this.iniciarDesambiguacion('BODEGA', bodegasConStock, `Tengo ese producto en ${bodegasStr}. ¿De cuál bodega te gustaría sacarlo?`);
                     return; 
                 } else {
-                    mensajesAlerta.push(`no nos queda stock de ${prod.nombre}`);
+                    mensajesAlerta.push(`ya no nos queda stock de ${prod.nombre}`);
                     continue;
                 }
             }
@@ -735,11 +731,11 @@ export class Facturas implements OnInit, OnDestroy {
                 const stockActual = this.obtenerStock(prod.id, bodegaElegidaId);
                 
                 if (stockActual === null || stockActual <= 0) {
-                    mensajesAlerta.push(`no nos queda stock de ${prod.nombre}`);
+                    mensajesAlerta.push(`ya no nos queda stock de ${prod.nombre}`);
                 } else {
                     if (cant > stockActual) {
                         cant = stockActual;
-                        mensajesAlerta.push(`solo pude agregar ${cant} de ${prod.nombre} porque es lo único que nos queda`);
+                        mensajesAlerta.push(`solo pude agregar ${cant} de ${prod.nombre} porque es lo último que queda`);
                     }
                     this.agregarProductoDirecto(prod, cant, bodegaElegidaId, descPct);
                     algoAgregado = true;
@@ -747,45 +743,50 @@ export class Facturas implements OnInit, OnDestroy {
             }
         } else if (matchesProd.length > 1) {
             pedirAclaracionProd = item.producto; 
-            // 🔥 ZOE HACE PREGUNTAS MÁS CONVERSACIONALES
             const prodsStr = matchesProd.slice(0,2).map(p => p.nombre).join(' y ');
-            this.iniciarDesambiguacion('PRODUCTO', matchesProd, `Encontré varios similares, como ${prodsStr}. Dime alguna marca o característica para elegir el correcto.`);
+            this.iniciarDesambiguacion('PRODUCTO', matchesProd, `Encontré varios productos parecidos, como ${prodsStr}. Dime alguna característica específica para elegir el correcto.`);
             return; 
         } else if (matchesProd.length === 0) {
-            mensajesAlerta.push(`no encontré ${item.producto} en tu catálogo`);
+            mensajesAlerta.push(`no logré encontrar ${item.producto} en tu catálogo`);
         }
     }
 
     this.cdr.detectChanges();
 
     const faltaCliente = !this.nuevaFactura.clienteId && !this.esConsumidorFinal;
+    const faltaPago = !this.metodoPagoConfirmado;
     const faltaItems = this.nuevaFactura.detalles.length === 0;
 
     let prefijoAviso = mensajesAlerta.length > 0 ? `A ver, te comento que ${mensajesAlerta.join(' y ')}. ` : '';
 
-    if ((quiereEmitir || this.quiereEmitirPendiente) && !faltaCliente && !faltaItems) {
-        this.quiereEmitirPendiente = false;
-        this.voiceState = VoiceStep.OFF;
-        this.hablar(`${prefijoAviso}Todo listo. Estoy emitiendo tu factura ahora mismo.`);
-        setTimeout(() => { this.guardarFactura(); }, 1200);
-        return;
-    }
+    const intencionEmitir = ['emite', 'emitir', 'factura ya', 'cobrar ya', 'guarda la factura', 'todo bien', 'listo', 'cobra', 'cobrar'].some(cmd => fraseUsuarioReal.includes(cmd));
 
-    this.quiereEmitirPendiente = false;
-    this.voiceState = VoiceStep.ESCUCHA_LIBRE;
-
+    // 🔥 PREGUNTA POR LO QUE FALTA O PIDE CONFIRMACIÓN ESTRICTA
     if (faltaCliente) {
-        this.hablar(`${prefijoAviso}Aún me falta el cliente. ¿A quién le hacemos la factura?`, () => this.escuchar());
+        this.voiceState = VoiceStep.ESCUCHA_LIBRE;
+        this.hablar(`${prefijoAviso}Aún no tengo al cliente. ¿A quién le facturamos o lo pongo como consumidor final?`, () => this.escuchar());
     } 
     else if (faltaItems) {
-        this.hablar(`${prefijoAviso}El carrito está vacío. ¿Qué productos vas a agregar?`, () => this.escuchar());
+        this.voiceState = VoiceStep.ESCUCHA_LIBRE;
+        this.hablar(`${prefijoAviso}El ticket está vacío. ¿Qué productos vas a agregar?`, () => this.escuchar());
     } 
-    else {
+    else if (faltaPago && intencionEmitir) {
+        this.voiceState = VoiceStep.ESCUCHA_LIBRE;
+        this.hablar(`${prefijoAviso}Tengo los productos y el cliente. ¿Cómo te van a pagar? ¿Efectivo, transferencia o tarjeta?`, () => this.escuchar());
+    }
+    else if (intencionEmitir && !faltaCliente && !faltaPago && !faltaItems) {
+        // 🔥 AQUÍ ESTÁ EL BLOQUEO: NO LA HACE DE UNA, PIDE CONFIRMACIÓN
         this.voiceState = VoiceStep.CONFIRMAR;
-        let msj = algoAgregado
-            ? `${prefijoAviso}A cobrar $${this.totalCarrito.toFixed(2)}. ¿Te parece bien si la emito ya?`
-            : `${prefijoAviso}Todo en orden. Son $${this.totalCarrito.toFixed(2)}. ¿Quieres que cobre la factura?`;
-        this.hablar(msj, () => this.escuchar());
+        this.hablar(`${prefijoAviso}Revisé todo y estamos listos. El total a cobrar es $${this.totalCarrito.toFixed(2)}. ¿Confirmo la emisión de la factura?`, () => this.escuchar());
+    }
+    else {
+        // Modo normal de solo seguir agregando
+        this.voiceState = VoiceStep.ESCUCHA_LIBRE;
+        if (algoAgregado) {
+            this.hablar(`${prefijoAviso}Agregado. ¿Qué más deseas hacer?`, () => this.escuchar());
+        } else if (mensajesAlerta.length > 0) {
+            this.hablar(`${prefijoAviso}¿Modificamos algo más?`, () => this.escuchar());
+        }
     }
   }
 
@@ -829,7 +830,6 @@ export class Facturas implements OnInit, OnDestroy {
       let maxScore = 0;
 
       for (let opt of this.opcionesVoz) {
-        // 🔥 EVALÚA DIRECCIONES, NOMBRES, CORREOS Y MARCAS PARA SER SUPER FLEXIBLE
         let stringDeComparacion = "";
         
         if (this.tipoOpciones === 'CLIENTE') {
@@ -864,12 +864,7 @@ export class Facturas implements OnInit, OnDestroy {
           this.seleccionarCliente(seleccionado);
           this.opcionesVoz = [];
           this.tipoOpciones = null;
-          
-          if (this.quiereEmitirPendiente) {
-              this.aplicarDatosExtraidos({}, true);
-          } else {
-              this.aplicarDatosExtraidos({}); 
-          }
+          this.aplicarDatosExtraidos({}, transcript); 
       } 
       else if (this.tipoOpciones === 'PRODUCTO') {
           let prod = seleccionado;
@@ -879,7 +874,7 @@ export class Facturas implements OnInit, OnDestroy {
           
           this.aplicarDatosExtraidos({
               items: [{ producto: prod.nombre, cantidad: cant, descuentoPorcentaje: 0 }]
-          });
+          }, transcript);
       }
       else if (this.tipoOpciones === 'BODEGA') {
           let bodega = seleccionado;
@@ -895,13 +890,13 @@ export class Facturas implements OnInit, OnDestroy {
           if (stockActual !== null && stockActual > 0) {
               if (cant > stockActual) cant = stockActual;
               this.agregarProductoDirecto(prod, cant, bodega.id, desc);
-              this.hablar(`Listo, lo saco de la bodega ${bodega.nombre}. ¿Qué más hacemos?`, () => this.escuchar());
+              this.hablar(`Entendido, lo sacamos de ${bodega.nombre}. ¿Deseas agregar algo más?`, () => this.escuchar());
           } else {
-              this.hablar(`Uy, revisé y no queda stock de ${prod.nombre} en ${bodega.nombre}. ¿Hacemos otra cosa?`, () => this.escuchar());
+              this.hablar(`Uy, acabo de revisar y no queda stock en ${bodega.nombre}. ¿Hacemos otra cosa?`, () => this.escuchar());
           }
       }
     } else {
-      this.hablar("Perdón, no te escuché bien. Dime el nombre o el número de la opción que prefieras.", () => this.escuchar());
+      this.hablar("Perdón, sigo sin entenderte bien. Intenta decirme el nombre o una característica clave.", () => this.escuchar());
     }
   }
 
@@ -969,6 +964,10 @@ export class Facturas implements OnInit, OnDestroy {
   }
 
   guardarFactura() {
+    if (!this.nuevaFactura.metodoPago) {
+        this.nuevaFactura.metodoPago = 'EFECTIVO';
+    }
+
     if ((!this.nuevaFactura.clienteId && !this.esConsumidorFinal) || this.nuevaFactura.detalles.length === 0) {
       Swal.fire('Error', 'Faltan datos para emitir la factura.', 'error');
       return;
