@@ -1,7 +1,8 @@
 <div class="dashboard-layout">
+    
     <!-- Precarga silenciosa de imágenes -->
-    <img *ngIf="fotoPerfilUrl" [src]="fotoPerfilUrl" style="display: none;" aria-hidden="true" fetchpriority="high" alt="Precarga perfil">
-    <img src="images/IA.png" style="display: none;" aria-hidden="true" fetchpriority="high" alt="Precarga IA">
+    <img *ngIf="fotoPerfilUrl" [src]="fotoPerfilUrl" style="display: none;" aria-hidden="true" fetchpriority="high">
+    <img src="images/IA.png" style="display: none;" aria-hidden="true" fetchpriority="high">
 
     <div class="mobile-overlay" *ngIf="isSidebarOpen" (click)="toggleSidebar()"></div>
 
@@ -11,8 +12,7 @@
             <span class="role-badge">{{ rolUsuario }}</span>
         </div>
         
-        <!-- MEJORA: Cambio a etiqueta <nav> para semántica -->
-        <nav class="sidebar-menu">
+        <div class="sidebar-menu">
             <p class="menu-label">GENERAL</p>
 
             <a *ngIf="tieneRol(['PROPIETARIO'])" routerLink="/dashboard/propietario" routerLinkActive="active" class="menu-item" (click)="isSidebarOpen = false">
@@ -86,7 +86,7 @@
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                 Mi Perfil
             </a>
-        </nav>
+        </div>
 
         <div class="sidebar-footer">
             <div class="user-info">
@@ -99,8 +99,7 @@
                     <h4>{{ usuarioLogueado?.primerNombre || 'Mi Negocio' }}</h4>
                     <p>{{ usuarioLogueado?.email }}</p>
                 </div>
-                <!-- MEJORA: type="button" agregado -->
-                <button type="button" class="logout-btn" (click)="cerrarSesion()" title="Cerrar sesión">
+                <button class="logout-btn" (click)="cerrarSesion()" title="Cerrar sesión">
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
                 </button>
             </div>
@@ -110,8 +109,7 @@
    <main class="main-content">
         <header class="top-header">
             <div class="header-left">
-                <!-- MEJORA: type="button" agregado -->
-                <button type="button" class="menu-toggle-btn" (click)="toggleSidebar()" aria-label="Abrir menú">
+                <button class="menu-toggle-btn" (click)="toggleSidebar()">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
                 </button>
                 
@@ -128,8 +126,7 @@
             <div class="header-actions">
                 
                 <div class="notification-wrapper">
-                    <!-- MEJORA: type="button" agregado -->
-                    <button type="button" class="notification-btn" (click)="toggleNotificaciones()" [ngClass]="{'has-alerts': alertasCaducidad.length > 0}" aria-label="Notificaciones">
+                    <button class="notification-btn" (click)="toggleNotificaciones()" [ngClass]="{'has-alerts': alertasCaducidad.length > 0}">
                         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
                         <span class="notification-badge" *ngIf="alertasCaducidad.length > 0">{{ alertasCaducidad.length }}</span>
                     </button>
@@ -185,7 +182,7 @@
                             Configuración
                         </a>
                         <div class="user-dropdown-divider"></div>
-                        <button type="button" class="user-dropdown-item text-red" (click)="cerrarSesion()">
+                        <button class="user-dropdown-item text-red" (click)="cerrarSesion()">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
                             Cerrar Sesión
                         </button>
@@ -206,12 +203,12 @@
                         </div>
                         <span>Zoe</span>
                     </div>
-                    <!-- MEJORA: type="button" agregado -->
-                    <button type="button" class="close-chat" (click)="zoeService.toggleChat()" aria-label="Cerrar chat">
+                    <button class="close-chat" (click)="zoeService.toggleChat()">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                     </button>
                 </div>
                 
+                <!-- 🔥 LA MAGIA DEL AUTO SCROLL AQUI: #chatScroll -->
                 <div class="chat-messages" #chatScroll>
                     <div *ngFor="let msg of zoeService.chatMensajes" [ngClass]="msg.role === 'user' ? 'msg-wrapper user' : 'msg-wrapper assistant'">
                         <img *ngIf="msg.role === 'assistant'" src="images/IA.png" alt="Zoe" class="chat-bubble-avatar">
@@ -227,7 +224,8 @@
                 </div>
 
                 <div class="chat-input-area">
-                    <button type="button" class="mic-btn" (click)="zoeService.toggleEscucha()" [ngClass]="{'listening': zoeService.isListening}" title="Hablar con Zoe">
+                    <!-- 🔥 BOTÓN DEL MICRÓFONO -->
+                    <button class="mic-btn" (click)="zoeService.toggleEscucha()" [ngClass]="{'listening': zoeService.isListening}" title="Hablar con Zoe">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
                             <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
@@ -237,14 +235,16 @@
 
                     <input type="text" [(ngModel)]="nuevoMensajeTexto" (keyup.enter)="enviarMensajeDesdeInput()" placeholder="Pregúntame o háblame..." [disabled]="zoeService.isChatLoading || zoeService.isListening">
                     
-                    <button type="button" class="send-btn" (click)="enviarMensajeDesdeInput()" [disabled]="zoeService.isChatLoading || !nuevoMensajeTexto.trim()" aria-label="Enviar mensaje">
+                    <button class="send-btn" (click)="enviarMensajeDesdeInput()" [disabled]="zoeService.isChatLoading || !nuevoMensajeTexto.trim()">
                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
                     </button>
                 </div>
             </div>
 
+            <!-- Botón flotante -->
             <div style="position: relative; display: flex; align-items: center; gap: 15px;">
                 
+                <!-- Burbuja Normal (Chat cerrado, IA inactiva) -->
                 <div class="chat-hint-bubble clickable" *ngIf="!zoeService.isChatOpen && !zoeService.isListening" (click)="zoeService.toggleEscucha()">
                     <p style="display: flex; align-items: center; gap: 6px;">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary-orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4"></path><path d="M12 18v4"></path><path d="M4.93 4.93l2.83 2.83"></path><path d="M16.24 16.24l2.83 2.83"></path><path d="M2 12h4"></path><path d="M18 12h4"></path><path d="M4.93 19.07l2.83-2.83"></path><path d="M16.24 7.76l2.83-2.83"></path></svg>
@@ -253,6 +253,7 @@
                     <div class="chat-hint-arrow"></div>
                 </div>
 
+                <!-- 🔥 NUEVO: Burbuja Activa (Chat cerrado, IA ESCUCHANDO) -->
                 <div class="chat-hint-bubble listening-mode" *ngIf="!zoeService.isChatOpen && zoeService.isListening">
                     <p style="display: flex; align-items: center; gap: 6px; color: #ef4444; font-weight: 800;">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -262,13 +263,14 @@
                         </svg>
                         Te escucho...
                     </p>
-                    <button type="button" class="btn-stop-mic" (click)="zoeService.toggleEscucha()" title="Apagar micrófono">
+                    <button class="btn-stop-mic" (click)="zoeService.toggleEscucha()" title="Apagar micrófono">
                         Detener
                     </button>
                     <div class="chat-hint-arrow listening-arrow"></div>
                 </div>
 
-                <button type="button" class="chat-fab" (click)="zoeService.toggleChat()" [ngClass]="{'fab-open': zoeService.isChatOpen, 'fab-listening': !zoeService.isChatOpen && zoeService.isListening}" aria-label="Abrir asistente Zoe">
+                <!-- Botón de Zoe -->
+                <button class="chat-fab" (click)="zoeService.toggleChat()" [ngClass]="{'fab-open': zoeService.isChatOpen, 'fab-listening': !zoeService.isChatOpen && zoeService.isListening}">
                     <img *ngIf="!zoeService.isChatOpen" src="images/IA.png" alt="Zoe" class="fab-image">
                     <svg *ngIf="zoeService.isChatOpen" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>

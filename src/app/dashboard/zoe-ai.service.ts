@@ -37,19 +37,27 @@ export class ZoeAiService {
   private contextoGlobal = '';
   private promptSistemaBase = '';
 
+  // 🔥 Lista blanca de módulos a los que Zoe puede navegar de verdad.
+  // Se llena SOLO con los módulos reales y permitidos para el rol del usuario (ver dashboard-default.ts).
+  // Cualquier ruta que el modelo proponga y no esté aquí se ignora: nunca se navega "a ciegas".
   private modulosNavegables: ModuloNavegable[] = [];
+
+  // Regex del comando de navegación que el modelo debe emitir: [[NAVEGAR:/dashboard/xxx]]
   private readonly REGEX_NAVEGACION = /\[\[NAVEGAR:\s*(\/[a-zA-Z0-9\-\/]*)\s*\]\]/;
 
   // Control de Voz
   private recognition: any;
   private silenceTimer: any;
   private transcriptAcumulado = '';
+  
+  // Control para saber si Zoe debe seguir escuchando o si el usuario la apagó
   keepListeningActive = false; 
 
   constructor() {
     this.initSpeechRecognition();
   }
 
+  // 1. INICIALIZAR EL CHAT Y EL CONTEXTO
   inicializarChat(nombreUsuario: string, rol: string) {
     if (this.chatMensajes.length === 0) {
       const textoBienvenida = `¡Hola! Soy **Zoe**, tu asistente virtual en Dilo.\n\nSi es tu primera vez aquí, solo pregúntame o dime por voz: *"¿Por dónde empiezo?"* y te guiaré paso a paso. También puedo **llevarte directo** a cualquier módulo si me lo pides, por ejemplo: *"llévame a Productos"*.\n\n¿En qué te puedo ayudar hoy, ${nombreUsuario}?`;
@@ -61,7 +69,7 @@ export class ZoeAiService {
     }
   }
 
-  actualizarContexto(
+ actualizarContexto(
     contextoTexto: string,
     modulosPermitidos: string,
     modulosRestringidos: string,
@@ -76,8 +84,9 @@ export class ZoeAiService {
     this.contextoGlobal = contextoTexto;
     this.modulosNavegables = modulosNavegables;
 
-    const listaRutasParaComando = modulosNavegables.map(m => m.ruta).join(', ');
+    const listaRutasParaComando = modulosNavegables.map(m => `${m.ruta}`).join(', ');
 
+    // 🔥 FIX ANTICOLAPSO 6: Prompt ultra resumido. Directo al grano.
     this.promptSistemaBase = `Eres "Zoe", asistente virtual en "Dilo".
 Hablas con ${nombreUsuario} (${rolUsuario}) del negocio "${negocioNombre}".
 
@@ -98,6 +107,7 @@ REGLAS:
 3. El IVA (15%) es fijo.`;
   }
 
+  // En la función enviarMensaje(), busca la parte del payload y actualízala así:
   enviarMensaje(texto: string, responderConVoz: boolean = false) {
     if (!texto.trim() || this.isChatLoading) return;
 
@@ -118,6 +128,7 @@ REGLAS:
       'Content-Type': 'application/json'
     });
 
+    // 🔥 Solo mandamos los últimos 4 mensajes (ida y vuelta x2) en lugar de 6
     const historial = this.chatMensajes.slice(-4).map(msg => ({
       role: msg.role,
       content: msg.text
@@ -130,13 +141,17 @@ REGLAS:
       model: 'llama-3.1-8b-instant',
       messages: [{ role: 'system', content: promptConUbicacion }, ...historial],
       temperature: 0.5,
-      max_tokens: 250 
+      max_tokens: 250 // 🔥 FIX ANTICOLAPSO 7: Forzamos a que Zoe responda más corto, ahorrando cientos de tokens en la respuesta.
     };
 
     this.http.post<any>('https://api.groq.com/openai/v1/chat/completions', payload, { headers })
+      // ... EL RESTO SIGUE IGUAL ...
       .subscribe({
         next: (res) => {
           const respuestaCruda = res.choices[0].message.content;
+
+          // 🔥 Detectamos si Zoe pidió navegar a algún módulo, y limpiamos el comando
+          // para que el usuario NUNCA vea ni escuche "[[NAVEGAR:...]]" en el chat.
           const { textoLimpio: respuestaBot, ruta: rutaSolicitada } = this.extraerComandoNavegacion(respuestaCruda);
 
           this.chatMensajes.push({
@@ -146,6 +161,8 @@ REGLAS:
           });
           this.isChatLoading = false;
 
+          // 🔥 Solo navegamos si la ruta está en la lista blanca de módulos permitidos para este rol.
+          // Así evitamos que el modelo "alucine" o mande al usuario a una pantalla inexistente o restringida.
           if (rutaSolicitada && this.modulosNavegables.some(m => m.ruta === rutaSolicitada)) {
             setTimeout(() => this.zone.run(() => this.router.navigate([rutaSolicitada])), 600);
           }
@@ -167,9 +184,10 @@ REGLAS:
           let msjError = 'Lo siento, hubo un fallo en mi conexión. Revisa tu internet.';
           let detenerMicrofonoPorError = false;
 
+          // 🔥 EL FRENO DE EMERGENCIA PARA EL ERROR 429
           if (err.status === 429) {
               msjError = 'Uy, me hiciste pensar demasiado rápido y me quedé sin aire. Espera unos segundos, por favor.';
-              detenerMicrofonoPorError = true; 
+              detenerMicrofonoPorError = true; // Forzamos apagar el micro para detener el bucle
               this.keepListeningActive = false; 
           }
 
@@ -191,6 +209,7 @@ REGLAS:
       });
   }
 
+  // 3. CONTROL DE VOZ CONTINUO (BURBUJA)
   private initSpeechRecognition() {
     const { webkitSpeechRecognition } = window as any;
     if (!webkitSpeechRecognition) return;
@@ -264,7 +283,7 @@ REGLAS:
     window.speechSynthesis.cancel();
     setTimeout(() => {
       const utterance = new SpeechSynthesisUtterance(texto);
-      const voices = window.speechSynthesis.getVoices();
+      let voices = window.speechSynthesis.getVoices();
       
       let femaleVoice = voices.find(v => v.lang.startsWith('es') && (v.name.includes('Google español') || /(sabina|paulina|monica|mujer|female)/i.test(v.name)));
       if (!femaleVoice) femaleVoice = voices.find(v => v.lang.startsWith('es') && !/(pablo|jorge|diego|carlos|male|hombre)/i.test(v.name));
@@ -285,6 +304,10 @@ REGLAS:
     }, 50);
   }
 
+  // 4. UTILIDADES
+
+  // Busca el patrón [[NAVEGAR:/ruta]] en la respuesta del modelo, lo quita del texto
+  // (el usuario nunca debe ver el comando) y devuelve la ruta solicitada, si existe.
   private extraerComandoNavegacion(texto: string): { textoLimpio: string; ruta: string | null } {
     if (!texto) return { textoLimpio: texto, ruta: null };
     const match = texto.match(this.REGEX_NAVEGACION);
