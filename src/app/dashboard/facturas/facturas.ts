@@ -27,11 +27,10 @@ export class Facturas implements OnInit, OnDestroy {
   private cdr = inject(ChangeDetectorRef);
   
   facturas: any[] = [];
-  facturasBase: any[] = []; 
-  terminoBusqueda: string = ''; 
+  facturasBase: any[] = []; // Guarda la lista original para el buscador
+  terminoBusqueda: string = ''; // La variable que pide el HTML
   isLoading = true;
   negocioId: number | null = null;
-  negocioInfo: any = null; 
   private apiUrl = environment.apiUrl;
   private groqApiKey = environment.groqApiKey;
 
@@ -51,15 +50,13 @@ export class Facturas implements OnInit, OnDestroy {
   clienteSeleccionadoInfo: any = null;
   esConsumidorFinal: boolean = false;
 
+  // 🔥 NUEVO ESTADO DE LA FACTURA BLINDADO
   nuevaFactura: any = {
     clienteId: null,
-    metodoPago: null, 
+    metodoPago: 'EFECTIVO',
     numeroCuotas: 0,
     detallesTarjeta: '', 
-    tarjetaNumero: '', 
-    tarjetaVence: '',  
-    tarjetaCvc: '',    
-    descuentoGlobalPorcentaje: null,
+    descuentoGlobal: 0, // 🔥 Acepta descuento al total de la factura
     detalles: []
   };
 
@@ -67,7 +64,7 @@ export class Facturas implements OnInit, OnDestroy {
     productoId: null,
     bodegaId: null,
     cantidad: null,
-    descuentoPorcentaje: null, 
+    descuento: null, 
     productoNombre: '' 
   };
 
@@ -82,24 +79,16 @@ export class Facturas implements OnInit, OnDestroy {
   opcionesVoz: any[] = [];
   tipoOpciones: 'CLIENTE' | 'BODEGA' | 'PRODUCTO' | null = null;
   metodoPagoConfirmado: boolean = false;
+  quiereEmitirPendiente: boolean = false;
 
-  productoPendientePorBodega: any = null;
-  cantidadPendientePorBodega: number = 1;
-  descuentoPendientePorBodega: number = 0;
-  
-  hoverIndex: number = -1; 
-
+  // 🔥 CÁLCULOS CORREGIDOS PARA SOPORTAR DESCUENTOS
   get subtotalCarrito(): number {
     return this.nuevaFactura.detalles.reduce((sum: number, item: any) => sum + (item.subtotal || 0), 0);
   }
 
-  get montoDescuentoGlobal(): number {
-    const descPct = Number(this.nuevaFactura.descuentoGlobalPorcentaje || 0);
-    return this.subtotalCarrito * (descPct / 100);
-  }
-
   get totalCarrito(): number {
-    const total = this.subtotalCarrito - this.montoDescuentoGlobal;
+    const descGlobal = Number(this.nuevaFactura.descuentoGlobal || 0);
+    const total = this.subtotalCarrito - descGlobal;
     return total > 0 ? total : 0;
   }
 
@@ -134,17 +123,13 @@ export class Facturas implements OnInit, OnDestroy {
     this.cargarIvaDelSistema();
 
     if (this.negocioId) {
-      this.cargarDatosNegocio(); 
       this.cargarTodasLasFacturas(this.negocioId);
     } else {
       this.isLoading = false;
     }
 
     this.initSpeechRecognition();
-    if (window.speechSynthesis) {
-        window.speechSynthesis.getVoices();
-        window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
-    }
+    window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
   }
 
   ngOnDestroy(): void {
@@ -157,16 +142,6 @@ export class Facturas implements OnInit, OnDestroy {
     return new HttpHeaders().set('Authorization', `Bearer ${cleanToken}`);
   }
 
-  cargarDatosNegocio() {
-    if (!this.negocioId) return;
-    this.http.get<any>(`${this.apiUrl}/negocios/${this.negocioId}`, { headers: this.getAuthHeaders() }).subscribe({
-      next: (data) => {
-        this.negocioInfo = data;
-      },
-      error: (err) => console.warn('No se pudo cargar la info del negocio', err)
-    });
-  }
-
   cargarIvaDelSistema() {
       this.http.get<any>(`${this.apiUrl}/parametros/iva`, { headers: this.getAuthHeaders() }).subscribe({
           next: (res) => {
@@ -174,38 +149,38 @@ export class Facturas implements OnInit, OnDestroy {
                   this.ivaActual = parseFloat(res.ivaActual);
               }
           },
-          error: (err) => console.warn("No se pudo cargar el IVA, usando 15%", err)
+          error: (err) => {
+              console.warn("No se pudo cargar el IVA, usando 15%", err);
+          }
       });
   }
 
-  cargarTodasLasFacturas(id: number) {
+ cargarTodasLasFacturas(id: number) {
     this.isLoading = true;
     this.http.get<any[]>(`${this.apiUrl}/negocios/${id}/facturas`, { headers: this.getAuthHeaders() }).subscribe({
       next: (data) => {
-        setTimeout(() => {
-            const arregloSeguro = Array.isArray(data) ? data : [];
-            this.facturas = arregloSeguro.map(f => ({
-              id: f.id,
-              numero: f.numeroFactura || 'S/N',
-              cliente: f.clienteNombre || f.cliente?.nombre || f.cliente?.razonSocial || 'Consumidor Final',
-              tipo: f.formaPago || 'Manual',
-              fecha: f.fechaEmision || new Date().toLocaleDateString(),
-              monto: Number(f.totalFactura || f.total || 0),
-              estado: f.estadoSri || 'Emitida',
-              detalles: f.detallesFactura || f.detalles || f.items || [] 
-            }));
-            
-            this.facturasBase = [...this.facturas]; 
-            this.isLoading = false;
-            this.cdr.detectChanges();
-        }, 0);
+        const arregloSeguro = Array.isArray(data) ? data : [];
+        this.facturas = arregloSeguro.map(f => ({
+          id: f.id,
+          numero: f.numeroFactura || 'S/N',
+          cliente: f.clienteNombre || f.cliente?.nombre || f.cliente?.razonSocial || 'Consumidor Final',
+          tipo: f.formaPago || 'Manual',
+          fecha: f.fechaEmision || new Date().toLocaleDateString(),
+          monto: Number(f.totalFactura || f.total || 0),
+          estado: f.estadoSri || 'Emitida',
+          detalles: f.detallesFactura || f.detalles || f.items || [] 
+        }));
+        
+        this.facturasBase = [...this.facturas]; // 🔥 NUEVO: Guardamos la original para buscar
+        
+        this.isLoading = false;
+        this.cdr.detectChanges();
       },
-      error: () => {
-          setTimeout(() => { this.isLoading = false; this.cdr.detectChanges(); }, 0);
-      }
+      error: () => this.isLoading = false
     });
   }
 
+  // 🔥 NUEVO: Función para buscar facturas en tiempo real
   buscarFacturas() {
     if (!this.terminoBusqueda.trim()) {
       this.facturas = [...this.facturasBase];
@@ -213,7 +188,8 @@ export class Facturas implements OnInit, OnDestroy {
     }
     const term = this.terminoBusqueda.toLowerCase().trim();
     this.facturas = this.facturasBase.filter(f => 
-      f.numero.toLowerCase().includes(term) || f.cliente.toLowerCase().includes(term)
+      f.numero.toLowerCase().includes(term) || 
+      f.cliente.toLowerCase().includes(term)
     );
   }
 
@@ -222,18 +198,8 @@ export class Facturas implements OnInit, OnDestroy {
     this.cdr.detectChanges(); 
 
     this.cargarCatalogos();
-    this.nuevaFactura = { 
-        clienteId: null, 
-        metodoPago: null,
-        numeroCuotas: 0, 
-        detallesTarjeta: '', 
-        tarjetaNumero: '', 
-        tarjetaVence: '', 
-        tarjetaCvc: '', 
-        descuentoGlobalPorcentaje: null, 
-        detalles: [] 
-    };
-    this.itemTemp = { productoId: null, bodegaId: null, cantidad: null, descuentoPorcentaje: null, productoNombre: '' };
+    this.nuevaFactura = { clienteId: null, metodoPago: 'EFECTIVO', numeroCuotas: 0, detallesTarjeta: '', descuentoGlobal: 0, detalles: [] };
+    this.itemTemp = { productoId: null, bodegaId: null, cantidad: null, descuento: null, productoNombre: '' };
     this.terminoBusquedaCliente = '';
     this.clienteSeleccionadoInfo = null;
     this.mostrarDropdownClientes = false;
@@ -242,8 +208,7 @@ export class Facturas implements OnInit, OnDestroy {
     this.opcionesVoz = [];
     this.tipoOpciones = null;
     this.metodoPagoConfirmado = false;
-
-    this.productoPendientePorBodega = null;
+    this.quiereEmitirPendiente = false;
 
     if (porVoz) {
       window.speechSynthesis.resume();
@@ -281,7 +246,11 @@ export class Facturas implements OnInit, OnDestroy {
   setConsumidorFinal() {
     this.esConsumidorFinal = true;
     this.nuevaFactura.clienteId = null; 
-    this.clienteSeleccionadoInfo = { nombreCompleto: 'Consumidor Final', dni: '9999999999999', email: 'N/A' };
+    this.clienteSeleccionadoInfo = {
+        nombreCompleto: 'Consumidor Final',
+        dni: '9999999999999',
+        email: 'N/A'
+    };
     this.terminoBusquedaCliente = 'Consumidor Final';
     this.mostrarDropdownClientes = false;
     this.cdr.detectChanges();
@@ -289,39 +258,33 @@ export class Facturas implements OnInit, OnDestroy {
 
   private limpiarTexto(texto: any): string {
     if (!texto) return '';
-    return String(texto)
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "") 
-        .replace(/[^a-zA-Z0-9 ]/g, "") 
-        .toLowerCase()
-        .replace(/\b(de|la|el|los|las|un|una|unos|unas|para|con|y|o)\b/g, '') 
-        .replace(/\s+/g, ' ') 
-        .trim();
+    return String(texto).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
   }
 
   private buscarClientesUniversales(textoBuscado: string): any[] {
     const txt = this.limpiarTexto(textoBuscado);
     if (!txt) return [...this.clientesList];
     
-    let exact = this.clientesList.filter(cli => {
-        const nomCompleto = this.limpiarTexto(cli.nombreCompleto || `${cli.primerNombre || ''} ${cli.apellidoPaterno || ''}`);
-        return nomCompleto === txt || this.limpiarTexto(cli.dni) === txt || this.limpiarTexto(cli.identificacion) === txt;
-    });
+    let exact = this.clientesList.filter(cli => 
+        this.limpiarTexto(cli.nombreCompleto) === txt || this.limpiarTexto(cli.primerNombre) === txt ||
+        this.limpiarTexto(cli.apellidoPaterno) === txt || this.limpiarTexto(cli.dni) === txt ||
+        this.limpiarTexto(cli.identificacion) === txt || this.limpiarTexto(cli.email) === txt || this.limpiarTexto(cli.correo) === txt
+    );
     if (exact.length > 0) return exact;
 
     let partial = this.clientesList.filter(cli => {
         const nom = this.limpiarTexto(cli.nombreCompleto || `${cli.primerNombre || ''} ${cli.apellidoPaterno || ''}`);
         const doc = this.limpiarTexto(cli.dni || cli.identificacion || '');
-        return nom.includes(txt) || txt.includes(nom) || (doc && doc.includes(txt));
+        const corr = this.limpiarTexto(cli.email || cli.correo || '');
+        return nom.includes(txt) || txt.includes(nom) || (doc && doc.includes(txt)) || (corr && corr.includes(txt));
     });
     if (partial.length > 0) return partial;
 
     const palabras = txt.split(' ').filter(p => p.length > 2);
     if (palabras.length === 0) return [];
-    
     return this.clientesList.filter(cli => {
         const nom = this.limpiarTexto(cli.nombreCompleto || `${cli.primerNombre || ''} ${cli.apellidoPaterno || ''}`);
-        return palabras.every(pal => nom.includes(pal)); 
+        return palabras.every(pal => nom.includes(pal));
     });
   }
 
@@ -361,11 +324,16 @@ export class Facturas implements OnInit, OnDestroy {
       let final = '';
 
       for (let i = event.resultIndex; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) final += event.results[i][0].transcript + ' ';
-          else interim += event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+              final += event.results[i][0].transcript + ' ';
+          } else {
+              interim += event.results[i][0].transcript;
+          }
       }
 
-      if (final) this.transcriptAcumulado += final;
+      if (final) {
+          this.transcriptAcumulado += final;
+      }
 
       this.userTranscript = (this.transcriptAcumulado + interim).toLowerCase().trim().replace(/\.$/, '');
       this.cdr.detectChanges();
@@ -379,7 +347,7 @@ export class Facturas implements OnInit, OnDestroy {
           } else {
               this.escuchar();
           }
-      }, 3500); 
+      }, 5000); 
     };
 
     this.recognition.onerror = (event: any) => {
@@ -406,9 +374,9 @@ export class Facturas implements OnInit, OnDestroy {
     this.voiceState = VoiceStep.ESCUCHA_LIBRE;
     
     if (!this.nuevaFactura.clienteId && !this.esConsumidorFinal) {
-        this.voiceMessage = "Hola, soy Zoe. ¿A quién le facturamos y qué agregamos?";
+        this.voiceMessage = "¿A quién le facturamos y qué le agregamos?";
     } else if (!this.metodoPagoConfirmado) {
-        this.voiceMessage = "Cliente listo. ¿Cuál será el método de pago?";
+        this.voiceMessage = "Cliente listo. ¿Con qué paga?";
     } else {
         this.voiceMessage = "¿Qué productos deseas agregar o modificar?";
     }
@@ -422,7 +390,6 @@ export class Facturas implements OnInit, OnDestroy {
     this.isListening = false;
     this.isThinking = false;
     this.transcriptAcumulado = '';
-    this.productoPendientePorBodega = null;
     clearTimeout(this.silenceTimer);
     window.speechSynthesis.cancel();
     if (this.recognition) this.recognition.abort();
@@ -440,27 +407,20 @@ export class Facturas implements OnInit, OnDestroy {
         this.cdr.detectChanges();
 
         const utterance = new SpeechSynthesisUtterance(texto);
-        let voices = window.speechSynthesis.getVoices();
+        utterance.lang = 'es-ES';
         
-        let femaleVoice = voices.find(v => 
-            v.lang.startsWith('es') && 
-            /(sabina|paulina|monica|laura|helena|elena|victoria|mujer|female|Google español)/i.test(v.name)
-        );
+        utterance.rate = 1.35; 
+        utterance.pitch = 1.2; 
+        
+        let voices = window.speechSynthesis.getVoices();
+        let femaleVoice = voices.find(v => v.lang.startsWith('es') && /(sabina|paulina|helena|monica|victoria|lucia|sofia|laura|isabel|carmen|female|mujer|google español)/i.test(v.name));
         
         if (!femaleVoice) {
-            femaleVoice = voices.find(v => 
-                v.lang.startsWith('es') && 
-                !/(pablo|jorge|diego|carlos|david|male|hombre)/i.test(v.name)
-            );
+            femaleVoice = voices.find(v => v.lang.startsWith('es') && !/(pablo|jorge|diego|carlos|male|hombre)/i.test(v.name));
         }
-
         if (femaleVoice) {
             utterance.voice = femaleVoice;
         }
-
-        utterance.lang = 'es-ES'; 
-        utterance.rate = 1.03;    
-        utterance.pitch = 1.15;   
 
         utterance.onend = () => { if (callback && this.voiceState !== VoiceStep.OFF) callback(); };
         utterance.onerror = () => { if (callback && this.voiceState !== VoiceStep.OFF) callback(); };
@@ -484,50 +444,26 @@ export class Facturas implements OnInit, OnDestroy {
     if (comandosLimpiar.some(cmd => transcriptLimpio.includes(cmd))) {
         this.nuevaFactura.detalles = [];
         this.limpiarClienteSeleccionado();
-        this.nuevaFactura.descuentoGlobalPorcentaje = null;
+        this.nuevaFactura.descuentoGlobal = 0;
         this.nuevaFactura.detallesTarjeta = '';
-        this.nuevaFactura.tarjetaNumero = '';
-        this.nuevaFactura.tarjetaVence = '';
-        this.nuevaFactura.tarjetaCvc = '';
-        this.nuevaFactura.metodoPago = null;
-        this.metodoPagoConfirmado = false;
-        this.hablar("De acuerdo, he vaciado todo el ticket. Empecemos de cero.", () => this.escuchar());
+        this.hablar("He vaciado el ticket por completo. Empecemos de cero.", () => this.escuchar());
         return;
     }
 
-    if (this.voiceState === VoiceStep.ELEGIR_OPCION && this.opcionesVoz.length > 0) {
-        this.manejarDesambiguacion(transcriptLimpio);
+    const comandosEmitir = ['emite', 'emitir', 'factura ya', 'cobrar ya', 'guarda la factura', 'guardar factura', 'todo bien', 'listo', 'cobra', 'cobrar'];
+    const quiereEmitir = comandosEmitir.some(cmd => transcriptLimpio.includes(cmd));
+
+    if (this.voiceState === VoiceStep.CONFIRMAR && (quiereEmitir || transcriptLimpio.includes('si') || transcriptLimpio.includes('sí') || transcriptLimpio.includes('ok') || transcriptLimpio.includes('dale'))) {
+        this.voiceState = VoiceStep.OFF;
+        this.hablar("¡Listo! Emitiendo Factura de inmediato.");
+        setTimeout(() => { this.guardarFactura(); }, 800);
         return;
     }
 
-    // 🔥 SI ESTAMOS EN CONFIRMACIÓN, EVALUAMOS EL SÍ O EL NO EXCLUSIVAMENTE
-    if (this.voiceState === VoiceStep.CONFIRMAR) {
-        // Expresión regular fuerte para confirmaciones exactas
-        const afirmativo = /\b(si|sí|dale|ok|claro|confirmo|emite|emitir|ya|correcto|procede|listo)\b/.test(transcriptLimpio);
-        const negativo = /\b(no|espera|cancela|todavia no|aguanta|detente|pausa)\b/.test(transcriptLimpio);
-
-        if (negativo) {
-            this.voiceState = VoiceStep.ESCUCHA_LIBRE;
-            this.hablar("Entendido, esperaré. Dime qué modificamos.", () => this.escuchar());
-            return;
-        } else if (afirmativo) {
-            this.voiceState = VoiceStep.OFF;
-            this.isListening = false;
-            if (this.recognition) { try { this.recognition.stop(); } catch(e){} }
-            
-            // 🔥 SOLUCIÓN DEL ERROR "NO SE FACTURÓ": Se dispara directamente sin esperar a Zoe
-            this.guardarFactura(); 
-            this.hablar("¡Perfecto! Emitiendo la factura ahora mismo.");
-            return;
-        } else {
-            this.voiceState = VoiceStep.ESCUCHA_LIBRE;
-        }
-    }
-
-    this.analizarConGroq(transcriptLimpio);
+    this.analizarConGroq(transcriptLimpio, quiereEmitir);
   }
 
-  private analizarConGroq(fraseUsuario: string) {
+  private analizarConGroq(fraseUsuario: string, quiereEmitirPalabra: boolean) {
     this.isThinking = true;
     this.cdr.detectChanges();
 
@@ -538,43 +474,38 @@ export class Facturas implements OnInit, OnDestroy {
 
     const instruccionCliente = (this.nuevaFactura.clienteId || this.esConsumidorFinal)
       ? `"cliente": null,` 
-      : `"cliente": "Extrae el nombre del cliente. Si no menciona ningún cliente o persona, devuelve 'NO_MENCIONADO'. Si dice Consumidor Final, devuelve 'CONSUMIDOR_FINAL'",`;
+      : `"cliente": "Extrae el nombre, cédula, o pon 'CONSUMIDOR_FINAL'",`;
 
-    const listaNombresCli = this.clientesList.map(c => c.nombreCompleto || `${c.primerNombre} ${c.apellidoPaterno}`).join(', ').substring(0, 1000);
-    const listaNombresProd = this.productosList.map(p => p.nombre).join(', ').substring(0, 1000);
-    const listaBodegas = this.bodegasList.map(b => b.nombre).join(', ');
+    const listaNombresCli = this.clientesList.map(c => c.nombreCompleto || c.primerNombre).join(', ').substring(0, 600);
+    const listaNombresProd = this.productosList.map(p => p.nombre).join(', ').substring(0, 600);
 
-    // 🔥 PROMPT MEJORADO PARA DETECTAR LA INTENCIÓN REAL DE EMITIR
+    // 🔥 PROMPT CON SOPORTE PARA TARJETAS Y DESCUENTOS GLOBALES Y POR ITEM
     const promptSystem = `
-      Eres Zoe, la asistente virtual de un sistema de punto de venta. 
-      Extrae los datos solicitados en formato JSON estricto basándote en la petición del usuario.
+      Eres la IA veloz de un sistema POS. El usuario habla de forma natural.
+      Extrae los datos en un JSON puro.
       
-      🔥 REGLA VITAL DE PRODUCTOS:
-      - TIENES que intentar emparejar lo que el usuario dice con un producto EXACTO de la Lista Referencial de Productos proporcionada abajo.
-      - NO inventes productos que no estén en la lista.
-      
-      Listas referenciales de tu BD:
+      Listas de BD:
       Clientes: [${listaNombresCli}]
       Productos: [${listaNombresProd}]
-      Bodegas: [${listaBodegas}]
 
-      Formato EXACTO QUE DEBES RESPONDER:
+      Formato EXACTO:
       {
          ${instruccionCliente}
-         "metodoPago": "EFECTIVO" | "TRANSFERENCIA" | "TARJETA_CREDITO" | "NO_MENCIONADO",
+         "metodoPago": "EFECTIVO" | "TRANSFERENCIA" | "TARJETA_CREDITO" | null,
          "detallesTarjeta": "Ej: Visa terminada en 1234 (o null)",
          "cuotas": numero_entero_o_null,
-         "descuentoGlobalPorcentaje": numero_o_null,
-         "items": [ { "producto": "Nombre extraído o corregido según la lista", "cantidad": numero_entero_o_null, "descuentoPorcentaje": numero_o_0, "bodega": "Nombre exacto de la bodega o null" } ],
+         "descuentoGlobal": numero_decimal_o_null,
+         "items": [ { "producto": "Nombre", "cantidad": numero_entero_o_null, "descuento": numero_decimal_o_0 } ],
          "eliminarProducto": "Nombre del producto a quitar del carrito (o null)",
-         "emitirFactura": boolean
+         "emitirFactura": true o false
       }
       
-      REGLAS SECUNDARIAS:
-      1. CLIENTE: Si no menciona a nadie, DEBE SER "NO_MENCIONADO". 
-      2. PAGO: Si no menciona tarjeta, efectivo o transferencia, DEBE SER "NO_MENCIONADO".
-      3. EMITIR FACTURA: Si el usuario dice frases como "eso es todo", "cóbrame", "listo", o si SOLAMENTE indica el método de pago sin agregar productos, asume "emitirFactura": true.
-      4. NO devuelvas NADA MÁS que el JSON puro.
+      REGLAS:
+      1. Si dice "Consumidor final" o "sin datos", cliente es "CONSUMIDOR_FINAL".
+      2. "emitirFactura": true SIEMPRE que insinúe terminar.
+      3. TARJETA Y CUOTAS: Si menciona "tarjeta" o "crédito" es TARJETA_CREDITO. Si menciona banco o terminación, ponlo en "detallesTarjeta". Si dice "meses" extrae el número a "cuotas".
+      4. DESCUENTOS: Si dice "pon un descuento de 5 dolares a la factura" o "bájale 2 al total", ponlo en "descuentoGlobal". Si el descuento es solo para un producto específico, ponlo en el "descuento" del "item".
+      5. NO devuelvas texto fuera del JSON.
     `;
 
     const payload = {
@@ -583,7 +514,7 @@ export class Facturas implements OnInit, OnDestroy {
         { role: 'system', content: promptSystem },
         { role: 'user', content: fraseUsuario }
       ],
-      temperature: 0.1, 
+      temperature: 0.0, 
       max_tokens: 450
     };
 
@@ -599,36 +530,38 @@ export class Facturas implements OnInit, OnDestroy {
             jsonStr = jsonStr.replace(/```json/gi, '').replace(/```/g, '').trim();
             
             const datosExtraidos = JSON.parse(jsonStr);
-            this.aplicarDatosExtraidos(datosExtraidos, fraseUsuario);
+            const intencionEmitir = quiereEmitirPalabra || String(datosExtraidos.emitirFactura).toLowerCase() === 'true';
+            
+            this.aplicarDatosExtraidos(datosExtraidos, intencionEmitir);
           } catch (e) {
             console.error("Error parseando JSON:", e);
-            this.hablar("Perdón, me enredé un poco. ¿Podrías decirlo de nuevo?", () => this.escuchar());
+            this.hablar("Uy, me enredé con esa frase. ¿Me lo repites?", () => this.escuchar());
           }
         },
         error: () => {
           this.isThinking = false;
-          this.hablar("Tuve un problema con el internet. ¿Me lo repites?", () => this.escuchar());
+          this.hablar("Hubo un fallo de conexión. Repite, por favor.", () => this.escuchar());
         }
       });
   }
 
-  private aplicarDatosExtraidos(datos: any, fraseUsuarioReal: string) {
+  private aplicarDatosExtraidos(datos: any, quiereEmitir: boolean = false) {
     let algoAgregado = false;
     let mensajesAlerta: string[] = []; 
 
     if (datos.eliminarProducto && datos.eliminarProducto !== 'null') {
         const index = this.nuevaFactura.detalles.findIndex((d: any) => 
-            this.limpiarTexto(d.productoNombre).includes(this.limpiarTexto(datos.eliminarProducto))
+            d.productoNombre.toLowerCase().includes(datos.eliminarProducto.toLowerCase())
         );
         if (index !== -1) {
             const nombreQuitado = this.nuevaFactura.detalles[index].productoNombre;
             this.eliminarDelCarrito(index);
-            this.hablar(`Listo, ya saqué ${nombreQuitado}. ¿Qué más hacemos?`, () => this.escuchar());
+            this.hablar(`Listo, acabo de quitar ${nombreQuitado} del ticket. ¿Qué más hacemos?`, () => this.escuchar());
             return; 
         }
     }
 
-    if (datos.metodoPago && datos.metodoPago !== 'null' && datos.metodoPago !== 'NULL' && datos.metodoPago !== 'NO_MENCIONADO') {
+    if (datos.metodoPago && datos.metodoPago !== 'null' && datos.metodoPago !== 'NULL') {
         this.nuevaFactura.metodoPago = datos.metodoPago;
         this.metodoPagoConfirmado = true;
     }
@@ -650,19 +583,22 @@ export class Facturas implements OnInit, OnDestroy {
                 this.metodoPagoConfirmado = true;
             }
         }
+    } else if (quiereEmitir && !this.metodoPagoConfirmado) {
+        this.nuevaFactura.metodoPago = 'EFECTIVO'; 
+        this.metodoPagoConfirmado = true;
     }
 
-    if (datos.descuentoGlobalPorcentaje !== undefined && datos.descuentoGlobalPorcentaje !== null) {
-        const descGlobal = parseFloat(datos.descuentoGlobalPorcentaje);
+    // 🔥 APLICAR DESCUENTO GLOBAL SI LO DICTÓ LA IA
+    if (datos.descuentoGlobal !== undefined && datos.descuentoGlobal !== null) {
+        const descGlobal = parseFloat(datos.descuentoGlobal);
         if (!isNaN(descGlobal) && descGlobal > 0) {
-            this.nuevaFactura.descuentoGlobalPorcentaje = descGlobal;
+            this.nuevaFactura.descuentoGlobal = descGlobal;
             algoAgregado = true;
         }
     }
 
     let pedirCedula = false;
-    
-    if (datos.cliente && datos.cliente !== 'null' && datos.cliente !== 'NO_MENCIONADO' && !this.nuevaFactura.clienteId && !this.esConsumidorFinal) {
+    if (datos.cliente && datos.cliente !== 'null' && !this.nuevaFactura.clienteId && !this.esConsumidorFinal) {
         if (datos.cliente === 'CONSUMIDOR_FINAL' || String(datos.cliente).toLowerCase().includes('consumidor')) {
             this.setConsumidorFinal();
         } else {
@@ -671,22 +607,22 @@ export class Facturas implements OnInit, OnDestroy {
                 this.seleccionarCliente(matchesCli[0]); 
             } else if (matchesCli.length > 1) {
                 pedirCedula = true; 
-                const nombresStr = matchesCli.slice(0,3).map(c => c.nombreCompleto || c.primerNombre).join(' y ');
-                this.iniciarDesambiguacion('CLIENTE', matchesCli, `Tengo varios clientes similares, como ${nombresStr}. Dime su apellido completo o la cédula.`);
-                return;
             } else {
-                mensajesAlerta.push(`no encontré a ${datos.cliente} en la base de clientes`);
+                mensajesAlerta.push(`no encontré a ${datos.cliente}`);
             }
         }
     }
 
     if (pedirCedula) {
+        this.quiereEmitirPendiente = quiereEmitir;
         this.voiceState = VoiceStep.ESCUCHA_LIBRE;
-        this.hablar("Por favor, díctame la cédula de ese cliente para estar segura.", () => this.escuchar());
+        this.hablar("Hay varios clientes con ese nombre. Por favor, díctame su número de cédula para estar seguros.", () => this.escuchar());
         return;
     }
 
     const items = datos.items || [];
+    let bodegaDefaultId = this.bodegasList.length > 0 ? this.bodegasList[0].id : null;
+    let pedirAclaracionProd = null;
 
     for (let item of items) {
         if (!item.producto || item.producto === 'null') continue;
@@ -696,107 +632,72 @@ export class Facturas implements OnInit, OnDestroy {
             let prod = matchesProd[0]; 
             let cant = Number(item.cantidad);
             if (isNaN(cant) || cant <= 0) cant = 1;
-            let descPct = Number(item.descuentoPorcentaje || 0);
+            
+            let desc = Number(item.descuento || 0);
 
-            const bodegasConStock = this.bodegasList.filter(b => {
-                const stock = this.obtenerStock(prod.id, b.id);
-                return stock !== null && stock > 0;
-            });
-
-            let bodegaElegidaId = null;
-
-            if (item.bodega && item.bodega !== 'null') {
-                const bodCoincidencia = this.bodegasList.find(b => this.limpiarTexto(b.nombre).includes(this.limpiarTexto(item.bodega)));
-                if (bodCoincidencia) {
-                    bodegaElegidaId = bodCoincidencia.id;
-                }
-            }
-
-            if (!bodegaElegidaId) {
-                if (bodegasConStock.length === 1) {
-                    bodegaElegidaId = bodegasConStock[0].id;
-                } else if (bodegasConStock.length > 1) {
-                    this.productoPendientePorBodega = prod;
-                    this.cantidadPendientePorBodega = cant;
-                    this.descuentoPendientePorBodega = descPct;
-                    const bodegasStr = bodegasConStock.map(b => b.nombre).join(' y en ');
-                    this.iniciarDesambiguacion('BODEGA', bodegasConStock, `Tengo ese producto en ${bodegasStr}. ¿De cuál bodega te gustaría sacarlo? Puedes decirlo o hacer click en la opción.`);
-                    return; 
-                } else {
-                    mensajesAlerta.push(`ya no nos queda stock de ${prod.nombre}`);
-                    continue;
-                }
-            }
-
-            if (bodegaElegidaId) {
-                const stockActual = this.obtenerStock(prod.id, bodegaElegidaId);
+            if (bodegaDefaultId) {
+                const stockActual = this.obtenerStock(prod.id, bodegaDefaultId);
                 
                 if (stockActual === null || stockActual <= 0) {
-                    mensajesAlerta.push(`ya no nos queda stock de ${prod.nombre}`);
+                    mensajesAlerta.push(`no hay stock de ${prod.nombre}`);
                 } else {
                     if (cant > stockActual) {
                         cant = stockActual;
-                        mensajesAlerta.push(`solo agregué ${cant} de ${prod.nombre} porque es todo lo que queda en la bodega`);
+                        mensajesAlerta.push(`solo metí ${cant} de ${prod.nombre} porque no hay más`);
                     }
-                    this.agregarProductoDirecto(prod, cant, bodegaElegidaId, descPct);
+                    this.agregarProductoDirecto(prod, cant, bodegaDefaultId, desc);
                     algoAgregado = true;
                 }
             }
         } else if (matchesProd.length > 1) {
-            this.itemTemp.cantidad = Number(item.cantidad) > 0 ? Number(item.cantidad) : 1;
-            this.itemTemp.descuentoPorcentaje = Number(item.descuentoPorcentaje) > 0 ? Number(item.descuentoPorcentaje) : 0;
-
-            const prodsStr = matchesProd.slice(0,3).map((p, index) => `Opción ${index + 1}: ${p.nombre}`).join('. ');
-            this.iniciarDesambiguacion('PRODUCTO', matchesProd, `Encontré varios similares. Dime el número de la opción o haz clic en pantalla: ${prodsStr}.`);
-            return; 
+            pedirAclaracionProd = item.producto; 
         } else if (matchesProd.length === 0) {
-            mensajesAlerta.push(`no encontré ${item.producto} en el inventario`);
+            mensajesAlerta.push(`no tengo ${item.producto} en el catálogo`);
         }
     }
 
     this.cdr.detectChanges();
 
+    if (pedirAclaracionProd) {
+        this.quiereEmitirPendiente = quiereEmitir;
+        this.voiceState = VoiceStep.ESCUCHA_LIBRE;
+        this.hablar(`Tengo varios productos que coinciden con ${pedirAclaracionProd}. ¿Puedes ser un poco más específico?`, () => this.escuchar());
+        return;
+    }
+
     const faltaCliente = !this.nuevaFactura.clienteId && !this.esConsumidorFinal;
-    const faltaPago = !this.metodoPagoConfirmado;
     const faltaItems = this.nuevaFactura.detalles.length === 0;
 
-    let prefijoAviso = mensajesAlerta.length > 0 ? `Atención, ${mensajesAlerta.join(' y ')}. ` : '';
+    let prefijoAviso = mensajesAlerta.length > 0 ? `A ver, ${mensajesAlerta.join(', y ')}. ` : '';
 
-    // Nueva validación combinada de intención de emitir
-    const intencionEmitir = ['emite', 'emitir', 'factura ya', 'cobrar ya', 'guarda la factura', 'todo bien', 'listo', 'cobra', 'cobrar', 'termina', 'eso es todo'].some(cmd => fraseUsuarioReal.toLowerCase().includes(cmd)) || String(datos.emitirFactura).toLowerCase() === 'true';
+    if ((quiereEmitir || this.quiereEmitirPendiente) && !faltaCliente && !faltaItems) {
+        this.quiereEmitirPendiente = false;
+        this.voiceState = VoiceStep.OFF;
+        this.hablar(`${prefijoAviso}¡Todo listo! Emitiendo factura.`);
+        setTimeout(() => { this.guardarFactura(); }, 1200);
+        return;
+    }
+
+    this.quiereEmitirPendiente = false;
+    this.voiceState = VoiceStep.ESCUCHA_LIBRE;
 
     if (faltaCliente) {
-        this.voiceState = VoiceStep.ESCUCHA_LIBRE;
-        this.hablar(`${prefijoAviso}Aún no tengo al cliente. ¿A quién le facturamos o lo registro como consumidor final?`, () => this.escuchar());
+        this.hablar(`${prefijoAviso}Para cobrar necesito el cliente. ¿A quién le facturamos?`, () => this.escuchar());
     } 
     else if (faltaItems) {
-        this.voiceState = VoiceStep.ESCUCHA_LIBRE;
-        this.hablar(`${prefijoAviso}El carrito está vacío. ¿Qué producto vamos a buscar?`, () => this.escuchar());
+        this.hablar(`${prefijoAviso}El ticket está vacío. ¿Qué le agregamos?`, () => this.escuchar());
     } 
-    else if (faltaPago && intencionEmitir) {
-        this.voiceState = VoiceStep.ESCUCHA_LIBRE;
-        this.hablar(`${prefijoAviso}Ya tengo todo, pero me falta saber si pagarán en efectivo, transferencia o tarjeta.`, () => this.escuchar());
-    }
-    else if (intencionEmitir && !faltaCliente && !faltaPago && !faltaItems) {
-        this.voiceState = VoiceStep.CONFIRMAR;
-        this.hablar(`${prefijoAviso}Revisé todo y estamos listos. El total a cobrar es $${this.totalCarrito.toFixed(2)}. ¿Deseas que confirme la emisión de la factura?`, () => this.escuchar());
-    }
     else {
-        this.voiceState = VoiceStep.ESCUCHA_LIBRE;
-        if (algoAgregado) {
-            this.hablar(`${prefijoAviso}Añadido al carrito. ¿Qué más deseas agregar?`, () => this.escuchar());
-        } else if (mensajesAlerta.length > 0) {
-            this.hablar(`${prefijoAviso}¿Buscamos otra cosa?`, () => this.escuchar());
-        } else {
-            this.hablar(`Listo. ¿Qué más hacemos?`, () => this.escuchar());
-        }
+        this.voiceState = VoiceStep.CONFIRMAR;
+        let msj = algoAgregado
+            ? `${prefijoAviso}Total a pagar $${this.totalCarrito.toFixed(2)}. ¿Emitimos?`
+            : `${prefijoAviso}Todo listo. Son $${this.totalCarrito.toFixed(2)}. ¿Deseas emitir ya?`;
+        this.hablar(msj, () => this.escuchar());
     }
   }
 
   private buscarProductos(textoBuscado: string): any[] {
     const txt = this.limpiarTexto(textoBuscado);
-    if (!txt) return [];
-    
     let exact = this.productosList.filter(p => this.limpiarTexto(p.nombre) === txt);
     if (exact.length > 0) return exact;
 
@@ -805,16 +706,16 @@ export class Facturas implements OnInit, OnDestroy {
 
     const palabras = txt.split(' ').filter(p => p.length > 2); 
     if (palabras.length > 0) {
-        let flexible = this.productosList.filter(p => {
+        let agresivo = this.productosList.filter(p => {
             const nom = this.limpiarTexto(p.nombre);
-            return palabras.every(pal => nom.includes(pal)); 
+            return palabras.some(pal => nom.includes(pal)); 
         });
-        if (flexible.length > 0) return flexible;
+        if (agresivo.length > 0) return agresivo;
     }
     return [];
   }
 
-  private iniciarDesambiguacion(tipo: 'CLIENTE' | 'PRODUCTO' | 'BODEGA', opciones: any[], mensaje: string) {
+  private iniciarDesambiguacion(tipo: 'CLIENTE' | 'PRODUCTO', opciones: any[], mensaje: string) {
     this.tipoOpciones = tipo;
     this.opcionesVoz = opciones.slice(0, 5); 
     this.voiceState = VoiceStep.ELEGIR_OPCION;
@@ -822,135 +723,45 @@ export class Facturas implements OnInit, OnDestroy {
     this.hablar(mensaje, () => this.escuchar());
   }
 
-  seleccionarOpcionManual(opcion: any) {
-    this.isThinking = true; 
-    if (this.recognition) {
-        try { this.recognition.stop(); } catch(e){}
-    }
-    this.isListening = false;
-    this.hoverIndex = -1; 
-
-    setTimeout(() => {
-        this.isThinking = false;
-        this.ejecutarSeleccion(opcion, '');
-    }, 100);
-  }
-
   private manejarDesambiguacion(transcript: string) {
-    const transcriptLimpio = this.limpiarTexto(transcript);
-    
-    if (['cancelar', 'ninguno', 'ninguna', 'me equivoque', 'salir', 'atras'].some(cmd => transcriptLimpio.includes(cmd))) {
-        this.voiceState = VoiceStep.ESCUCHA_LIBRE;
-        this.opcionesVoz = [];
-        this.tipoOpciones = null;
-        this.productoPendientePorBodega = null;
-        this.hablar("Cancelado. ¿Qué deseas hacer ahora?", () => this.escuchar());
-        return;
-    }
+    const num = this.extraerIndice(transcript, this.opcionesVoz.length);
 
-    let seleccionado = null;
-
-    const num = this.extraerIndice(transcriptLimpio, this.opcionesVoz.length);
     if (num >= 0 && num < this.opcionesVoz.length) {
-      seleccionado = this.opcionesVoz[num];
-    } else {
-      const palabrasUsuario = transcriptLimpio.split(' ').filter(p => p.length > 2);
-      let maxScore = 0;
-
-      for (let opt of this.opcionesVoz) {
-        let stringDeComparacion = "";
-        
-        if (this.tipoOpciones === 'CLIENTE') {
-            stringDeComparacion = `${opt.nombreCompleto} ${opt.primerNombre} ${opt.razonSocial} ${opt.dni}`;
-        } else if (this.tipoOpciones === 'PRODUCTO') {
-            stringDeComparacion = `${opt.nombre} ${opt.descripcion || ''}`;
-        } else if (this.tipoOpciones === 'BODEGA') {
-            stringDeComparacion = `${opt.nombre} ${opt.ubicacion || ''} ${opt.direccion || ''}`;
-        }
-
-        const textoACompararLimpio = this.limpiarTexto(stringDeComparacion);
-        
-        if (textoACompararLimpio.includes(transcriptLimpio) || transcriptLimpio.includes(textoACompararLimpio)) {
-          seleccionado = opt;
-          break;
-        }
-
-        let score = 0;
-        for (let pal of palabrasUsuario) {
-          if (textoACompararLimpio.includes(pal)) score++;
-        }
-
-        if (score > maxScore) {
-          maxScore = score;
-          seleccionado = opt;
-        }
-      }
-    }
-
-    if (seleccionado) {
-        this.ejecutarSeleccion(seleccionado, transcript);
-    } else {
-      this.hablar("Perdón, no escuché bien. Dime el número de la opción o haz clic en la pantalla.", () => this.escuchar());
-    }
-  }
-
-  private ejecutarSeleccion(seleccionado: any, transcriptContext: string) {
+      const seleccionado = this.opcionesVoz[num];
+      
       if (this.tipoOpciones === 'CLIENTE') {
           this.seleccionarCliente(seleccionado);
           this.opcionesVoz = [];
           this.tipoOpciones = null;
-          this.aplicarDatosExtraidos({}, transcriptContext); 
-      } 
-      else if (this.tipoOpciones === 'PRODUCTO') {
-          let prod = seleccionado;
-          let cant = this.itemTemp.cantidad || 1;
-          let desc = this.itemTemp.descuentoPorcentaje || 0;
           
-          this.opcionesVoz = [];
-          this.tipoOpciones = null;
-          
-          this.aplicarDatosExtraidos({
-              items: [{ producto: prod.nombre, cantidad: cant, descuentoPorcentaje: desc }]
-          }, transcriptContext);
-      }
-      else if (this.tipoOpciones === 'BODEGA') {
-          let bodega = seleccionado;
-          let prod = this.productoPendientePorBodega;
-          let cant = this.cantidadPendientePorBodega;
-          let desc = this.descuentoPendientePorBodega;
-          
-          this.opcionesVoz = [];
-          this.tipoOpciones = null;
-          this.productoPendientePorBodega = null;
-
-          const stockActual = this.obtenerStock(prod.id, bodega.id);
-          if (stockActual !== null && stockActual > 0) {
-              if (cant > stockActual) cant = stockActual;
-              this.agregarProductoDirecto(prod, cant, bodega.id, desc);
-              this.hablar(`Entendido, lo sacamos de ${bodega.nombre}. ¿Deseas agregar algo más?`, () => this.escuchar());
+          if (this.quiereEmitirPendiente) {
+              this.aplicarDatosExtraidos({}, true);
           } else {
-              this.hablar(`Uy, acabo de revisar y no queda stock en ${bodega.nombre}. ¿Buscamos en otro lado?`, () => this.escuchar());
+              this.aplicarDatosExtraidos({}); 
           }
-      }
+      } 
+    } else {
+      this.hablar("Oye, no capté la opción. ¿Qué número es?", () => this.escuchar());
+    }
   }
 
   private extraerIndice(texto: string, maxOpciones: number): number {
-    const txtLimpio = texto.replace(/\b(la|el|las|los|opcion|opción|numero|número|quiero|dame|selecciona|escoge)\b/g, '').trim();
-
-    const matchDigito = txtLimpio.match(/\d+/);
+    const matchDigito = texto.match(/\d+/);
     if (matchDigito) {
         const idx = parseInt(matchDigito[0], 10) - 1;
         if (idx >= 0 && idx < maxOpciones) return idx;
     }
-    
-    if (/(primer|uno|1)/.test(txtLimpio)) return 0;
-    if (/(segund|dos|2)/.test(txtLimpio)) return 1;
-    if (/(tercer|tres|3)/.test(txtLimpio)) return 2;
-    if (/(cuart|cuatro|4)/.test(txtLimpio)) return 3;
-    if (/(quint|cinco|5)/.test(txtLimpio)) return 4;
+    if (texto.includes('primer') || texto.includes('uno')) return 0;
+    if (texto.includes('segund') || texto.includes('dos')) return 1;
+    if (texto.includes('tercer') || texto.includes('tres')) return 2;
+    if (texto.includes('cuart') || texto.includes('cuatro')) return 3;
+    if (texto.includes('quint') || texto.includes('cinco')) return 4;
     return -1;
   }
 
+  // =======================================================
+  // 🔥 CARRITO Y PDF
+  // =======================================================
   agregarAlCarrito() {
     if (!this.itemTemp.productoId || !this.itemTemp.bodegaId || this.itemTemp.cantidad <= 0) return;
     const prodSelect = this.productosList.find(p => p.id === this.itemTemp.productoId);
@@ -962,62 +773,40 @@ export class Facturas implements OnInit, OnDestroy {
         Swal.fire('Stock Limitado', `Solo quedan ${stockActual} unidades disponibles.`, 'info');
     }
     
-    let descPct = Number(this.itemTemp.descuentoPorcentaje || 0);
+    let desc = Number(this.itemTemp.descuento || 0);
 
     if (cant > 0) {
-        this.agregarProductoDirecto(prodSelect, cant, this.itemTemp.bodegaId, descPct);
+        this.agregarProductoDirecto(prodSelect, cant, this.itemTemp.bodegaId, desc);
     }
-    this.itemTemp = { productoId: null, bodegaId: this.itemTemp.bodegaId, cantidad: null, descuentoPorcentaje: null, productoNombre: '' }; 
+    this.itemTemp = { productoId: null, bodegaId: this.itemTemp.bodegaId, cantidad: null, descuento: null, productoNombre: '' }; 
   }
 
-  // 🔥 SOLUCIÓN PARA PRODUCTOS REPETIDOS: Súmalo a la fila existente si es el mismo
-  private agregarProductoDirecto(producto: any, cantidad: number, bodegaId: any, descuentoPorcentaje: number = 0) {
+  private agregarProductoDirecto(producto: any, cantidad: number, bodegaId: any, descuento: number = 0) {
     if (!producto || !bodegaId || cantidad <= 0) return;
 
     let precio = Number(producto.costoPromedioActual || 0);
     if (precio <= 0) precio = Number(producto.precioUnitario || 0);
 
-    const indexEnCarrito = this.nuevaFactura.detalles.findIndex((d: any) => d.productoId === producto.id && d.bodegaId === bodegaId);
+    const subtotal = (precio * cantidad) - descuento;
 
-    if (indexEnCarrito !== -1) {
-        // Ya existe en el carrito, se suma la cantidad inteligentemente
-        let nuevaCantidadTotal = this.nuevaFactura.detalles[indexEnCarrito].cantidad + cantidad;
-        
-        // Verificación de stock para la nueva suma total
-        const stockActual = this.obtenerStock(producto.id, bodegaId);
-        if (stockActual !== null && nuevaCantidadTotal > stockActual) {
-            nuevaCantidadTotal = stockActual;
-        }
-
-        const descMonto = (precio * nuevaCantidadTotal) * (descuentoPorcentaje / 100);
-        const subtotal = (precio * nuevaCantidadTotal) - descMonto;
-
-        this.nuevaFactura.detalles[indexEnCarrito].cantidad = nuevaCantidadTotal;
-        this.nuevaFactura.detalles[indexEnCarrito].descuentoPorcentaje = descuentoPorcentaje; // actualiza descuento
-        this.nuevaFactura.detalles[indexEnCarrito].descuentoMonto = descMonto;
-        this.nuevaFactura.detalles[indexEnCarrito].subtotal = subtotal;
-
-    } else {
-        // Producto totalmente nuevo en el carrito
-        const descMonto = (precio * cantidad) * (descuentoPorcentaje / 100);
-        const subtotal = (precio * cantidad) - descMonto;
-
-        const bodSelect = this.bodegasList.find(b => b.id === bodegaId);
-        const bodegaNombre = bodSelect ? bodSelect.nombre : 'Principal';
-        
-        this.nuevaFactura.detalles.push({
-          productoId: producto.id,
-          bodegaId: bodegaId,
-          bodegaNombre: bodegaNombre,
-          cantidad: cantidad,
-          productoNombre: producto.nombre,
-          precioUnitario: precio,
-          descuentoPorcentaje: descuentoPorcentaje, 
-          descuentoMonto: descMonto, 
-          subtotal: subtotal
-        });
+    if (subtotal < 0) {
+        Swal.fire('Error', `El descuento no puede ser mayor al precio total de ${producto.nombre}.`, 'error');
+        return;
     }
 
+    const bodSelect = this.bodegasList.find(b => b.id === bodegaId);
+    const bodegaNombre = bodSelect ? bodSelect.nombre : 'Principal';
+    
+    this.nuevaFactura.detalles.push({
+      productoId: producto.id,
+      bodegaId: bodegaId,
+      bodegaNombre: bodegaNombre,
+      cantidad: cantidad,
+      productoNombre: producto.nombre,
+      precioUnitario: precio,
+      descuento: descuento, 
+      subtotal: subtotal
+    });
     this.cdr.detectChanges();
   }
 
@@ -1026,10 +815,6 @@ export class Facturas implements OnInit, OnDestroy {
   }
 
   guardarFactura() {
-    if (!this.nuevaFactura.metodoPago) {
-        this.nuevaFactura.metodoPago = 'EFECTIVO';
-    }
-
     if ((!this.nuevaFactura.clienteId && !this.esConsumidorFinal) || this.nuevaFactura.detalles.length === 0) {
       Swal.fire('Error', 'Faltan datos para emitir la factura.', 'error');
       return;
@@ -1038,26 +823,17 @@ export class Facturas implements OnInit, OnDestroy {
     this.isSaving = true;
     Swal.fire({ title: 'Emitiendo Factura...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
-    if (this.nuevaFactura.metodoPago === 'TARJETA_CREDITO' && this.nuevaFactura.tarjetaNumero) {
-        const numClean = this.nuevaFactura.tarjetaNumero.replace(/\D/g, '');
-        if (numClean.length >= 4) {
-            this.nuevaFactura.detallesTarjeta = `Tarjeta terminada en ${numClean.slice(-4)}`;
-        } else {
-            this.nuevaFactura.detallesTarjeta = 'Pago con Tarjeta';
-        }
-    }
-
     const payload = {
       clienteId: this.nuevaFactura.clienteId, 
       metodoPago: this.nuevaFactura.metodoPago,
       tarjeta: this.nuevaFactura.detallesTarjeta, 
       numeroCuotas: this.nuevaFactura.numeroCuotas,
-      descuentoGlobal: this.montoDescuentoGlobal || 0, 
+      descuentoGlobal: this.nuevaFactura.descuentoGlobal || 0,
       detalles: this.nuevaFactura.detalles.map((d: any) => ({
         productoId: d.productoId,
         bodegaId: d.bodegaId,
         cantidad: d.cantidad,
-        descuento: d.descuentoMonto || 0 
+        descuento: d.descuento || 0
       }))
     };
 
@@ -1074,7 +850,7 @@ export class Facturas implements OnInit, OnDestroy {
             fecha: res.fechaEmision ? new Date(res.fechaEmision).toLocaleDateString() : new Date().toLocaleDateString(),
             monto: Number(res.totalFactura || res.total || 0),
             tipo: res.formaPago || 'Manual',
-            descuentoGlobal: this.montoDescuentoGlobal || 0,
+            descuentoGlobal: this.nuevaFactura.descuentoGlobal || 0, // Pasamos el descuento para que el PDF lo sepa
             detalles: res.detallesFactura || res.detalles || this.nuevaFactura.detalles 
           };
           
@@ -1098,24 +874,18 @@ export class Facturas implements OnInit, OnDestroy {
     const subtotal = total / (1 + this.ivaActual);
     const iva = total - subtotal;
     
+    // Obtenemos el descuento global desde la respuesta de la API o usamos 0
     const descuentoGlobal = Number(fac.descuentoGlobal || 0);
     
     let filasProductos = '';
     const baseUrl = window.location.origin; 
     
-    const nombreNegocio = this.negocioInfo?.nombreComercial || this.negocioInfo?.razonSocial || 'Mi Negocio S.A.';
-    const rucNegocio = this.negocioInfo?.ruc || '0000000000000';
-    const direccionNegocio = this.negocioInfo?.direccion || 'Dirección no registrada';
-    const emailNegocio = this.negocioInfo?.email || this.negocioInfo?.correo || 'Sin correo registrado';
-    const logoUrl = this.negocioInfo?.logo || `${baseUrl}/images/Dilo-Logo-2-.png`;
-
     if (fac.detalles && fac.detalles.length > 0) {
       fac.detalles.forEach((item: any) => {
         const cantidad = item.cantidad || 1;
         const descripcion = item.producto?.nombre || item.productoNombre || item.descripcion || 'Producto / Servicio';
         const precioUnit = Number(item.precioUnitario || item.precio || 0);
-        
-        const descItem = Number(item.descuento || item.descuentoMonto || 0);
+        const descItem = Number(item.descuento || 0);
         const subtotalItem = Number(item.subtotal || item.subtotalItem || ((cantidad * precioUnit) - descItem));
         
         let descHtml = descItem > 0 ? `<br><small style="color: #ea580c; font-weight: bold;">(Descuento: -$${descItem.toFixed(2)})</small>` : '';
@@ -1142,7 +912,7 @@ export class Facturas implements OnInit, OnDestroy {
 
     let htmlDescuento = descuentoGlobal > 0 ? `
         <div class="total-row">
-            <span>Descuento Global Adicional</span>
+            <span>Descuento Aplicado a Factura</span>
             <span class="font-bold" style="color: #ea580c;">-$${descuentoGlobal.toFixed(2).replace('.', ',')}</span>
         </div>` : '';
 
@@ -1193,13 +963,13 @@ export class Facturas implements OnInit, OnDestroy {
               <div class="header">
                   <div>
                       <div class="logo">
-                          <img src="${logoUrl}" alt="Logo Negocio">
+                          <img src="${baseUrl}/images/Dilo-Logo-2-.png" alt="Dilo">
                       </div>
                       <div class="company-details">
-                          <strong>${nombreNegocio}</strong><br>
-                          RUC: ${rucNegocio}<br>
-                          ${direccionNegocio}<br>
-                          ${emailNegocio}
+                          <strong>Mi Negocio S.A.</strong><br>
+                          RUC: 0102030405001<br>
+                          Cuenca, Azuay, Ecuador<br>
+                          contacto@minegocio.com
                       </div>
                   </div>
                   <div class="invoice-title-area">

@@ -273,7 +273,8 @@
         </div>
     </div>
     
-   <div class="zoe-side-panel fade-in" *ngIf="voiceState !== 'OFF'">
+    <!-- ZOE SIDE PANEL -->
+    <div class="zoe-side-panel fade-in" *ngIf="voiceState !== 'OFF'">
             <div class="zoe-widget">
                 
                 <button class="close-zoe-btn" (click)="cancelarAsistenteVoz()" title="Detener a Zoe">
@@ -299,30 +300,15 @@
                         <p>{{ voiceMessage }}</p>
                     </div>
 
-                    <!-- 🔥 OPCIONES INTERACTIVAS MEJORADAS (AQUÍ ESTÁ LA MAGIA) -->
                     <div class="voice-options-list fade-in" *ngIf="opcionesVoz.length > 0">
-                        <p class="voice-options-title" style="font-size: 0.9rem; font-weight: 600; margin-bottom: 10px; color: #475569;">Di el número o haz clic en la opción:</p>
-                        
-                        <div class="voice-option-item" *ngFor="let opt of opcionesVoz; let i = index" 
-                             (click)="seleccionarOpcionManual(opt)" 
-                             style="cursor: pointer; transition: all 0.2s; background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; margin-bottom: 8px; display: flex; align-items: center; gap: 10px;"
-                             onmouseover="this.style.backgroundColor='#f1f5f9'; this.style.borderColor='#f97316'" 
-                             onmouseout="this.style.backgroundColor='white'; this.style.borderColor='#e2e8f0'">
-                            
-                            <span class="voice-opt-number" style="background: #f97316; color: white; width: 24px; height: 24px; display: flex; justify-content: center; align-items: center; border-radius: 50%; font-weight: bold; font-size: 0.85rem; flex-shrink: 0;">{{ i + 1 }}</span>
-                            
-                            <span class="voice-opt-text" *ngIf="tipoOpciones === 'CLIENTE'" style="font-size: 0.95rem; font-weight: 500; color: #0f172a; width: 100%;">
-                                {{ opt.nombreCompleto || opt.primerNombre || opt.razonSocial }} 
-                                <span style="color:#64748b; font-size:0.8rem; margin-left: 5px;">(CI: {{ opt.dni || opt.identificacion || 'N/A' }})</span>
+                        <p class="voice-options-title">Di el número:</p>
+                        <div class="voice-option-item" *ngFor="let opt of opcionesVoz; let i = index">
+                            <span class="voice-opt-number">{{ i + 1 }}</span>
+                            <span class="voice-opt-text" *ngIf="tipoOpciones === 'CLIENTE'">
+                                {{ opt.nombreCompleto || opt.primerNombre }} <span style="color:#64748b; font-size:0.8rem;">(CI: {{ opt.dni || opt.identificacion || 'N/A' }})</span>
                             </span>
-                            
-                            <span class="voice-opt-text" *ngIf="tipoOpciones === 'BODEGA'" style="font-size: 0.95rem; font-weight: 500; color: #0f172a; width: 100%;">
-                                {{ opt.nombre }} 
-                            </span>
-                            
-                            <span class="voice-opt-text" *ngIf="tipoOpciones === 'PRODUCTO'" style="font-size: 0.95rem; font-weight: 500; color: #0f172a; width: 100%;">
-                                {{ opt.nombre }} <span style="color:#10b981; font-size:0.85rem; margin-left: 5px; font-weight: 700;">${{ opt.precioUnitario }}</span>
-                            </span>
+                            <span class="voice-opt-text" *ngIf="tipoOpciones === 'BODEGA'">{{ opt.nombre }}</span>
+                            <span class="voice-opt-text" *ngIf="tipoOpciones === 'PRODUCTO'">{{ opt.nombre }}</span>
                         </div>
                     </div>
                     
@@ -331,6 +317,6 @@
                     </div>
                 </div>
             </div>
-    </div>
+        </div>
 </div>
 </div>
