@@ -466,7 +466,8 @@ export class Facturas implements OnInit, OnDestroy {
 
   private procesarComandoVoz(transcript: string) {
     this.transcriptAcumulado = ''; 
-    const transcriptLimpio = transcript.toLowerCase().trim();
+    // Normalizar: minúsculas, sin acentos, sin puntuación al final
+    const transcriptLimpio = this.limpiarTexto(transcript).replace(/[.,;:!?¡¿]+/g, ' ').replace(/\s+/g, ' ').trim();
 
     const comandosLimpiar = ['borra todo', 'borrar todo', 'limpiar carrito', 'reiniciar', 'vaciar ticket', 'cancela todo'];
     if (comandosLimpiar.some(cmd => transcriptLimpio.includes(cmd))) {
@@ -479,17 +480,59 @@ export class Facturas implements OnInit, OnDestroy {
         return;
     }
 
+    // 🔥 Desambiguación por número/clic: NO mandar a Groq
+    if (this.voiceState === VoiceStep.ELEGIR_OPCION) {
+      this.manejarDesambiguacion(transcriptLimpio);
+      return;
+    }
+
+    // 🔥 Confirmación de emisión: sí / no sin pasar por la IA
+    if (this.voiceState === VoiceStep.CONFIRMAR) {
+      if (this.esRespuestaAfirmativa(transcriptLimpio)) {
+        this.voiceState = VoiceStep.OFF;
+        this.hablar("¡Listo! Emitiendo la factura.");
+        setTimeout(() => { this.guardarFactura(); }, 800);
+        return;
+      }
+      if (this.esRespuestaNegativa(transcriptLimpio)) {
+        this.voiceState = VoiceStep.ESCUCHA_LIBRE;
+        this.hablar("De acuerdo, no emitimos aún. ¿Qué deseas cambiar o agregar?", () => this.escuchar());
+        return;
+      }
+      // Si no es sí/no claro, puede estar pidiendo más productos o un descuento → analizar
+      // pero no forzamos emisión
+    }
+
     const comandosEmitir = ['emite', 'emitir', 'factura ya', 'cobrar ya', 'guarda la factura', 'guardar factura', 'todo bien', 'listo', 'cobra', 'cobrar'];
     const quiereEmitir = comandosEmitir.some(cmd => transcriptLimpio.includes(cmd));
 
-    if (this.voiceState === VoiceStep.CONFIRMAR && (quiereEmitir || transcriptLimpio.includes('si') || transcriptLimpio.includes('sí') || transcriptLimpio.includes('ok') || transcriptLimpio.includes('dale'))) {
-        this.voiceState = VoiceStep.OFF;
-        this.hablar("¡Listo! Emitiendo Factura de inmediato.");
-        setTimeout(() => { this.guardarFactura(); }, 800);
-        return;
-    }
-
     this.analizarConGroq(transcriptLimpio, quiereEmitir);
+  }
+
+  /** Detecta afirmaciones de voz (sí, dale, ok, confirmo, etc.) */
+  private esRespuestaAfirmativa(texto: string): boolean {
+    const t = texto.trim();
+    if (!t) return false;
+    // Respuestas cortas exactas
+    const exactas = ['si', 'sí', 'ok', 'okay', 'dale', 'claro', 'listo', 'confirmo', 'confirmado', 'de acuerdo', 'afirmativo', 'hazlo', 'emite', 'emitir', 'cobra', 'cobrar'];
+    if (exactas.some(e => t === e || t === e + ' por favor' || t === e + ' gracias')) return true;
+    // Frases típicas
+    const frases = [
+      'si por favor', 'si dale', 'si emite', 'si emitir', 'si cobra',
+      'de una', 'de una vez', 'adelante', 'vamos', 'esta bien', 'esta bueno',
+      'confirmamos', 'confirma', 'si confirma', 'si confirmo', 'si listo'
+    ];
+    if (frases.some(f => t.includes(f))) return true;
+    // "si" como palabra completa (evita falsos positivos en otras palabras)
+    if (/(^|\s)(si|sí)(\s|$)/.test(t) && t.length <= 40) return true;
+    return false;
+  }
+
+  private esRespuestaNegativa(texto: string): boolean {
+    const t = texto.trim();
+    if (!t) return false;
+    const neg = ['no', 'nop', 'nel', 'cancelar', 'cancela', 'espera', 'aun no', 'todavia no', 'todavía no', 'no emitas', 'no cobrar', 'revisar'];
+    return neg.some(n => t === n || t.startsWith(n + ' ') || t.includes(n));
   }
 
   private analizarConGroq(fraseUsuario: string, quiereEmitirPalabra: boolean) {
@@ -524,7 +567,8 @@ export class Facturas implements OnInit, OnDestroy {
          "detallesTarjeta": "Ej: Visa terminada en 1234 (o null)",
          "cuotas": numero_entero_o_null,
          "descuentoGlobal": numero_decimal_o_null,
-         "items": [ { "producto": "Nombre", "cantidad": numero_entero_o_null, "descuento": numero_decimal_o_0 } ],
+         "descuentoGlobalPorcentaje": numero_0_a_100_o_null,
+         "items": [ { "producto": "Nombre exacto de la lista", "cantidad": numero_entero_o_1, "descuento": numero_decimal_en_dolares_o_0, "descuentoPorcentaje": numero_0_a_100_o_0 } ],
          "eliminarProducto": "Nombre del producto a quitar del carrito (o null)",
          "emitirFactura": true o false
       }
@@ -533,9 +577,10 @@ export class Facturas implements OnInit, OnDestroy {
       1. Si dice "Consumidor final" o "sin datos", cliente es "CONSUMIDOR_FINAL".
       2. "emitirFactura": true solo si pide cobrar/emitir/guardar de forma clara. Si solo agrega productos, false.
       3. TARJETA Y CUOTAS: Si menciona "tarjeta" o "crédito" es TARJETA_CREDITO. Si menciona banco o terminación, ponlo en "detallesTarjeta". Si dice "meses" extrae el número a "cuotas".
-      4. DESCUENTOS: Monto en dólares. "descuento de 5 dólares a la factura" → descuentoGlobal: 5. Descuento de un producto → "descuento" del item. No inventes descuentos.
-      5. PRODUCTOS: Usa el nombre MÁS CERCANO de la lista de Productos. Si pide varios, pon un objeto por cada uno en "items". Si repite el mismo producto, es otra línea con su cantidad.
-      6. NO devuelvas texto fuera del JSON.
+      4. DESCUENTOS FACTURA: "descuento de 5 dólares a la factura" → descuentoGlobal: 5. "10 por ciento de descuento a la factura" → descuentoGlobalPorcentaje: 10.
+      5. DESCUENTOS PRODUCTO: "con 2 dólares de descuento" → descuento: 2. "con 15 por ciento de descuento" → descuentoPorcentaje: 15. No inventes descuentos si no los dijo.
+      6. PRODUCTOS: Copia el nombre MÁS CERCANO de la lista. Si pide varios, un objeto por cada uno en "items". Si repite el mismo, otra entrada con su cantidad.
+      7. NO devuelvas texto fuera del JSON.
     `;
 
     const payload = {
@@ -618,10 +663,16 @@ export class Facturas implements OnInit, OnDestroy {
         this.metodoPagoConfirmado = true;
     }
 
-    if (datos.descuentoGlobal !== undefined && datos.descuentoGlobal !== null) {
+    if (datos.descuentoGlobalPorcentaje !== undefined && datos.descuentoGlobalPorcentaje !== null) {
+        const pct = parseFloat(datos.descuentoGlobalPorcentaje);
+        if (!isNaN(pct) && pct > 0) {
+          this.nuevaFactura.descuentoGlobalPorcentaje = Math.min(pct, 100);
+          this.nuevaFactura.descuentoGlobal = 0;
+          algoAgregado = true;
+        }
+    } else if (datos.descuentoGlobal !== undefined && datos.descuentoGlobal !== null) {
         const descGlobal = parseFloat(datos.descuentoGlobal);
         if (!isNaN(descGlobal) && descGlobal > 0) {
-            // Monto en dólares (voz). Limpiamos % para no doble-contar.
             this.nuevaFactura.descuentoGlobal = descGlobal;
             this.nuevaFactura.descuentoGlobalPorcentaje = 0;
             algoAgregado = true;
@@ -668,7 +719,16 @@ export class Facturas implements OnInit, OnDestroy {
             let prod = matchesProd[0]; 
             let cant = Number(item.cantidad);
             if (isNaN(cant) || cant <= 0) cant = 1;
-            let desc = Number(item.descuento || 0);
+
+            // Descuento por ítem: % tiene prioridad sobre monto en $
+            let descPct = Number(item.descuentoPorcentaje || 0);
+            let descMonto = Number(item.descuento || 0);
+            if (isNaN(descPct)) descPct = 0;
+            if (isNaN(descMonto)) descMonto = 0;
+            if (descPct > 0) {
+              const precioUnit = Number(prod.precioUnitario || 0);
+              descMonto = (precioUnit * cant * descPct) / 100;
+            }
 
             let bodegaUsar = null;
             let stockActual = 0;
@@ -701,7 +761,7 @@ export class Facturas implements OnInit, OnDestroy {
                         cant = disponible;
                         mensajesAlerta.push(`solo agregué ${cant} de ${prod.nombre} porque no hay más`);
                     }
-                    this.agregarProductoDirecto(prod, cant, bodegaUsar, desc, 0);
+                    this.agregarProductoDirecto(prod, cant, bodegaUsar, descMonto, descPct);
                     algoAgregado = true;
                 }
             } else {
@@ -712,6 +772,7 @@ export class Facturas implements OnInit, OnDestroy {
             requiereDesambiguacionProd = matchesProd; 
             cantTemp = Number(item.cantidad) || 1;
             descTemp = Number(item.descuento) || 0;
+            this.itemTemp.descuentoPorcentaje = Number(item.descuentoPorcentaje || 0) || null;
             break; // Detiene el bucle para resolver esto primero
         } else if (matchesProd.length === 0) {
             mensajesAlerta.push(`no tengo ${item.producto} en el catálogo`);
@@ -741,11 +802,15 @@ export class Facturas implements OnInit, OnDestroy {
         this.voiceState = VoiceStep.ESCUCHA_LIBRE;
         this.hablar(`${prefijoAviso}El ticket está vacío. ¿Qué le agregamos?`, () => this.escuchar());
     } 
-    else if (quiereEmitir || algoAgregado) {
-        // Siempre pedir confirmación verbal antes de emitir
+    else if (quiereEmitir) {
+        // Solo cuando pide emitir → pedir confirmación explícita
         this.voiceState = VoiceStep.CONFIRMAR;
-        const msj = `${prefijoAviso}Total a pagar $${this.totalCarrito.toFixed(2)}. ¿Confirmas que emitimos la factura?`;
+        const msj = `${prefijoAviso}Total a pagar $${this.totalCarrito.toFixed(2)}. ¿Confirmas que emitimos la factura? Di sí o no.`;
         this.hablar(msj, () => this.escuchar());
+    } else if (algoAgregado) {
+        // Solo agregó productos/descuento: informar y seguir escuchando (sin bloquear en CONFIRMAR)
+        this.voiceState = VoiceStep.ESCUCHA_LIBRE;
+        this.hablar(`${prefijoAviso}Listo. Total $${this.totalCarrito.toFixed(2)}. ¿Algo más o emitimos?`, () => this.escuchar());
     } else {
         this.voiceState = VoiceStep.ESCUCHA_LIBRE;
         this.hablar(`${prefijoAviso}¿Algo más o emitimos?`, () => this.escuchar());
@@ -823,21 +888,33 @@ export class Facturas implements OnInit, OnDestroy {
 
     if (num >= 0 && num < this.opcionesVoz.length) {
       const seleccionado = this.opcionesVoz[num];
-      
-      if (this.tipoOpciones === 'CLIENTE') {
-          this.seleccionarCliente(seleccionado);
-          this.opcionesVoz = [];
-          this.tipoOpciones = null;
-          
-          if (this.quiereEmitirPendiente) {
-              this.aplicarDatosExtraidos({}, true);
-          } else {
-              this.aplicarDatosExtraidos({}); 
-          }
-      } 
-    } else {
-      this.hablar("Oye, no capté la opción. ¿Qué número es?", () => this.escuchar());
+      // Unifica cliente y producto
+      this.procesarSeleccionDesambiguacion(seleccionado);
+      return;
     }
+
+    // Intento por nombre si no dijo número
+    if (this.tipoOpciones === 'PRODUCTO') {
+      const porNombre = this.opcionesVoz.find(p =>
+        this.limpiarTexto(p.nombre).includes(transcript) || transcript.includes(this.limpiarTexto(p.nombre))
+      );
+      if (porNombre) {
+        this.procesarSeleccionDesambiguacion(porNombre);
+        return;
+      }
+    }
+    if (this.tipoOpciones === 'CLIENTE') {
+      const porNombre = this.opcionesVoz.find(c => {
+        const nom = this.limpiarTexto(c.nombreCompleto || `${c.primerNombre || ''} ${c.apellidoPaterno || ''}`);
+        return nom.includes(transcript) || transcript.includes(nom);
+      });
+      if (porNombre) {
+        this.procesarSeleccionDesambiguacion(porNombre);
+        return;
+      }
+    }
+
+    this.hablar("Oye, no capté la opción. Di el número o el nombre.", () => this.escuchar());
   }
 
   private procesarSeleccionDesambiguacion(seleccionado: any) {
@@ -849,8 +926,13 @@ export class Facturas implements OnInit, OnDestroy {
         this.aplicarDatosExtraidos({}, this.quiereEmitirPendiente);
 
     } else if (this.tipoOpciones === 'PRODUCTO') {
-        let cant = this.itemTemp.cantidad || 1;
-        let desc = this.itemTemp.descuento || 0;
+        let cant = Number(this.itemTemp.cantidad) || 1;
+        let descPct = Number(this.itemTemp.descuentoPorcentaje || 0);
+        let desc = Number(this.itemTemp.descuento || 0);
+        if (descPct > 0) {
+          const precioUnit = Number(seleccionado.precioUnitario || 0);
+          desc = (precioUnit * cant * descPct) / 100;
+        }
 
         let bodegaUsar = null;
         let stockActual = 0;
@@ -868,16 +950,21 @@ export class Facturas implements OnInit, OnDestroy {
         }
 
         if (bodegaUsar) {
-            if (stockActual <= 0) {
+            const yaEnCarrito = this.nuevaFactura.detalles
+              .filter((d: any) => d.productoId === seleccionado.id && d.bodegaId === bodegaUsar)
+              .reduce((s: number, d: any) => s + Number(d.cantidad || 0), 0);
+            const disponible = Math.max(0, stockActual - yaEnCarrito);
+
+            if (disponible <= 0) {
                 this.hablar(`Me temo que no hay stock de ${seleccionado.nombre}. ¿Agregamos otra cosa?`, () => this.escuchar());
             } else {
-                if (cant > stockActual) cant = stockActual;
-                this.agregarProductoDirecto(seleccionado, cant, bodegaUsar, desc);
+                if (cant > disponible) cant = disponible;
+                this.agregarProductoDirecto(seleccionado, cant, bodegaUsar, desc, descPct);
                 
                 if (this.quiereEmitirPendiente) {
                     this.aplicarDatosExtraidos({}, true);
                 } else {
-                    this.hablar(`Agregué ${seleccionado.nombre}. ¿Algo más?`, () => this.escuchar());
+                    this.hablar(`Agregué ${seleccionado.nombre}. Total $${this.totalCarrito.toFixed(2)}. ¿Algo más?`, () => this.escuchar());
                 }
             }
         }
@@ -886,6 +973,7 @@ export class Facturas implements OnInit, OnDestroy {
         this.tipoOpciones = null;
         this.itemTemp.cantidad = null;
         this.itemTemp.descuento = null;
+        this.itemTemp.descuentoPorcentaje = null;
     }
   }
 
