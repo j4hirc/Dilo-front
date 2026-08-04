@@ -488,8 +488,9 @@ export class Facturas implements OnInit, OnDestroy {
       ? `"cliente": null,` 
       : `"cliente": "Extrae el nombre del cliente con precisión, o pon 'CONSUMIDOR_FINAL'",`;
 
-    const listaNombresCli = this.clientesList.map(c => c.nombreCompleto || c.primerNombre).join(', ').substring(0, 600);
-    const listaNombresProd = this.productosList.map(p => p.nombre).join(', ').substring(0, 600);
+    // 🔥 CORRECCIÓN: Se amplió drásticamente el substring a 4000 para que la IA "vea" todos los productos y no se invente nombres
+    const listaNombresCli = this.clientesList.map(c => c.nombreCompleto || c.primerNombre).join(', ').substring(0, 4000);
+    const listaNombresProd = this.productosList.map(p => p.nombre).join(', ').substring(0, 4000);
 
     const promptSystem = `
       Eres la IA veloz de un sistema POS. El usuario habla de forma natural.
@@ -514,7 +515,8 @@ export class Facturas implements OnInit, OnDestroy {
       1. Si dice "Consumidor final" o "sin datos", cliente es "CONSUMIDOR_FINAL".
       2. TARJETA Y CUOTAS: Si menciona "tarjeta" o "crédito" es TARJETA_CREDITO.
       3. DESCUENTOS: Si dice "descuento a la factura", ponlo en "descuentoGlobal". Si es para un ítem, ponlo en "descuento" del "item".
-      4. NO devuelvas texto fuera del JSON.
+      4. Escribe el nombre del producto lo más parecido posible a la Lista de BD.
+      5. NO devuelvas texto fuera del JSON.
     `;
 
     const payload = {
@@ -710,6 +712,8 @@ export class Facturas implements OnInit, OnDestroy {
 
   private buscarProductos(textoBuscado: string): any[] {
     const txt = this.limpiarTexto(textoBuscado);
+    if (!txt) return [];
+
     let exact = this.productosList.filter(p => this.limpiarTexto(p.nombre) === txt);
     if (exact.length > 0) return exact;
 
@@ -718,11 +722,24 @@ export class Facturas implements OnInit, OnDestroy {
 
     const palabras = txt.split(' ').filter(p => p.length > 2); 
     if (palabras.length > 0) {
-        let agresivo = this.productosList.filter(p => {
+        
+        let matchTodos = this.productosList.filter(p => {
             const nom = this.limpiarTexto(p.nombre);
-            return palabras.some(pal => nom.includes(pal)); 
+            return palabras.every(pal => nom.includes(pal)); 
         });
-        if (agresivo.length > 0) return agresivo;
+        if (matchTodos.length > 0) return matchTodos;
+
+        let conPuntaje = this.productosList.map(p => {
+            const nom = this.limpiarTexto(p.nombre);
+            const score = palabras.filter(pal => nom.includes(pal)).length;
+            return { producto: p, score };
+        }).filter(item => item.score > 0)
+          .sort((a, b) => b.score - a.score);
+
+        if (conPuntaje.length > 0) {
+            const mejorPuntaje = conPuntaje[0].score;
+            return conPuntaje.filter(item => item.score === mejorPuntaje).map(item => item.producto);
+        }
     }
     return [];
   }
