@@ -112,7 +112,8 @@ export class Facturas implements OnInit, OnDestroy {
       (i.productoId === productoId || i.producto?.id === productoId) && 
       (i.bodegaId === bodegaId || i.bodega?.id === bodegaId)
     );
-    return inv ? Number(inv.cantidadActual || 0) : 0;
+    
+    return inv ? Number(inv.cantidadActual || inv.cantidad || inv.stock || 0) : 0;
   }
 
   ngOnInit(): void {
@@ -588,7 +589,6 @@ export class Facturas implements OnInit, OnDestroy {
         this.metodoPagoConfirmado = true;
     }
 
-    // 🔥 APLICAR DESCUENTO GLOBAL SI LO DICTÓ LA IA
     if (datos.descuentoGlobal !== undefined && datos.descuentoGlobal !== null) {
         const descGlobal = parseFloat(datos.descuentoGlobal);
         if (!isNaN(descGlobal) && descGlobal > 0) {
@@ -597,7 +597,8 @@ export class Facturas implements OnInit, OnDestroy {
         }
     }
 
-    let pedirCedula = false;
+    // 🔥 EVALUAR CLIENTES Y MOSTRAR OPCIONES VISUALES
+    let requiereDesambiguacionCli = null;
     if (datos.cliente && datos.cliente !== 'null' && !this.nuevaFactura.clienteId && !this.esConsumidorFinal) {
         if (datos.cliente === 'CONSUMIDOR_FINAL' || String(datos.cliente).toLowerCase().includes('consumidor')) {
             this.setConsumidorFinal();
@@ -606,68 +607,91 @@ export class Facturas implements OnInit, OnDestroy {
             if (matchesCli.length === 1) {
                 this.seleccionarCliente(matchesCli[0]); 
             } else if (matchesCli.length > 1) {
-                pedirCedula = true; 
+                requiereDesambiguacionCli = matchesCli; 
             } else {
                 mensajesAlerta.push(`no encontré a ${datos.cliente}`);
             }
         }
     }
 
-    if (pedirCedula) {
+    if (requiereDesambiguacionCli) {
         this.quiereEmitirPendiente = quiereEmitir;
-        this.voiceState = VoiceStep.ESCUCHA_LIBRE;
-        this.hablar("Hay varios clientes con ese nombre. Por favor, díctame su número de cédula para estar seguros.", () => this.escuchar());
+        this.iniciarDesambiguacion('CLIENTE', requiereDesambiguacionCli, "Encontré varios clientes parecidos. Di el número o haz clic en la pantalla.");
         return;
     }
 
-    const items = datos.items || [];
     let bodegaDefaultId = this.bodegasList.length > 0 ? this.bodegasList[0].id : null;
-    let pedirAclaracionProd = null;
+    const items = datos.items || [];
+    
+    // 🔥 EVALUAR PRODUCTOS Y MOSTRAR OPCIONES VISUALES
+    let requiereDesambiguacionProd = null;
+    let cantTemp = 1;
+    let descTemp = 0;
 
     for (let item of items) {
         if (!item.producto || item.producto === 'null') continue;
         
         const matchesProd = this.buscarProductos(item.producto);
+        
         if (matchesProd.length === 1) {
             let prod = matchesProd[0]; 
             let cant = Number(item.cantidad);
             if (isNaN(cant) || cant <= 0) cant = 1;
-            
             let desc = Number(item.descuento || 0);
 
-            if (bodegaDefaultId) {
-                const stockActual = this.obtenerStock(prod.id, bodegaDefaultId);
-                
-                if (stockActual === null || stockActual <= 0) {
+            let bodegaUsar = null;
+            let stockActual = 0;
+
+            for (let bod of this.bodegasList) {
+                let stockEnBod = this.obtenerStock(prod.id, bod.id) || 0;
+                if (stockEnBod > 0) {
+                    bodegaUsar = bod.id;
+                    stockActual = stockEnBod;
+                    break; 
+                }
+            }
+
+            if (!bodegaUsar && this.bodegasList.length > 0) {
+                bodegaUsar = this.bodegasList[0].id;
+                stockActual = this.obtenerStock(prod.id, bodegaUsar) || 0;
+            }
+
+            if (bodegaUsar) {
+                if (stockActual <= 0) {
                     mensajesAlerta.push(`no hay stock de ${prod.nombre}`);
                 } else {
                     if (cant > stockActual) {
                         cant = stockActual;
-                        mensajesAlerta.push(`solo metí ${cant} de ${prod.nombre} porque no hay más`);
+                        mensajesAlerta.push(`solo agregué ${cant} de ${prod.nombre} porque no hay más`);
                     }
-                    this.agregarProductoDirecto(prod, cant, bodegaDefaultId, desc);
+                    this.agregarProductoDirecto(prod, cant, bodegaUsar, desc);
                     algoAgregado = true;
                 }
+            } else {
+                mensajesAlerta.push(`no hay bodegas configuradas para ${prod.nombre}`);
             }
+
         } else if (matchesProd.length > 1) {
-            pedirAclaracionProd = item.producto; 
+            requiereDesambiguacionProd = matchesProd; 
+            cantTemp = Number(item.cantidad) || 1;
+            descTemp = Number(item.descuento) || 0;
+            break; // Detiene el bucle para resolver esto primero
         } else if (matchesProd.length === 0) {
             mensajesAlerta.push(`no tengo ${item.producto} en el catálogo`);
         }
     }
-
     this.cdr.detectChanges();
 
-    if (pedirAclaracionProd) {
+    if (requiereDesambiguacionProd) {
         this.quiereEmitirPendiente = quiereEmitir;
-        this.voiceState = VoiceStep.ESCUCHA_LIBRE;
-        this.hablar(`Tengo varios productos que coinciden con ${pedirAclaracionProd}. ¿Puedes ser un poco más específico?`, () => this.escuchar());
+        this.itemTemp.cantidad = cantTemp;
+        this.itemTemp.descuento = descTemp;
+        this.iniciarDesambiguacion('PRODUCTO', requiereDesambiguacionProd, "Tengo varios productos que coinciden. Di el número o haz clic en el correcto.");
         return;
     }
 
     const faltaCliente = !this.nuevaFactura.clienteId && !this.esConsumidorFinal;
     const faltaItems = this.nuevaFactura.detalles.length === 0;
-
     let prefijoAviso = mensajesAlerta.length > 0 ? `A ver, ${mensajesAlerta.join(', y ')}. ` : '';
 
     if ((quiereEmitir || this.quiereEmitirPendiente) && !faltaCliente && !faltaItems) {
@@ -694,7 +718,7 @@ export class Facturas implements OnInit, OnDestroy {
             : `${prefijoAviso}Todo listo. Son $${this.totalCarrito.toFixed(2)}. ¿Deseas emitir ya?`;
         this.hablar(msj, () => this.escuchar());
     }
-  }
+  }             
 
   private buscarProductos(textoBuscado: string): any[] {
     const txt = this.limpiarTexto(textoBuscado);
@@ -723,6 +747,14 @@ export class Facturas implements OnInit, OnDestroy {
     this.hablar(mensaje, () => this.escuchar());
   }
 
+  seleccionarOpcionVozManual(index: number) {
+    if (this.voiceState !== VoiceStep.ELEGIR_OPCION) return;
+    if (index >= 0 && index < this.opcionesVoz.length) {
+        const seleccionado = this.opcionesVoz[index];
+        this.procesarSeleccionDesambiguacion(seleccionado);
+    }
+  }
+
   private manejarDesambiguacion(transcript: string) {
     const num = this.extraerIndice(transcript, this.opcionesVoz.length);
 
@@ -742,6 +774,55 @@ export class Facturas implements OnInit, OnDestroy {
       } 
     } else {
       this.hablar("Oye, no capté la opción. ¿Qué número es?", () => this.escuchar());
+    }
+  }
+
+  private procesarSeleccionDesambiguacion(seleccionado: any) {
+    if (this.tipoOpciones === 'CLIENTE') {
+        this.seleccionarCliente(seleccionado);
+        this.opcionesVoz = [];
+        this.tipoOpciones = null;
+        
+        this.aplicarDatosExtraidos({}, this.quiereEmitirPendiente);
+
+    } else if (this.tipoOpciones === 'PRODUCTO') {
+        let cant = this.itemTemp.cantidad || 1;
+        let desc = this.itemTemp.descuento || 0;
+
+        let bodegaUsar = null;
+        let stockActual = 0;
+        for (let bod of this.bodegasList) {
+            let stockEnBod = this.obtenerStock(seleccionado.id, bod.id) || 0;
+            if (stockEnBod > 0) {
+                bodegaUsar = bod.id;
+                stockActual = stockEnBod;
+                break;
+            }
+        }
+        if (!bodegaUsar && this.bodegasList.length > 0) {
+            bodegaUsar = this.bodegasList[0].id;
+            stockActual = this.obtenerStock(seleccionado.id, bodegaUsar) || 0;
+        }
+
+        if (bodegaUsar) {
+            if (stockActual <= 0) {
+                this.hablar(`Me temo que no hay stock de ${seleccionado.nombre}. ¿Agregamos otra cosa?`, () => this.escuchar());
+            } else {
+                if (cant > stockActual) cant = stockActual;
+                this.agregarProductoDirecto(seleccionado, cant, bodegaUsar, desc);
+                
+                if (this.quiereEmitirPendiente) {
+                    this.aplicarDatosExtraidos({}, true);
+                } else {
+                    this.hablar(`Agregué ${seleccionado.nombre}. ¿Algo más?`, () => this.escuchar());
+                }
+            }
+        }
+        
+        this.opcionesVoz = [];
+        this.tipoOpciones = null;
+        this.itemTemp.cantidad = null;
+        this.itemTemp.descuento = null;
     }
   }
 

@@ -302,8 +302,7 @@
 
                     <div class="voice-options-list fade-in" *ngIf="opcionesVoz.length > 0">
                         <p class="voice-options-title">Di el número:</p>
-                        <div class="voice-option-item" *ngFor="let opt of opcionesVoz; let i = index">
-                            <span class="voice-opt-number">{{ i + 1 }}</span>
+<div class="voice-option-item" *ngFor="let opt of opcionesVoz; let i = index" (click)="seleccionarOpcionVozManual(i)" style="cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'">                            <span class="voice-opt-number">{{ i + 1 }}</span>
                             <span class="voice-opt-text" *ngIf="tipoOpciones === 'CLIENTE'">
                                 {{ opt.nombreCompleto || opt.primerNombre }} <span style="color:#64748b; font-size:0.8rem;">(CI: {{ opt.dni || opt.identificacion || 'N/A' }})</span>
                             </span>
