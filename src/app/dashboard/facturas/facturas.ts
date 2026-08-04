@@ -85,6 +85,8 @@ export class Facturas implements OnInit, OnDestroy {
   /** Ítems de voz pendientes cuando hay que desambiguar un producto primero */
   private itemsVozPendientes: any[] = [];
   private datosVozPendientes: any = null;
+  /** Última frase del usuario: evita que la IA elija un producto al azar entre muchos similares */
+  private ultimaFraseUsuario: string = '';
 
   // 🔥 CÁLCULOS: descuentos %, IVA solo en productos que graban IVA, precio de venta (PVP)
   get subtotalCarrito(): number {
@@ -240,6 +242,9 @@ export class Facturas implements OnInit, OnDestroy {
     this.tipoOpciones = null;
     this.metodoPagoConfirmado = false;
     this.quiereEmitirPendiente = false;
+    this.itemsVozPendientes = [];
+    this.datosVozPendientes = null;
+    this.ultimaFraseUsuario = '';
 
     if (porVoz) {
       window.speechSynthesis.resume();
@@ -539,6 +544,7 @@ export class Facturas implements OnInit, OnDestroy {
   }
 
   private analizarConGroq(fraseUsuario: string, quiereEmitirPalabra: boolean) {
+    this.ultimaFraseUsuario = fraseUsuario || '';
     this.isThinking = true;
     this.cdr.detectChanges();
 
@@ -717,19 +723,19 @@ export class Facturas implements OnInit, OnDestroy {
 
     for (let i = 0; i < items.length; i++) {
         const item = items[i];
-        const matchesProd = this.buscarProductos(String(item.producto));
+        // Cruza lo que dijo el usuario + lo que devolvió la IA → si hay varias máscaras, lista opciones
+        const matchesProd = this.resolverMatchesProductoVoz(String(item.producto), this.ultimaFraseUsuario);
 
         if (matchesProd.length === 1) {
             const ok = this.intentarAgregarProductoVoz(matchesProd[0], item, mensajesAlerta);
             if (ok) algoAgregado = true;
         } else if (matchesProd.length > 1) {
-            // Siempre pedir opción si hay más de uno
+            // Siempre pedir opción si hay más de uno (nunca elegir al azar)
             requiereDesambiguacionProd = matchesProd;
             cantTemp = Number(item.cantidad);
             if (isNaN(cantTemp) || cantTemp <= 0) cantTemp = 1;
             descTemp = Number(item.descuento || 0) || 0;
             descPctTemp = Number(item.descuentoPorcentaje || 0) || 0;
-            // Guardar el resto de ítems para después de elegir
             for (let j = i + 1; j < items.length; j++) itemsRestantes.push(items[j]);
             break;
         } else {
@@ -745,11 +751,14 @@ export class Facturas implements OnInit, OnDestroy {
         this.itemTemp.cantidad = cantTemp;
         this.itemTemp.descuento = descTemp;
         this.itemTemp.descuentoPorcentaje = descPctTemp > 0 ? descPctTemp : null;
-        const nombres = requiereDesambiguacionProd.slice(0, 5).map((p, idx) => `${idx + 1}) ${p.nombre}`).join(', ');
+        const totalOps = requiereDesambiguacionProd.length;
+        const muestra = requiereDesambiguacionProd.slice(0, 8);
+        const nombres = muestra.map((p, idx) => `${idx + 1}) ${p.nombre}`).join('. ');
+        const extra = totalOps > 8 ? ` Hay ${totalOps} en total; te muestro las primeras 8.` : '';
         this.iniciarDesambiguacion(
           'PRODUCTO',
           requiereDesambiguacionProd,
-          `Hay varios parecidos: ${nombres}. Di el número o toca el correcto.`
+          `Encontré ${totalOps} productos parecidos. ${nombres}.${extra} Di el número o toca el correcto.`
         );
         return;
     }
@@ -832,6 +841,66 @@ export class Facturas implements OnInit, OnDestroy {
     }
     this.agregarProductoDirecto(prod, cant, bodegaUsar, descMonto, descPct);
     return true;
+  }
+
+  /**
+   * Resuelve productos por voz sin dejar que la IA elija al azar.
+   * Si el usuario dijo "máscara" y hay 20 máscaras, devuelve las 20 (o top 8)
+   * aunque Groq haya inventado un nombre concreto de la lista.
+   */
+  private resolverMatchesProductoVoz(nombreIa: string, fraseUsuario: string): any[] {
+    const porIa = this.buscarProductos(nombreIa);
+
+    // Tokens útiles de lo que REALMENTE dijo el usuario (ignorando ruido)
+    const stop = new Set([
+      'agrega', 'agregue', 'agregar', 'añade', 'añadir', 'pon', 'poner', 'quiero', 'dame',
+      'uno', 'una', 'unos', 'unas', 'dos', 'tres', 'cuatro', 'cinco', 'seis', 'siete',
+      'ocho', 'nueve', 'diez', 'del', 'de', 'la', 'el', 'los', 'las', 'un', 'al', 'con',
+      'por', 'para', 'y', 'o', 'que', 'me', 'te', 'le', 'se', 'producto', 'productos',
+      'factura', 'favor', 'porfa', 'descuento', 'porcentaje', 'dolares', 'dolar', 'centavos'
+    ]);
+    const tokensUsuario = this.limpiarTexto(fraseUsuario)
+      .split(/\s+/)
+      .filter(t => t.length >= 4 && !stop.has(t) && !/^\d+$/.test(t));
+
+    // Por cada token del usuario, ver cuántos productos lo contienen
+    let mejorMulti: any[] = [];
+    for (const tok of tokensUsuario) {
+      const hits = this.productosList.filter(p => this.limpiarTexto(p.nombre).includes(tok));
+      const uniq = this.dedupProductos(hits);
+      if (uniq.length > mejorMulti.length) {
+        mejorMulti = uniq;
+      }
+    }
+
+    // Si el usuario dijo una palabra genérica con MUCHOS productos → siempre opciones
+    if (mejorMulti.length > 1) {
+      // Si la IA acertó un nombre que está dentro de ese grupo, ordenar ese primero
+      if (porIa.length === 1) {
+        const idIa = porIa[0].id;
+        mejorMulti = [
+          ...mejorMulti.filter(p => p.id === idIa),
+          ...mejorMulti.filter(p => p.id !== idIa)
+        ];
+      }
+      return mejorMulti;
+    }
+
+    // Si no hay ambigüedad por frase, usar resultado de la IA / búsqueda normal
+    if (porIa.length > 1) return porIa;
+    if (porIa.length === 1) return porIa;
+
+    // Último intento: tokens del nombre que devolvió la IA
+    const tokensIa = this.limpiarTexto(nombreIa).split(/\s+/).filter(t => t.length >= 4);
+    for (const tok of tokensIa) {
+      const hits = this.dedupProductos(
+        this.productosList.filter(p => this.limpiarTexto(p.nombre).includes(tok))
+      );
+      if (hits.length > 1) return hits;
+      if (hits.length === 1) return hits;
+    }
+
+    return [];
   }
 
   /**
