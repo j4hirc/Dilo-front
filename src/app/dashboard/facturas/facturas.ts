@@ -103,7 +103,6 @@ export class Facturas implements OnInit, OnDestroy {
     return this.obtenerStock(this.itemTemp.productoId, this.itemTemp.bodegaId);
   }
 
-  // 🔥 CORRECCIÓN: Se usa '==' para evitar fallos si el ID viene como texto o número
   private obtenerStock(productoId: any, bodegaId: any): number | null {
     if (!productoId || !bodegaId) return null;
     const inv = this.inventarioList.find(i => 
@@ -452,26 +451,8 @@ export class Facturas implements OnInit, OnDestroy {
         return;
     }
 
-    // 🔥 REGLA ESTRICTA DE CONFIRMACIÓN DE EMISIÓN
-    if (this.voiceState === VoiceStep.CONFIRMAR) {
-        const afirmar = ['si', 'sí', 'ok', 'dale', 'emite', 'emitir', 'cobrar', 'cobra', 'listo', 'correcto', 'ya', 'guarda'];
-        const negar = ['no', 'espera', 'todavia no', 'aguanta', 'cancela', 'modificar', 'cambiar', 'falta'];
-        
-        const esNegacion = negar.some(cmd => transcriptLimpio.includes(cmd));
-        const esAfirmacion = afirmar.some(cmd => transcriptLimpio.includes(cmd) || transcriptLimpio === cmd);
-
-        if (esNegacion) {
-            this.voiceState = VoiceStep.ESCUCHA_LIBRE;
-            this.hablar("De acuerdo, no la emitiré todavía. ¿Qué deseas cambiar o agregar?", () => this.escuchar());
-            return;
-        } else if (esAfirmacion) {
-            this.voiceState = VoiceStep.OFF;
-            this.hablar("¡Perfecto! Emitiendo factura ahora mismo.");
-            setTimeout(() => { this.guardarFactura(); }, 800);
-            return;
-        }
-    }
-
+    // Se eliminó la regla agresiva de confirmación que cortaba la suma de productos.
+    // Ahora Groq decide si es momento de emitir o si estás agregando cosas.
     this.analizarConGroq(transcriptLimpio);
   }
 
@@ -488,10 +469,10 @@ export class Facturas implements OnInit, OnDestroy {
       ? `"cliente": null,` 
       : `"cliente": "Extrae el nombre del cliente con precisión, o pon 'CONSUMIDOR_FINAL'",`;
 
-    // 🔥 CORRECCIÓN: Se amplió drásticamente el substring a 4000 para que la IA "vea" todos los productos y no se invente nombres
     const listaNombresCli = this.clientesList.map(c => c.nombreCompleto || c.primerNombre).join(', ').substring(0, 4000);
     const listaNombresProd = this.productosList.map(p => p.nombre).join(', ').substring(0, 4000);
 
+    // 🔥 PROMPT MEJORADO: Le explicamos claramente cuándo debe emitir y cuándo no.
     const promptSystem = `
       Eres la IA veloz de un sistema POS. El usuario habla de forma natural.
       Extrae los datos en un JSON puro.
@@ -507,14 +488,15 @@ export class Facturas implements OnInit, OnDestroy {
          "detallesTarjeta": "Ej: Visa terminada en 1234 (o null)",
          "cuotas": numero_entero_o_null,
          "descuentoGlobal": numero_decimal_o_null,
-         "items": [ { "producto": "Nombre", "cantidad": numero_entero_o_null, "descuento": numero_decimal_o_0 } ],
-         "eliminarProducto": "Nombre del producto a quitar del carrito (o null)"
+         "items": [ { "producto": "Nombre exacto", "cantidad": numero_entero_o_null, "descuento": numero_decimal_o_0 } ],
+         "eliminarProducto": "Nombre del producto a quitar (o null)",
+         "quiereEmitirYa": true o false
       }
       
       REGLAS:
-      1. Si dice "Consumidor final" o "sin datos", cliente es "CONSUMIDOR_FINAL".
-      2. TARJETA Y CUOTAS: Si menciona "tarjeta" o "crédito" es TARJETA_CREDITO.
-      3. DESCUENTOS: Si dice "descuento a la factura", ponlo en "descuentoGlobal". Si es para un ítem, ponlo en "descuento" del "item".
+      1. "quiereEmitirYa" DEBE SER true SOLO SI el usuario explícitamente dice "sí", "emite", "cobra ya", "listo" Y NO ESTÁ PIDIENDO AGREGAR NINGÚN PRODUCTO NUEVO.
+      2. Si pide agregar un producto, "quiereEmitirYa" DEBE SER false SIEMPRE.
+      3. TARJETA Y CUOTAS: Si menciona "tarjeta" o "crédito" es TARJETA_CREDITO.
       4. Escribe el nombre del producto lo más parecido posible a la Lista de BD.
       5. NO devuelvas texto fuera del JSON.
     `;
@@ -685,13 +667,21 @@ export class Facturas implements OnInit, OnDestroy {
     if (requiereDesambiguacionProd) {
         this.itemTemp.cantidad = cantTemp;
         this.itemTemp.descuento = descTemp;
-        this.iniciarDesambiguacion('PRODUCTO', requiereDesambiguacionProd, "Tengo varios productos que coinciden. Di el número o haz clic en el correcto.");
+        this.iniciarDesambiguacion('PRODUCTO', requiereDesambiguacionProd, "Tengo varios productos parecidos. Di el número o hazle clic al correcto.");
         return;
     }
 
     const faltaCliente = !this.nuevaFactura.clienteId && !this.esConsumidorFinal;
     const faltaItems = this.nuevaFactura.detalles.length === 0;
     let prefijoAviso = mensajesAlerta.length > 0 ? `A ver, ${mensajesAlerta.join(', y ')}. ` : '';
+
+    // 🔥 EMISIÓN DEFINITIVA SUPERVISADA POR LA IA
+    if (datos.quiereEmitirYa === true && !faltaCliente && !faltaItems) {
+        this.voiceState = VoiceStep.OFF;
+        this.hablar(`${prefijoAviso}¡Perfecto! Emitiendo factura en este momento.`);
+        setTimeout(() => { this.guardarFactura(); }, 1200);
+        return;
+    }
 
     this.voiceState = VoiceStep.ESCUCHA_LIBRE;
 
@@ -704,43 +694,47 @@ export class Facturas implements OnInit, OnDestroy {
     else {
         this.voiceState = VoiceStep.CONFIRMAR;
         let msj = algoAgregado
-            ? `${prefijoAviso}Total a pagar $${this.totalCarrito.toFixed(2)}. ¿Emitimos la factura?`
+            ? `${prefijoAviso}Total a pagar $${this.totalCarrito.toFixed(2)}. ¿Emitimos la factura o agregamos algo más?`
             : `${prefijoAviso}Todo listo. Son $${this.totalCarrito.toFixed(2)}. ¿Deseas emitir ya?`;
         this.hablar(msj, () => this.escuchar());
     }
   }
 
+  // 🔥 NUEVO SISTEMA DE BÚSQUEDA POR PUNTUACIÓN INTELIGENTE
   private buscarProductos(textoBuscado: string): any[] {
     const txt = this.limpiarTexto(textoBuscado);
     if (!txt) return [];
 
     let exact = this.productosList.filter(p => this.limpiarTexto(p.nombre) === txt);
-    if (exact.length > 0) return exact;
+    if (exact.length === 1) return exact;
 
-    let partial = this.productosList.filter(p => this.limpiarTexto(p.nombre).includes(txt) || txt.includes(this.limpiarTexto(p.nombre)));
-    if (partial.length > 0) return partial;
-
-    const palabras = txt.split(' ').filter(p => p.length > 2); 
-    if (palabras.length > 0) {
+    const palabrasUsuario = txt.split(' ').filter(p => p.length > 2);
+    
+    let conPuntaje = this.productosList.map(p => {
+        const nomLimpio = this.limpiarTexto(p.nombre);
+        let score = 0;
         
-        let matchTodos = this.productosList.filter(p => {
-            const nom = this.limpiarTexto(p.nombre);
-            return palabras.every(pal => nom.includes(pal)); 
+        // Bonificación fuerte si la frase contiene el nombre exacto de la base de datos
+        if (txt.includes(nomLimpio)) score += 20;
+        if (nomLimpio.includes(txt)) score += 10;
+
+        palabrasUsuario.forEach(pal => {
+            if (nomLimpio.includes(pal)) score += 2;
         });
-        if (matchTodos.length > 0) return matchTodos;
 
-        let conPuntaje = this.productosList.map(p => {
-            const nom = this.limpiarTexto(p.nombre);
-            const score = palabras.filter(pal => nom.includes(pal)).length;
-            return { producto: p, score };
-        }).filter(item => item.score > 0)
-          .sort((a, b) => b.score - a.score);
+        return { producto: p, score };
+    }).filter(item => item.score > 0).sort((a, b) => b.score - a.score);
 
-        if (conPuntaje.length > 0) {
-            const mejorPuntaje = conPuntaje[0].score;
-            return conPuntaje.filter(item => item.score === mejorPuntaje).map(item => item.producto);
+    if (conPuntaje.length > 0) {
+        const maxScore = conPuntaje[0].score;
+        // Si el primer resultado es significativamente mejor que el segundo, es un match directo
+        if (conPuntaje.length === 1 || conPuntaje[0].score > conPuntaje[1].score + 3) {
+            return [conPuntaje[0].producto];
         }
+        // Si hay empate, devolvemos las opciones para desambiguar
+        return conPuntaje.filter(item => item.score >= maxScore - 2).map(item => item.producto);
     }
+
     return [];
   }
 
@@ -770,7 +764,6 @@ export class Facturas implements OnInit, OnDestroy {
     }
   }
 
-  // 🔥 CORRECCIÓN: Maneja el estado directamente sin usar aplicarDatosExtraidos
   private procesarSeleccionDesambiguacion(seleccionado: any) {
     if (this.tipoOpciones === 'CLIENTE') {
         this.seleccionarCliente(seleccionado);
