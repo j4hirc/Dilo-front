@@ -11,7 +11,6 @@
 
 <div class="card full-height-card">
     
-    <!-- 🔥 NUEVA BARRA DE FILTROS AVANZADOS -->
     <div class="advanced-filter-bar" *ngIf="!isLoading">
         <div class="search-box flex-grow">
             <span class="search-icon">
@@ -39,7 +38,6 @@
                 <input type="date" [(ngModel)]="fechaFin" (change)="aplicarFiltros()" class="custom-select-small" title="Fecha Hasta">
             </div>
 
-            <!-- Botón para limpiar filtros (solo aparece si hay algo filtrado) -->
             <button class="btn-clear-filters" *ngIf="searchTerm || filtroTipo || bodegaFiltro || fechaInicio || fechaFin" (click)="limpiarFiltros()" title="Limpiar Filtros">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
             </button>
@@ -129,7 +127,6 @@
     </div>
 </div>
 
-<!-- 🔥 MODAL PARA REGISTRAR TRANSACCIÓN MANUAL -->
 <div class="modal-overlay" *ngIf="showModal">
     <div class="modal-content modal-lg">
         <div class="modal-header">
@@ -141,7 +138,6 @@
         
         <div class="modal-body modal-body-scrollable" style="background: #f8fafc; padding: 20px;">
             
-            <!-- AVISO VISUAL -->
             <div style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 12px 15px; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
                 <p style="margin: 0; color: #1e3a8a; font-size: 0.85rem;">

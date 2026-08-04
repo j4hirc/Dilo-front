@@ -66,7 +66,6 @@ export class Login {
       next: (response: any) => {
         this.failedAttempts = 0;
 
-        // 🔥 FIX DEL KICKOUT: Limpiamos el token y lo guardamos estrictamente como el Dashboard lo busca
         const rawToken = response.token || '';
         const cleanToken = rawToken.replace(/['"]+/g, '');
         
@@ -186,7 +185,6 @@ export class Login {
       showConfirmButton: false,
       timerProgressBar: true
     }).then(() => {
-        // 🔥 AQUÍ REDIRIGE AL PANEL DE ADMIN QUE ESTÁ EN OTRA PARTE
         if (isSuperAdmin) {
             this.router.navigate(['/admin-panel']);
         } else if (!tieneNegocio) {

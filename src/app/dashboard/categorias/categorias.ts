@@ -108,7 +108,6 @@ export class Categorias implements OnInit {
     const cleanToken = rawToken.replace(/['"]+/g, ''); 
     const headers = new HttpHeaders().set('Authorization', `Bearer ${cleanToken}`);
 
-    // Aquí enviamos JSON puro, como lo espera tu @RequestBody
     const requestDTO = {
       nombre: this.categoriaForm.nombre,
       descripcion: this.categoriaForm.descripcion
@@ -154,7 +153,6 @@ export class Categorias implements OnInit {
         const cleanToken = rawToken.replace(/['"]+/g, ''); 
         const headers = new HttpHeaders().set('Authorization', `Bearer ${cleanToken}`);
 
-        // Java devuelve un String de éxito en tu controlador
         this.http.delete(`${this.apiUrl}/negocios/${this.negocioId}/categorias/${id}`, { headers, responseType: 'text' }).subscribe({
           next: () => {
             Swal.fire('¡Eliminado!', 'Categoría borrada.', 'success');

@@ -1,8 +1,5 @@
 @import '../productos/productos.css';
 
-/* =========================================
-   🔥 BANNER DE INSTRUCCIONES
-   ========================================= */
 .info-banner {
     background-color: #eff6ff;
     border: 1px solid #bfdbfe;
@@ -22,9 +19,6 @@
     line-height: 1.4;
 }
 
-/* =========================================
-   🔥 BARRA DE FILTROS AVANZADA
-   ========================================= */
 .advanced-filter-bar {
     display: flex;
     flex-wrap: wrap;
@@ -65,9 +59,7 @@
     box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
 }
 
-/* =========================================
-   🔥 ETIQUETAS DE CATEGORÍAS
-   ========================================= */
+
 .category-tags {
     display: flex;
     flex-wrap: wrap;
@@ -94,9 +86,7 @@
     border: 1px solid #e2e8f0;
 }
 
-/* =========================================
-   🔥 ESTILOS DE ESTADO
-   ========================================= */
+
 .status {
     font-size: 0.75rem;
     font-weight: 800;
@@ -119,9 +109,6 @@
     border: 1px solid #e2e8f0;
 }
 
-/* =========================================
-   🔥 SELECTOR MÚLTIPLE MODAL
-   ========================================= */
 .multi-select {
     height: 120px !important; 
     padding: 8px !important;
@@ -146,7 +133,7 @@
     vertical-align: middle;
 }
 
-/* Responsividad para la barra de filtros */
+
 @media (max-width: 768px) {
     .filter-controls {
         width: 100%;

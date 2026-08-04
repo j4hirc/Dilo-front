@@ -5,7 +5,6 @@
     </div>
 </div>
 
-<!-- 🔥 BANNER INTUITIVO -->
 <div class="info-banner" *ngIf="!isLoading">
     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
     <p><strong>Ajustes Generales:</strong> Los datos registrados aquí aparecerán en tus comprobantes y reportes. Recuerda que el <strong>Método de Costeo</strong> define cómo el sistema calcula el valor de tu inventario y tus márgenes de ganancia.</p>
@@ -19,7 +18,6 @@
 <div class="card full-height-card" *ngIf="!isLoading">
     <div class="card-body form-body">
         
-        <!-- 🔥 SECCIÓN DEL LOGO -->
         <div class="logo-section">
             <div class="business-image-preview" [style.background-image]="imagenActual ? 'url(' + imagenActual + ')' : 'none'">
                 <span *ngIf="!imagenActual">
@@ -33,7 +31,6 @@
             <p class="help-text text-center mt-2">Formatos permitidos: JPG, PNG, WEBP. Tamaño máximo: 2MB.</p>
         </div>
 
-        <!-- 🔥 FORMULARIO FISCAL -->
         <div class="form-grid">
             <div class="form-group">
                 <label>Número de RUC *</label>
@@ -55,7 +52,6 @@
                 <input type="text" [(ngModel)]="negocioForm.direccion" placeholder="Ej: Calle Principal 123 y Secundaria">
             </div>
             
-            <!-- 🔥 MÉTODO DE COSTEO MEJORADO -->
             <div class="form-group" style="grid-column: 1 / -1;">
                 <label style="color: #ea580c; font-weight: 800;">Método de Valoración de Inventario (Costeo) *</label>
                 <p style="font-size: 0.85rem; color: #64748b; margin-top: 0; margin-bottom: 12px; line-height: 1.4;">Este método es estrictamente contable y se aplicará automáticamente a todas las salidas de bodega (ventas o egresos).</p>
@@ -67,7 +63,6 @@
             </div>
         </div>
 
-        <!-- 🔥 CHECKBOX CONTABILIDAD -->
         <div class="form-group checkbox-container" style="margin-top: 15px;">
             <input type="checkbox" [(ngModel)]="negocioForm.obligadoContabilidad" id="contabilidadCheck">
             <label for="contabilidadCheck">Obligado a llevar contabilidad</label>
@@ -75,7 +70,6 @@
 
     </div>
 
-    <!-- 🔥 BOTÓN DE GUARDAR -->
     <div class="card-footer">
         <button class="btn-primary btn-large" (click)="guardarCambios()">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>

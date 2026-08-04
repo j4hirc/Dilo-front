@@ -30,7 +30,6 @@ export class Inventario implements OnInit {
   searchTerm: string = '';
   bodegaSeleccionada: string = '';
 
-  // 🔥 VARIABLES PARA EL MODAL DE LOTES
   showModalLotes = false;
   isLoadingLotes = false;
   productoLotesActivo: any = null;
@@ -101,7 +100,6 @@ export class Inventario implements OnInit {
     this.cdr.detectChanges();
   }
 
-  // 🔥 NUEVO: Limpia los filtros rápidamente
   limpiarFiltros() {
       this.searchTerm = '';
       this.bodegaSeleccionada = '';
@@ -151,7 +149,6 @@ export class Inventario implements OnInit {
     });
   }
 
-  // 🔥 NUEVOS MÉTODOS PARA AUDITORÍA DE LOTES
   abrirModalLotes(item: any) {
       if (!this.negocioId) return;
 
@@ -164,7 +161,6 @@ export class Inventario implements OnInit {
       const cleanToken = rawToken.replace(/['"]+/g, '');
       const headers = new HttpHeaders().set('Authorization', `Bearer ${cleanToken}`);
 
-      // Consultamos al backend los lotes activos
       this.http.get<any[]>(`${this.apiUrl}/negocios/${this.negocioId}/inventario/bodegas/${item.bodegaId}/productos/${item.productoId}/lotes`, { headers }).subscribe({
           next: (data) => {
               this.lotesDelProducto = data || [];

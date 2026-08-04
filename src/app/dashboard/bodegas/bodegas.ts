@@ -85,7 +85,6 @@ export class Bodegas implements OnInit {
     });
   }
 
-  // 🔥 CREAR NUEVA BODEGA 
   abrirModalCrear() {
     Swal.fire({
       title: 'Nueva Bodega',
@@ -124,7 +123,6 @@ export class Bodegas implements OnInit {
     });
   }
 
-  // 🔥 EDITAR BODEGA 
   abrirModalEditar(bodega: any) {
     Swal.fire({
       title: 'Editar Bodega',
@@ -162,7 +160,6 @@ export class Bodegas implements OnInit {
     });
   }
 
-  // 🔥 ELIMINAR BODEGA
   eliminarBodega(id: number) {
     Swal.fire({
       title: '¿Estás seguro?',

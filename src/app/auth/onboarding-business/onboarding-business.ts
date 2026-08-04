@@ -20,17 +20,14 @@ export class OnboardingBusiness implements OnInit {
     const token = localStorage.getItem('dilo_token');
     const usuarioStr = localStorage.getItem('dilo_user') || localStorage.getItem('usuario');
     
-    // 1. Validar que exista el token y los datos del usuario
     if (!token || !usuarioStr) {
       this.router.navigate(['/login']);
       return; // Detenemos la ejecución
     }
 
-    // 2. Si está logueado, verificamos si ya tiene negocio
     const usuario = JSON.parse(usuarioStr);
     
     if (usuario.tieneNegocio || usuario.idNegocio) {
-      // Lo sacamos obligatoriamente a la vista principal
       this.router.navigate(['/dashboard']); 
     }
   }

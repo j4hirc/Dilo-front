@@ -27,7 +27,6 @@ export class UnirNegocio implements OnInit {
   });
 
   ngOnInit() {
-    // 🔥 1. VALIDACIÓN DE SEGURIDAD (TOKEN Y SESIÓN)
     const token = localStorage.getItem('dilo_token');
     const usuarioStr = localStorage.getItem('dilo_user') || localStorage.getItem('usuario');
     
@@ -36,11 +35,9 @@ export class UnirNegocio implements OnInit {
       return; 
     }
 
-    // 🔥 2. VALIDACIÓN BLINDADA (CORREGIDA)
     const usuario = JSON.parse(usuarioStr);
     console.log("🔍 Datos del usuario en localStorage:", usuario);
 
-    // CORRECCIÓN: Usamos Boolean() para verificar que la variable exista y tenga un valor válido (no undefined, no null, no 0)
     const tieneUnNegocio = Boolean(usuario.negocioId || usuario.idNegocio || usuario.tieneNegocio || usuario.negocio);
 
     const estaDeshabilitado = 
@@ -50,8 +47,6 @@ export class UnirNegocio implements OnInit {
           usuario.estado === 'INACTIVO' || 
           usuario.activo === false;
 
-    // Si tiene un negocio Y NO está deshabilitado, entonces sí lo botamos al dashboard.
-    // Si no tiene negocio, este IF da falso y lo deja entrar normalmente.
     if (tieneUnNegocio && !estaDeshabilitado) {
       console.log("⛔ El usuario ya tiene negocio activo. Expulsando al dashboard...");
       this.router.navigate(['/dashboard']); 
@@ -108,8 +103,6 @@ export class UnirNegocio implements OnInit {
         const mensajeError = err.error?.message || (typeof err.error === 'string' ? err.error : 'Verifica el código de invitación e intenta nuevamente.');
         const msgLower = mensajeError.toLowerCase();
 
-        // 🔥 Aquí ya quitamos la alerta de "rechazada", porque si está rechazada, 
-        // tu backend lo borró y le dejará enviar una nueva.
         if (msgLower.includes('revocado') || msgLower.includes('perteneces')) {
           Swal.fire({
             icon: 'warning',

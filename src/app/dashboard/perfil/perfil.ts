@@ -19,20 +19,17 @@ export class Perfil implements OnInit {
   isLoading = true;
   private apiUrl = 'https://dilo-backend-mxlu.onrender.com/api/v1';
 
-  // Variables para la edición del perfil
   isEditing = false;
   editData: any = {};
   selectedFile: File | null = null;
   previewUrl: string | null = null;
 
-  // Variables para cambiar contraseña
   isChangingPassword = false;
   passwordData = {
     newPassword: '',
     confirmPassword: ''
   };
 
-  // 🔥 Variables para mostrar/ocultar contraseñas (el ojito)
   showNewPassword = false;
   showConfirmPassword = false;
 
@@ -94,7 +91,6 @@ export class Perfil implements OnInit {
     }
   }
 
-  // Activa o desactiva el formulario de contraseña
   toggleChangePassword() {
     this.isChangingPassword = !this.isChangingPassword;
     if (!this.isChangingPassword) {
@@ -104,7 +100,6 @@ export class Perfil implements OnInit {
     }
   }
 
-  // 🔥 Lógica de los botones del ojito
   togglePasswordVisibility(field: 'new' | 'confirm') {
     if (field === 'new') {
       this.showNewPassword = !this.showNewPassword;
@@ -113,7 +108,6 @@ export class Perfil implements OnInit {
     }
   }
 
-  // Guarda la nueva contraseña
   guardarPassword() {
     // 1. Validar que no estén vacíos
     if (!this.passwordData.newPassword || !this.passwordData.confirmPassword) {
@@ -121,13 +115,11 @@ export class Perfil implements OnInit {
       return;
     }
 
-    // 🔥 2. Nueva validación: Mínimo 8 caracteres
     if (this.passwordData.newPassword.length < 8) {
       Swal.fire('Atención', 'La contraseña debe tener al menos 8 caracteres.', 'warning');
       return;
     }
 
-    // 3. Validar que coincidan
     if (this.passwordData.newPassword !== this.passwordData.confirmPassword) {
       Swal.fire('Error', 'Las contraseñas no coinciden.', 'error');
       return;
@@ -155,7 +147,6 @@ export class Perfil implements OnInit {
     });
   }
 
-  // Guarda los cambios normales del perfil
   guardarCambios() {
     this.isLoading = true;
     const rawToken = localStorage.getItem('dilo_token') || '';

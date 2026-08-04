@@ -27,8 +27,8 @@ export class Facturas implements OnInit, OnDestroy {
   private cdr = inject(ChangeDetectorRef);
   
   facturas: any[] = [];
-  facturasBase: any[] = []; // Guarda la lista original para el buscador
-  terminoBusqueda: string = ''; // La variable que pide el HTML
+  facturasBase: any[] = []; 
+  terminoBusqueda: string = ''; 
   isLoading = true;
   negocioId: number | null = null;
   private apiUrl = environment.apiUrl;
@@ -50,13 +50,13 @@ export class Facturas implements OnInit, OnDestroy {
   clienteSeleccionadoInfo: any = null;
   esConsumidorFinal: boolean = false;
 
-  // 🔥 NUEVO ESTADO DE LA FACTURA BLINDADO
+
   nuevaFactura: any = {
     clienteId: null,
     metodoPago: 'EFECTIVO',
     numeroCuotas: 0,
     detallesTarjeta: '', 
-    descuentoGlobal: 0, // 🔥 Acepta descuento al total de la factura
+    descuentoGlobal: 0, 
     detalles: []
   };
 
@@ -81,7 +81,6 @@ export class Facturas implements OnInit, OnDestroy {
   metodoPagoConfirmado: boolean = false;
   quiereEmitirPendiente: boolean = false;
 
-  // 🔥 CÁLCULOS CORREGIDOS PARA SOPORTAR DESCUENTOS
   get subtotalCarrito(): number {
     return this.nuevaFactura.detalles.reduce((sum: number, item: any) => sum + (item.subtotal || 0), 0);
   }
@@ -181,7 +180,6 @@ export class Facturas implements OnInit, OnDestroy {
     });
   }
 
-  // 🔥 NUEVO: Función para buscar facturas en tiempo real
   buscarFacturas() {
     if (!this.terminoBusqueda.trim()) {
       this.facturas = [...this.facturasBase];
@@ -480,7 +478,6 @@ export class Facturas implements OnInit, OnDestroy {
     const listaNombresCli = this.clientesList.map(c => c.nombreCompleto || c.primerNombre).join(', ').substring(0, 600);
     const listaNombresProd = this.productosList.map(p => p.nombre).join(', ').substring(0, 600);
 
-    // 🔥 PROMPT CON SOPORTE PARA TARJETAS Y DESCUENTOS GLOBALES Y POR ITEM
     const promptSystem = `
       Eres la IA veloz de un sistema POS. El usuario habla de forma natural.
       Extrae los datos en un JSON puro.
@@ -597,7 +594,6 @@ export class Facturas implements OnInit, OnDestroy {
         }
     }
 
-    // 🔥 EVALUAR CLIENTES Y MOSTRAR OPCIONES VISUALES
     let requiereDesambiguacionCli = null;
     if (datos.cliente && datos.cliente !== 'null' && !this.nuevaFactura.clienteId && !this.esConsumidorFinal) {
         if (datos.cliente === 'CONSUMIDOR_FINAL' || String(datos.cliente).toLowerCase().includes('consumidor')) {
@@ -623,7 +619,6 @@ export class Facturas implements OnInit, OnDestroy {
     let bodegaDefaultId = this.bodegasList.length > 0 ? this.bodegasList[0].id : null;
     const items = datos.items || [];
     
-    // 🔥 EVALUAR PRODUCTOS Y MOSTRAR OPCIONES VISUALES
     let requiereDesambiguacionProd = null;
     let cantTemp = 1;
     let descTemp = 0;
@@ -675,7 +670,7 @@ export class Facturas implements OnInit, OnDestroy {
             requiereDesambiguacionProd = matchesProd; 
             cantTemp = Number(item.cantidad) || 1;
             descTemp = Number(item.descuento) || 0;
-            break; // Detiene el bucle para resolver esto primero
+            break; 
         } else if (matchesProd.length === 0) {
             mensajesAlerta.push(`no tengo ${item.producto} en el catálogo`);
         }
@@ -840,9 +835,6 @@ export class Facturas implements OnInit, OnDestroy {
     return -1;
   }
 
-  // =======================================================
-  // 🔥 CARRITO Y PDF
-  // =======================================================
   agregarAlCarrito() {
     if (!this.itemTemp.productoId || !this.itemTemp.bodegaId || this.itemTemp.cantidad <= 0) return;
     const prodSelect = this.productosList.find(p => p.id === this.itemTemp.productoId);
@@ -955,7 +947,6 @@ export class Facturas implements OnInit, OnDestroy {
     const subtotal = total / (1 + this.ivaActual);
     const iva = total - subtotal;
     
-    // Obtenemos el descuento global desde la respuesta de la API o usamos 0
     const descuentoGlobal = Number(fac.descuentoGlobal || 0);
     
     let filasProductos = '';

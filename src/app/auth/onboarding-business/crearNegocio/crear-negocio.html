@@ -11,7 +11,6 @@
 
     <form [formGroup]="createForm" (ngSubmit)="onSubmit()" class="formulario">
       
-      <!-- Subida de Logo -->
       <div class="contenedor-logo">
         <div class="logo-preview-container" [class.has-image]="logoPreview">
           <img *ngIf="logoPreview" [src]="logoPreview" alt="Preview Logo" class="imagen-preview" />
@@ -25,9 +24,7 @@
         <input type="file" id="logoUpload" (change)="onFileSelected($event)" accept="image/*" class="input-oculto" />
       </div>
 
-      <!-- Grid de Inputs Básicos -->
       <div class="grid-inputs">
-        <!-- RUC -->
         <div class="grupo-input">
           <label for="ruc">RUC *</label>
           <input 
@@ -42,7 +39,6 @@
           <span *ngIf="(createForm.get('ruc')?.errors?.['minlength'] || createForm.get('ruc')?.errors?.['maxlength']) && createForm.get('ruc')?.touched" class="mensaje-error">El RUC debe tener exactamente 13 dígitos.</span>
         </div>
 
-        <!-- Razón Social -->
         <div class="grupo-input">
           <label for="razonSocial">Razón Social *</label>
           <input 
@@ -55,7 +51,6 @@
           <span *ngIf="createForm.get('razonSocial')?.invalid && createForm.get('razonSocial')?.touched" class="mensaje-error">La razón social es requerida.</span>
         </div>
 
-        <!-- Nombre Comercial -->
         <div class="grupo-input">
           <label for="nombreComercial">Nombre Comercial *</label>
           <input 
@@ -68,7 +63,6 @@
           <span *ngIf="createForm.get('nombreComercial')?.invalid && createForm.get('nombreComercial')?.touched" class="mensaje-error">El nombre comercial es requerido.</span>
         </div>
 
-        <!-- Dirección -->
         <div class="grupo-input">
           <label for="direccion">Dirección Matriz *</label>
           <input 
@@ -81,7 +75,6 @@
           <span *ngIf="createForm.get('direccion')?.invalid && createForm.get('direccion')?.touched" class="mensaje-error">La dirección es requerida por el SRI.</span>
         </div>
         
-        <!-- Método de Valoración (Ancho Completo) -->
         <div class="grupo-input campo-ancho-completo">
           <label for="metodoCosteo" class="label-destacado">Método de Valoración de Inventario *</label>
           <span class="texto-ayuda">Define cómo el sistema calculará el costo de tu mercadería al vender.</span>
@@ -98,7 +91,6 @@
         </div>
       </div>
 
-      <!-- Obligado a llevar contabilidad -->
       <div class="contenedor-checkbox">
         <label class="checkbox-moderno">
           <input type="checkbox" formControlName="obligadoContabilidad" />

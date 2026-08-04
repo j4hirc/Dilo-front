@@ -29,7 +29,6 @@ export class Kardex implements OnInit {
   negocioId: number | null = null;
   private apiUrl = 'https://dilo-backend-mxlu.onrender.com/api/v1';
 
-  // 🔥 VARIABLES DE FILTROS AVANZADOS
   searchTerm: string = '';
   filtroTipo: string = ''; 
   bodegaFiltro: string | number = ''; 
@@ -101,7 +100,6 @@ export class Kardex implements OnInit {
     this.http.get<any[]>(`${this.apiUrl}/negocios/${id}/inventario`, { headers }).subscribe(res => this.inventarioTotal = res);
   }
 
-  // 🔥 FUNCIÓN PARA LIMPIAR TODOS LOS FILTROS
   limpiarFiltros() {
       this.searchTerm = '';
       this.filtroTipo = '';
@@ -115,23 +113,19 @@ export class Kardex implements OnInit {
   aplicarFiltros() {
     let result = this.kardex;
     
-    // 1. Filtro por Tipo
     if (this.filtroTipo) {
       result = result.filter(k => k.tipo === this.filtroTipo);
     }
 
-    // 2. Filtro por Bodega (BUSCANDO POR NOMBRE PARA EVITAR EL BUG DEL ID FALTANTE)
     if (this.bodegaFiltro && this.bodegaFiltro !== '') {
         const idBodegaBuscada = Number(this.bodegaFiltro);
         
-        // Buscamos el nombre de la bodega que seleccionaste
         const bodegaEncontrada = this.bodegas.find(b => b.id === idBodegaBuscada);
         
         if (bodegaEncontrada) {
             const nombreBodega = bodegaEncontrada.nombre;
             
             result = result.filter(k => {
-                // Comparamos los nombres exactos que vienen del backend
                 const esOrigen = k.bodegaOrigenNombre === nombreBodega;
                 const esDestino = k.bodegaDestinoNombre === nombreBodega;
                 
@@ -140,7 +134,6 @@ export class Kardex implements OnInit {
         }
     }
 
-    // 3. Rango de Fechas
     if (this.fechaInicio) {
         const inicioTimeStamp = new Date(this.fechaInicio + 'T00:00:00').getTime();
         result = result.filter(k => new Date(k.fechaTransaccion).getTime() >= inicioTimeStamp);
@@ -151,7 +144,6 @@ export class Kardex implements OnInit {
         result = result.filter(k => new Date(k.fechaTransaccion).getTime() <= finDate.getTime());
     }
 
-    // 4. Búsqueda de Texto Abierta (Producto, Lote, Doc, Motivo, o Responsable)
     if (this.searchTerm.trim()) {
       const term = this.searchTerm.toLowerCase();
       result = result.filter(k => 

@@ -86,7 +86,6 @@ export class Productos implements OnInit {
             marca: p.marca || 'Sin marca',
             precioUnitario: Number(p.precioUnitario || 0),
             
-            // 🔥 NUEVO: Recibimos el costo promedio desde Java
             costoPromedioActual: Number(p.costoPromedioActual || 0),
             
             categoriaId: p.categoriaId,

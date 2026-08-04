@@ -23,12 +23,10 @@ export class Clientes implements OnInit {
 
   searchTerm: string = '';
 
-  // Control del Modal
   showModal = false;
   isEditing = false;
   currentClienteId: number | null = null;
   
-  // 🔥 DTO Exacto al de tu Java
   clienteForm = {
     dni: '',
     primerNombre: '',
@@ -126,7 +124,6 @@ export class Clientes implements OnInit {
   guardarCliente() {
     if (!this.negocioId) return;
 
-    // Validación de los @NotBlank de tu Java
     if (!this.clienteForm.dni || !this.clienteForm.primerNombre || !this.clienteForm.apellidoPaterno) {
       Swal.fire('Error', 'El DNI, Primer Nombre y Apellido Paterno son obligatorios.', 'error');
       return;
@@ -136,7 +133,6 @@ export class Clientes implements OnInit {
     const cleanToken = rawToken.replace(/['"]+/g, ''); 
     const headers = new HttpHeaders().set('Authorization', `Bearer ${cleanToken}`);
 
-    // 🔥 Envío de JSON Puro (No es FormData porque no hay imagen)
     const requestDTO = {
       dni: this.clienteForm.dni,
       primerNombre: this.clienteForm.primerNombre,

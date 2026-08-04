@@ -62,23 +62,17 @@ export class Equipo implements OnInit {
       next: ([miemData, negData]) => {
         const equipoCompleto = Array.isArray(miemData) ? miemData : [];
         
-        // Separa las solicitudes pendientes
         this.solicitudes = equipoCompleto.filter(m => m.estadoInvitacion === 'PENDIENTE');
         
-        // Colaboradores activos
         this.miembrosActivos = equipoCompleto.filter(m => m.estadoInvitacion !== 'PENDIENTE');
 
-        // 🔥 LÓGICA PARA IDENTIFICAR AL CREADOR
         if (this.miembrosActivos.length > 0) {
-          // 1. Ordenamos de más antiguo a más nuevo
           this.miembrosActivos.sort((a, b) => {
-            // Reemplazamos el espacio por 'T' para asegurar compatibilidad en todos los navegadores
             const timeA = a.fechaVinculacion ? new Date(a.fechaVinculacion.replace(' ', 'T')).getTime() : new Date().getTime();
             const timeB = b.fechaVinculacion ? new Date(b.fechaVinculacion.replace(' ', 'T')).getTime() : new Date().getTime();
             return timeA - timeB; // Ascendente
           });
 
-          // 2. El primer elemento ahora es garantizado el más antiguo (el Creador)
           this.miembrosActivos[0].esCreador = true;
         }
 

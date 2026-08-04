@@ -64,7 +64,6 @@ export class DashboardDefault implements OnInit, OnDestroy, AfterViewChecked {
     { rol: 'BODEGUERO', descripcion: 'Enfocado solo en mercadería e inventario. No puede facturar.' },
   ];
 
-  // 🔥 MEJORA: Getter para evitar repetir la lógica del token en cada petición HTTP
   private get authHeaders(): HttpHeaders {
     const rawToken = localStorage.getItem('dilo_token') || '';
     const cleanToken = rawToken.replace(/['"]+/g, '');

@@ -19,7 +19,6 @@ export const routes: Routes = [
       { path: 'propietario', loadComponent: () => import('./dashboard/propietario/propietario').then(m => m.Propietario) },
       { path: 'facturas', loadComponent: () => import('./dashboard/facturas/facturas').then(m => m.Facturas) },
       
-      // 🔥 NUEVA RUTA DE COMPRAS
       { path: 'compras', loadComponent: () => import('./dashboard/abastecimiento/compras').then(m => m.Compras) },
       
       { path: 'clientes', loadComponent: () => import('./dashboard/clientes/clientes').then(m => m.Clientes) },

@@ -28,10 +28,9 @@ export class Compras implements OnInit {
 
   searchTerm: string = '';
   
-  // Modales
   showModal = false;
-  showModalDetalles = false; // 🔥 NUEVO MODAL DE LECTURA
-  compraSeleccionada: any = null; // 🔥 ALMACENA LA COMPRA A VER
+  showModalDetalles = false; 
+  compraSeleccionada: any = null; 
 
   compraForm = {
     proveedorId: null as number | null,
@@ -78,7 +77,6 @@ export class Compras implements OnInit {
       error: (err) => {
         this.compras = [];
         this.aplicarFiltros();
-        // 🔥 FIX NG0100: También lo protegemos si da error
         setTimeout(() => { 
           this.isLoading = false; 
           this.cdr.detectChanges(); 
@@ -107,7 +105,6 @@ export class Compras implements OnInit {
     this.cdr.detectChanges();
   }
 
-  // --- LÓGICA DEL MODAL DE REGISTRO ---
   abrirModalNuevo() {
     this.compraForm = {
       proveedorId: null,
@@ -124,7 +121,6 @@ export class Compras implements OnInit {
     this.cdr.detectChanges();
   }
 
-  // --- 🔥 LÓGICA DEL NUEVO MODAL DE LECTURA DE DETALLES ---
   abrirModalDetalles(compra: any) {
     this.compraSeleccionada = compra;
     this.showModalDetalles = true;
@@ -135,7 +131,6 @@ export class Compras implements OnInit {
     this.compraSeleccionada = null;
   }
 
-  // --- LÓGICA DEL CARRITO ---
   onProductoChange() {
     if (!this.detalleTemp.productoId) return;
     

@@ -76,7 +76,6 @@ cargarProveedores(id: number) {
       },
       error: (err) => {
         console.error('Error al cargar proveedores:', err);
-        // 🔥 SOLUCIÓN NG0100: Retrasamos el apagado del loading al siguiente ciclo del event loop
         setTimeout(() => {
           this.isLoading = false;
           this.cdr.detectChanges();
@@ -88,14 +87,12 @@ cargarProveedores(id: number) {
   aplicarFiltros() {
     let result = this.proveedores;
 
-    // Filtro por Estado
     if (this.filtroEstado === 'ACTIVO') {
         result = result.filter(p => p.estado === true);
     } else if (this.filtroEstado === 'INACTIVO') {
         result = result.filter(p => p.estado === false);
     }
 
-    // Filtro por Texto
     if (this.searchTerm.trim()) {
       const term = this.searchTerm.toLowerCase();
       result = result.filter(p => 

@@ -41,16 +41,13 @@ export class Registro implements OnInit {
     const soloDiezNumeros = /^[0-9]{10}$/; // Valida exactamente 10 números
 
     this.registerForm = this.fb.group({
-      // DNI: Exactamente 10 números
       dni: ['', [Validators.required, Validators.pattern(soloDiezNumeros)]],
       primerNombre: ['', [Validators.required, Validators.minLength(3), Validators.pattern(soloLetras)]],
       segundoNombre: ['', [Validators.pattern(soloLetras)]],
       apellidoPaterno: ['', [Validators.required, Validators.minLength(3), Validators.pattern(soloLetras)]],
       apellidoMaterno: ['', [Validators.pattern(soloLetras)]],
       email: ['', [Validators.required, Validators.email]],
-      // Teléfono: Exactamente 10 números
       telefono: ['', [Validators.required, Validators.pattern(soloDiezNumeros)]],
-      // Fecha Nacimiento: Obligatorio y con validador de edad (18 a 99 años)
       fechaNacimiento: ['', [Validators.required, this.ageValidator]],
       direccion: ['', [Validators.required, Validators.minLength(5)]],
       id_parroquia: ['', Validators.required],
@@ -60,7 +57,6 @@ export class Registro implements OnInit {
     }, { validators: this.passwordMatchValidator });
   }
 
-  // 🔥 NUEVO: Validador de edad (18 a 99 años)
   ageValidator(control: AbstractControl): ValidationErrors | null {
     if (!control.value) return null; // Si está vacío, el required lo ataja
     
@@ -75,13 +71,13 @@ export class Registro implements OnInit {
     }
     
     if (age < 18) {
-        return { underage: true }; // Menor de 18
+        return { underage: true }; 
     }
     if (age > 99) {
-        return { overage: true }; // Mayor de 99
+        return { overage: true }; 
     }
     
-    return null; // Válido
+    return null; 
   }
 
   cargarParroquias() {

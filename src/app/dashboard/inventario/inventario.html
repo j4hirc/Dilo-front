@@ -9,7 +9,6 @@
     </button>
 </div>
 
-<!-- 🔥 INSTRUCCIONES INTUITIVAS -->
 <div class="info-banner" *ngIf="!isLoading">
     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
     <p><strong>¿Cómo funciona esta pantalla?</strong> Aquí puedes ver exactamente qué tienes guardado en cada bodega en este preciso momento. Si necesitas sumar mercadería nueva o descontar mermas, debes hacerlo desde los módulos de <strong>Abastecimiento</strong> o <strong>Kardex</strong>.</p>
@@ -38,7 +37,6 @@
 
 <div class="card full-height-card">
     
-    <!-- 🔥 BARRA DE FILTROS AVANZADA -->
     <div class="advanced-filter-bar" *ngIf="!isLoading">
         <div class="search-box flex-grow">
             <span class="search-icon">
@@ -51,7 +49,6 @@
                 <option value="">Bodega: Todas las ubicaciones</option>
                 <option *ngFor="let b of bodegasDisponibles" [value]="b">🏢 {{ b }}</option>
             </select>
-            <!-- Botón Limpiar -->
             <button class="btn-clear-filters" *ngIf="searchTerm || bodegaSeleccionada" (click)="limpiarFiltros()" title="Limpiar Búsqueda">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
             </button>
@@ -101,7 +98,6 @@
                             ${{ item.costoPromedio | number:'1.4-4' }}
                         </td>
                         
-                        <!-- 🔥 NUEVO: Columna agrupada de STOCK vs MÍNIMO -->
                         <td style="text-align: center;">
                             <div style="font-weight: 900; font-size: 1.2rem;" [ngClass]="{'text-red': item.cantidadActual <= item.stockMinimo, 'text-green': item.cantidadActual > item.stockMinimo}">
                                 {{ item.cantidadActual }} uds.
@@ -109,7 +105,6 @@
                             <div style="font-size: 0.75rem; color: #94a3b8; font-weight: 600; margin-top: 2px;">
                                 Mínimo: {{ item.stockMinimo }}
                             </div>
-                            <!-- Etiqueta de advertencia si está bajo -->
                             <div *ngIf="item.cantidadActual <= item.stockMinimo" style="display: inline-block; background: #fee2e2; color: #b91c1c; font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; font-weight: 700; margin-top: 4px; border: 1px solid #fecaca;">
                                 ALERTA STOCK BAJO
                             </div>
@@ -119,7 +114,6 @@
                             ${{ item.valorInventario | number:'1.2-2' }}
                         </td>
 
-                        <!-- ACCIONES -->
                         <td style="text-align: center; display: flex; justify-content: center; gap: 8px;">
                             <button class="btn-icon text-orange" title="Auditar Lotes de este producto" (click)="abrirModalLotes(item)">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
@@ -135,8 +129,6 @@
     </div>
 </div>
 
-<!-- 🔥 MODAL: AUDITORÍA DE LOTES -->
-<!-- 🔥 MODAL: AUDITORÍA DE LOTES -->
 <div class="modal-overlay" *ngIf="showModalLotes">
     <div class="modal-content modal-lg">
         <div class="modal-header">
@@ -162,13 +154,11 @@
                 </div>
             </div>
 
-            <!-- Tabla de Lotes -->
             <div class="detail-table-container">
                 <table class="detail-table">
                     <thead>
                         <tr>
                             <th style="width: 20%;">Ref. de Lote</th> 
-                            <!-- 🔥 AÑADIDA COLUMNA DE FECHA DE INGRESO -->
                             <th style="width: 15%;">Ingresó El</th>
                             <th style="text-align: center; width: 12%;">Ingreso Original</th>
                             <th style="text-align: center; width: 15%;">Stock Disponible</th>
@@ -193,8 +183,6 @@
                                 <div style="font-weight: 700; color: #0f172a;">{{ lote.numeroLote || 'S/N' }}</div>
                                 <div style="font-size: 0.7rem; color: #94a3b8;">ID Sistema: {{ lote.id }}</div>
                             </td>
-                            
-                            <!-- 🔥 AQUÍ MOSTRAMOS LA FECHA DE INGRESO -->
                             <td>
                                 <div style="font-weight: 600; color: #334155; font-size: 0.85rem;">{{ lote.fechaIngreso | date:'dd/MM/yyyy' }}</div>
                                 <div style="font-size: 0.7rem; color: #64748b;">{{ lote.fechaIngreso | date:'HH:mm' }}</div>

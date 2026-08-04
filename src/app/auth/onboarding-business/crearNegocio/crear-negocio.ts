@@ -33,7 +33,6 @@ export class CrearNegocio implements OnInit {
   });
 
   ngOnInit() {
-    // 🔥 VALIDACIÓN DE SEGURIDAD AL CARGAR EL COMPONENTE
     const token = localStorage.getItem('dilo_token');
     const usuarioStr = localStorage.getItem('dilo_user') || localStorage.getItem('usuario');
     
