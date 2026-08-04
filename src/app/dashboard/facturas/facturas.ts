@@ -82,6 +82,9 @@ export class Facturas implements OnInit, OnDestroy {
   tipoOpciones: 'CLIENTE' | 'BODEGA' | 'PRODUCTO' | null = null;
   metodoPagoConfirmado: boolean = false;
   quiereEmitirPendiente: boolean = false;
+  /** Ítems de voz pendientes cuando hay que desambiguar un producto primero */
+  private itemsVozPendientes: any[] = [];
+  private datosVozPendientes: any = null;
 
   // 🔥 CÁLCULOS: descuentos %, IVA solo en productos que graban IVA, precio de venta (PVP)
   get subtotalCarrito(): number {
@@ -577,10 +580,11 @@ export class Facturas implements OnInit, OnDestroy {
       1. Si dice "Consumidor final" o "sin datos", cliente es "CONSUMIDOR_FINAL".
       2. "emitirFactura": true solo si pide cobrar/emitir/guardar de forma clara. Si solo agrega productos, false.
       3. TARJETA Y CUOTAS: Si menciona "tarjeta" o "crédito" es TARJETA_CREDITO. Si menciona banco o terminación, ponlo en "detallesTarjeta". Si dice "meses" extrae el número a "cuotas".
-      4. DESCUENTOS FACTURA: "descuento de 5 dólares a la factura" → descuentoGlobal: 5. "10 por ciento de descuento a la factura" → descuentoGlobalPorcentaje: 10.
-      5. DESCUENTOS PRODUCTO: "con 2 dólares de descuento" → descuento: 2. "con 15 por ciento de descuento" → descuentoPorcentaje: 15. No inventes descuentos si no los dijo.
-      6. PRODUCTOS: Copia el nombre MÁS CERCANO de la lista. Si pide varios, un objeto por cada uno en "items". Si repite el mismo, otra entrada con su cantidad.
-      7. NO devuelvas texto fuera del JSON.
+      4. DESCUENTOS FACTURA: "descuento de 5 dólares a la factura" → descuentoGlobal: 5. "10 por ciento de descuento a la factura" → descuentoGlobalPorcentaje: 10. Si NO menciona descuento, deja null.
+      5. DESCUENTOS PRODUCTO: solo si lo dice junto al producto. "2 dólares de descuento" → descuento: 2. "15 por ciento" → descuentoPorcentaje: 15. NUNCA inventes descuentos. Si no dijo descuento, pon 0.
+      6. PRODUCTOS: usa un nombre de la lista lo más fiel posible. Varios productos = varios objetos en "items". Mismo producto otra vez = otra entrada.
+      7. eliminarProducto SOLO si pide quitar/borrar un producto del ticket. Un descuento NUNCA elimina productos.
+      8. NO devuelvas texto fuera del JSON.
     `;
 
     const payload = {
@@ -702,89 +706,51 @@ export class Facturas implements OnInit, OnDestroy {
         return;
     }
 
-    let bodegaDefaultId = this.bodegasList.length > 0 ? this.bodegasList[0].id : null;
-    const items = datos.items || [];
-    
-    // 🔥 EVALUAR PRODUCTOS Y MOSTRAR OPCIONES VISUALES
-    let requiereDesambiguacionProd = null;
+    const items = Array.isArray(datos.items) ? datos.items.filter((it: any) => it && it.producto && it.producto !== 'null') : [];
+
+    // Procesar productos: 1 match exacto → agregar; 2+ → opciones (nunca elegir al azar)
+    let requiereDesambiguacionProd: any[] | null = null;
     let cantTemp = 1;
     let descTemp = 0;
+    let descPctTemp = 0;
+    const itemsRestantes: any[] = [];
 
-    for (let item of items) {
-        if (!item.producto || item.producto === 'null') continue;
-        
-        const matchesProd = this.buscarProductos(item.producto);
-        
+    for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        const matchesProd = this.buscarProductos(String(item.producto));
+
         if (matchesProd.length === 1) {
-            let prod = matchesProd[0]; 
-            let cant = Number(item.cantidad);
-            if (isNaN(cant) || cant <= 0) cant = 1;
-
-            // Descuento por ítem: % tiene prioridad sobre monto en $
-            let descPct = Number(item.descuentoPorcentaje || 0);
-            let descMonto = Number(item.descuento || 0);
-            if (isNaN(descPct)) descPct = 0;
-            if (isNaN(descMonto)) descMonto = 0;
-            if (descPct > 0) {
-              const precioUnit = Number(prod.precioUnitario || 0);
-              descMonto = (precioUnit * cant * descPct) / 100;
-            }
-
-            let bodegaUsar = null;
-            let stockActual = 0;
-
-            for (let bod of this.bodegasList) {
-                let stockEnBod = this.obtenerStock(prod.id, bod.id) || 0;
-                if (stockEnBod > 0) {
-                    bodegaUsar = bod.id;
-                    stockActual = stockEnBod;
-                    break; 
-                }
-            }
-
-            if (!bodegaUsar && this.bodegasList.length > 0) {
-                bodegaUsar = this.bodegasList[0].id;
-                stockActual = this.obtenerStock(prod.id, bodegaUsar) || 0;
-            }
-
-            if (bodegaUsar) {
-                // Restar lo ya en el carrito de esa bodega
-                const yaEnCarrito = this.nuevaFactura.detalles
-                  .filter((d: any) => d.productoId === prod.id && d.bodegaId === bodegaUsar)
-                  .reduce((s: number, d: any) => s + Number(d.cantidad || 0), 0);
-                const disponible = Math.max(0, stockActual - yaEnCarrito);
-
-                if (disponible <= 0) {
-                    mensajesAlerta.push(`no hay stock de ${prod.nombre}`);
-                } else {
-                    if (cant > disponible) {
-                        cant = disponible;
-                        mensajesAlerta.push(`solo agregué ${cant} de ${prod.nombre} porque no hay más`);
-                    }
-                    this.agregarProductoDirecto(prod, cant, bodegaUsar, descMonto, descPct);
-                    algoAgregado = true;
-                }
-            } else {
-                mensajesAlerta.push(`no hay bodegas configuradas para ${prod.nombre}`);
-            }
-
+            const ok = this.intentarAgregarProductoVoz(matchesProd[0], item, mensajesAlerta);
+            if (ok) algoAgregado = true;
         } else if (matchesProd.length > 1) {
-            requiereDesambiguacionProd = matchesProd; 
-            cantTemp = Number(item.cantidad) || 1;
-            descTemp = Number(item.descuento) || 0;
-            this.itemTemp.descuentoPorcentaje = Number(item.descuentoPorcentaje || 0) || null;
-            break; // Detiene el bucle para resolver esto primero
-        } else if (matchesProd.length === 0) {
-            mensajesAlerta.push(`no tengo ${item.producto} en el catálogo`);
+            // Siempre pedir opción si hay más de uno
+            requiereDesambiguacionProd = matchesProd;
+            cantTemp = Number(item.cantidad);
+            if (isNaN(cantTemp) || cantTemp <= 0) cantTemp = 1;
+            descTemp = Number(item.descuento || 0) || 0;
+            descPctTemp = Number(item.descuentoPorcentaje || 0) || 0;
+            // Guardar el resto de ítems para después de elegir
+            for (let j = i + 1; j < items.length; j++) itemsRestantes.push(items[j]);
+            break;
+        } else {
+            mensajesAlerta.push(`no tengo "${item.producto}" en el catálogo`);
         }
     }
     this.cdr.detectChanges();
 
     if (requiereDesambiguacionProd) {
         this.quiereEmitirPendiente = quiereEmitir;
+        this.itemsVozPendientes = itemsRestantes;
+        this.datosVozPendientes = { ...datos, items: itemsRestantes };
         this.itemTemp.cantidad = cantTemp;
         this.itemTemp.descuento = descTemp;
-        this.iniciarDesambiguacion('PRODUCTO', requiereDesambiguacionProd, "Tengo varios productos que coinciden. Di el número o haz clic en el correcto.");
+        this.itemTemp.descuentoPorcentaje = descPctTemp > 0 ? descPctTemp : null;
+        const nombres = requiereDesambiguacionProd.slice(0, 5).map((p, idx) => `${idx + 1}) ${p.nombre}`).join(', ');
+        this.iniciarDesambiguacion(
+          'PRODUCTO',
+          requiereDesambiguacionProd,
+          `Hay varios parecidos: ${nombres}. Di el número o toca el correcto.`
+        );
         return;
     }
 
@@ -817,59 +783,138 @@ export class Facturas implements OnInit, OnDestroy {
     }
   }             
 
+  /** Agrega un producto resuelto por voz (1 match). Devuelve true si se agregó. */
+  private intentarAgregarProductoVoz(prod: any, item: any, mensajesAlerta: string[]): boolean {
+    let cant = Number(item.cantidad);
+    if (isNaN(cant) || cant <= 0) cant = 1;
+
+    let descPct = Number(item.descuentoPorcentaje || 0);
+    let descMonto = Number(item.descuento || 0);
+    if (isNaN(descPct) || descPct < 0) descPct = 0;
+    if (isNaN(descMonto) || descMonto < 0) descMonto = 0;
+    // Solo aplicar descuento si el usuario lo dijo (valores > 0)
+    if (descPct > 0) {
+      const precioUnit = Number(prod.precioUnitario || 0);
+      descMonto = (precioUnit * cant * Math.min(descPct, 100)) / 100;
+    }
+
+    let bodegaUsar: any = null;
+    let stockActual = 0;
+    for (const bod of this.bodegasList) {
+      const stockEnBod = this.obtenerStock(prod.id, bod.id) || 0;
+      if (stockEnBod > 0) {
+        bodegaUsar = bod.id;
+        stockActual = stockEnBod;
+        break;
+      }
+    }
+    if (!bodegaUsar && this.bodegasList.length > 0) {
+      bodegaUsar = this.bodegasList[0].id;
+      stockActual = this.obtenerStock(prod.id, bodegaUsar) || 0;
+    }
+    if (!bodegaUsar) {
+      mensajesAlerta.push(`no hay bodegas para ${prod.nombre}`);
+      return false;
+    }
+
+    const yaEnCarrito = this.nuevaFactura.detalles
+      .filter((d: any) => d.productoId === prod.id && d.bodegaId === bodegaUsar)
+      .reduce((s: number, d: any) => s + Number(d.cantidad || 0), 0);
+    const disponible = Math.max(0, stockActual - yaEnCarrito);
+
+    if (disponible <= 0) {
+      mensajesAlerta.push(`no hay stock de ${prod.nombre}`);
+      return false;
+    }
+    if (cant > disponible) {
+      mensajesAlerta.push(`solo agregué ${disponible} de ${prod.nombre} (stock)`);
+      cant = disponible;
+    }
+    this.agregarProductoDirecto(prod, cant, bodegaUsar, descMonto, descPct);
+    return true;
+  }
+
+  /**
+   * Busca productos. Regla estricta:
+   * - Solo auto-elige si hay 1 coincidencia EXACTA (nombre o código).
+   * - Si hay 2 o más candidatos (nombres parecidos / repetidos), DEVUELVE TODOS
+   *   para forzar la pantalla de opciones. Nunca elige "al azar".
+   */
   private buscarProductos(textoBuscado: string): any[] {
     const txt = this.limpiarTexto(textoBuscado);
     if (!txt) return [];
 
-    // 1) Coincidencia exacta de nombre
+    // 1) Nombre exacto
     const exact = this.productosList.filter(p => this.limpiarTexto(p.nombre) === txt);
-    if (exact.length > 0) return exact;
+    if (exact.length === 1) return exact;
+    if (exact.length > 1) return exact; // mismos nombres → desambiguar
 
-    // 2) Código principal exacto
+    // 2) Código exacto
     const porCodigo = this.productosList.filter(p =>
       p.codigoPrincipal && this.limpiarTexto(String(p.codigoPrincipal)) === txt
     );
-    if (porCodigo.length > 0) return porCodigo;
+    if (porCodigo.length === 1) return porCodigo;
+    if (porCodigo.length > 1) return porCodigo;
 
-    // 3) Nombre contiene el texto completo (mejor ranking: más corto = más específico)
-    const partial = this.productosList
-      .filter(p => {
-        const nom = this.limpiarTexto(p.nombre);
-        return nom.includes(txt) || txt.includes(nom);
-      })
-      .sort((a, b) => this.limpiarTexto(a.nombre).length - this.limpiarTexto(b.nombre).length);
-    if (partial.length === 1) return partial;
-    if (partial.length > 1) {
-      // Si hay uno que empieza igual, priorizarlo
-      const starts = partial.filter(p => this.limpiarTexto(p.nombre).startsWith(txt));
-      if (starts.length === 1) return starts;
-      return partial;
+    // 3) El nombre del producto CONTIENE lo dicho (o al revés)
+    const partial = this.productosList.filter(p => {
+      const nom = this.limpiarTexto(p.nombre);
+      return nom.includes(txt) || (txt.length >= 4 && txt.includes(nom));
+    });
+    // Deduplicar por id
+    const uniqPartial = this.dedupProductos(partial);
+    if (uniqPartial.length === 1) return uniqPartial;
+    if (uniqPartial.length > 1) {
+      // Preferir los que empiezan igual, pero SI HAY MÁS DE UNO → todos a opciones
+      const starts = uniqPartial.filter(p => this.limpiarTexto(p.nombre).startsWith(txt));
+      if (starts.length === 1 && uniqPartial.length <= 3) {
+        // Un solo que empieza igual y pocos candidatos: aún así, si hay varios similares, mostrar opciones
+        // Usuario pidió: siempre que se repita → opciones. Si starts=1 y hay otros, mostrar todos.
+        return uniqPartial;
+      }
+      return starts.length > 1 ? starts : uniqPartial;
     }
 
-    // 4) Por palabras significativas (todas deben aparecer)
+    // 4) Todas las palabras significativas deben aparecer en el nombre
     const palabras = txt.split(/\s+/).filter(p => p.length > 2);
     if (palabras.length > 0) {
       const porPalabras = this.productosList.filter(p => {
         const nom = this.limpiarTexto(p.nombre);
         return palabras.every(pal => nom.includes(pal));
       });
-      if (porPalabras.length > 0) return porPalabras;
-
-      // Fallback: al menos la mitad de las palabras
-      const minMatch = Math.max(1, Math.ceil(palabras.length / 2));
-      const parciales = this.productosList.filter(p => {
-        const nom = this.limpiarTexto(p.nombre);
-        const hits = palabras.filter(pal => nom.includes(pal)).length;
-        return hits >= minMatch;
-      });
-      if (parciales.length > 0) return parciales;
+      const uniq = this.dedupProductos(porPalabras);
+      if (uniq.length >= 1) return uniq;
     }
+
+    // 5) Fallback suave: al menos una palabra larga (mín 4 chars) — siempre lista para desambiguar
+    const largas = txt.split(/\s+/).filter(p => p.length >= 4);
+    if (largas.length > 0) {
+      const suaves = this.productosList.filter(p => {
+        const nom = this.limpiarTexto(p.nombre);
+        return largas.some(pal => nom.includes(pal));
+      });
+      return this.dedupProductos(suaves);
+    }
+
     return [];
+  }
+
+  private dedupProductos(lista: any[]): any[] {
+    const seen = new Set<any>();
+    const out: any[] = [];
+    for (const p of lista) {
+      if (p && p.id != null && !seen.has(p.id)) {
+        seen.add(p.id);
+        out.push(p);
+      }
+    }
+    // Orden: nombres más cortos primero (más específicos)
+    return out.sort((a, b) => this.limpiarTexto(a.nombre).length - this.limpiarTexto(b.nombre).length);
   }
 
   private iniciarDesambiguacion(tipo: 'CLIENTE' | 'PRODUCTO', opciones: any[], mensaje: string) {
     this.tipoOpciones = tipo;
-    this.opcionesVoz = opciones.slice(0, 5); 
+    this.opcionesVoz = opciones.slice(0, 8); // más opciones si hay nombres repetidos
     this.voiceState = VoiceStep.ELEGIR_OPCION;
     this.cdr.detectChanges();
     this.hablar(mensaje, () => this.escuchar());
@@ -926,54 +971,41 @@ export class Facturas implements OnInit, OnDestroy {
         this.aplicarDatosExtraidos({}, this.quiereEmitirPendiente);
 
     } else if (this.tipoOpciones === 'PRODUCTO') {
-        let cant = Number(this.itemTemp.cantidad) || 1;
-        let descPct = Number(this.itemTemp.descuentoPorcentaje || 0);
-        let desc = Number(this.itemTemp.descuento || 0);
-        if (descPct > 0) {
-          const precioUnit = Number(seleccionado.precioUnitario || 0);
-          desc = (precioUnit * cant * descPct) / 100;
-        }
+        const itemFake = {
+          cantidad: this.itemTemp.cantidad || 1,
+          descuento: this.itemTemp.descuento || 0,
+          descuentoPorcentaje: this.itemTemp.descuentoPorcentaje || 0
+        };
+        const alertas: string[] = [];
+        const ok = this.intentarAgregarProductoVoz(seleccionado, itemFake, alertas);
 
-        let bodegaUsar = null;
-        let stockActual = 0;
-        for (let bod of this.bodegasList) {
-            let stockEnBod = this.obtenerStock(seleccionado.id, bod.id) || 0;
-            if (stockEnBod > 0) {
-                bodegaUsar = bod.id;
-                stockActual = stockEnBod;
-                break;
-            }
-        }
-        if (!bodegaUsar && this.bodegasList.length > 0) {
-            bodegaUsar = this.bodegasList[0].id;
-            stockActual = this.obtenerStock(seleccionado.id, bodegaUsar) || 0;
-        }
-
-        if (bodegaUsar) {
-            const yaEnCarrito = this.nuevaFactura.detalles
-              .filter((d: any) => d.productoId === seleccionado.id && d.bodegaId === bodegaUsar)
-              .reduce((s: number, d: any) => s + Number(d.cantidad || 0), 0);
-            const disponible = Math.max(0, stockActual - yaEnCarrito);
-
-            if (disponible <= 0) {
-                this.hablar(`Me temo que no hay stock de ${seleccionado.nombre}. ¿Agregamos otra cosa?`, () => this.escuchar());
-            } else {
-                if (cant > disponible) cant = disponible;
-                this.agregarProductoDirecto(seleccionado, cant, bodegaUsar, desc, descPct);
-                
-                if (this.quiereEmitirPendiente) {
-                    this.aplicarDatosExtraidos({}, true);
-                } else {
-                    this.hablar(`Agregué ${seleccionado.nombre}. Total $${this.totalCarrito.toFixed(2)}. ¿Algo más?`, () => this.escuchar());
-                }
-            }
-        }
-        
         this.opcionesVoz = [];
         this.tipoOpciones = null;
         this.itemTemp.cantidad = null;
         this.itemTemp.descuento = null;
         this.itemTemp.descuentoPorcentaje = null;
+
+        // Continuar con ítems que quedaron pendientes (otros productos del mismo comando)
+        const pendientes = [...this.itemsVozPendientes];
+        const emitir = this.quiereEmitirPendiente;
+        this.itemsVozPendientes = [];
+        this.datosVozPendientes = null;
+
+        if (pendientes.length > 0) {
+          this.aplicarDatosExtraidos({ items: pendientes }, emitir);
+          return;
+        }
+
+        if (!ok && alertas.length > 0) {
+          this.hablar(`${alertas.join(', ')}. ¿Qué más agregamos?`, () => this.escuchar());
+          return;
+        }
+
+        if (emitir) {
+          this.aplicarDatosExtraidos({}, true);
+        } else {
+          this.hablar(`Agregué ${seleccionado.nombre}. Total $${this.totalCarrito.toFixed(2)}. ¿Algo más o emitimos?`, () => this.escuchar());
+        }
     }
   }
 
