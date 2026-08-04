@@ -56,7 +56,8 @@ export class Facturas implements OnInit, OnDestroy {
     metodoPago: 'EFECTIVO',
     numeroCuotas: 0,
     detallesTarjeta: '', 
-    descuentoGlobal: 0, // 🔥 Acepta descuento al total de la factura
+    descuentoGlobal: 0,
+    descuentoGlobalPorcentaje: 0,
     detalles: []
   };
 
@@ -64,7 +65,8 @@ export class Facturas implements OnInit, OnDestroy {
     productoId: null,
     bodegaId: null,
     cantidad: null,
-    descuento: null, 
+    descuento: null,
+    descuentoPorcentaje: null,
     productoNombre: '' 
   };
 
@@ -81,25 +83,50 @@ export class Facturas implements OnInit, OnDestroy {
   metodoPagoConfirmado: boolean = false;
   quiereEmitirPendiente: boolean = false;
 
-  // 🔥 CÁLCULOS CORREGIDOS PARA SOPORTAR DESCUENTOS
+  // 🔥 CÁLCULOS: descuentos %, IVA solo en productos que graban IVA, precio de venta (PVP)
   get subtotalCarrito(): number {
-    return this.nuevaFactura.detalles.reduce((sum: number, item: any) => sum + (item.subtotal || 0), 0);
+    return this.nuevaFactura.detalles.reduce((sum: number, item: any) => sum + (Number(item.subtotal) || 0), 0);
+  }
+
+  get descuentoGlobalMonto(): number {
+    const pct = Number(this.nuevaFactura.descuentoGlobalPorcentaje || 0);
+    if (pct > 0) {
+      return Math.min((this.subtotalCarrito * pct) / 100, this.subtotalCarrito);
+    }
+    return Math.min(Number(this.nuevaFactura.descuentoGlobal || 0), this.subtotalCarrito);
   }
 
   get totalCarrito(): number {
-    const descGlobal = Number(this.nuevaFactura.descuentoGlobal || 0);
-    const total = this.subtotalCarrito - descGlobal;
+    const total = this.subtotalCarrito - this.descuentoGlobalMonto;
     return total > 0 ? total : 0;
   }
 
+  /** Base imponible de líneas con IVA (precios se tratan con IVA incluido) */
+  get baseImponible(): number {
+    let base = 0;
+    const factor = 1 + this.ivaActual;
+    for (const item of this.nuevaFactura.detalles) {
+      if (item.grabaIva) {
+        base += (Number(item.subtotal) || 0) / factor;
+      }
+    }
+    // Proporción del descuento global sobre líneas gravadas
+    if (this.subtotalCarrito > 0 && this.descuentoGlobalMonto > 0) {
+      const gravadoBruto = this.nuevaFactura.detalles
+        .filter((d: any) => d.grabaIva)
+        .reduce((s: number, d: any) => s + (Number(d.subtotal) || 0), 0);
+      const descSobreGravado = this.descuentoGlobalMonto * (gravadoBruto / this.subtotalCarrito);
+      base = Math.max(0, base - descSobreGravado / factor);
+    }
+    return base;
+  }
+
   get montoIva(): number {
-    const total = this.totalCarrito;
-    const subtotal = total / (1 + this.ivaActual);
-    return total - subtotal;
+    return this.baseImponible * this.ivaActual;
   }
 
   get subtotalSinIva(): number {
-      return this.totalCarrito / (1 + this.ivaActual);
+    return this.totalCarrito - this.montoIva;
   }
 
   get stockDisponible(): number | null {
@@ -199,8 +226,8 @@ export class Facturas implements OnInit, OnDestroy {
     this.cdr.detectChanges(); 
 
     this.cargarCatalogos();
-    this.nuevaFactura = { clienteId: null, metodoPago: 'EFECTIVO', numeroCuotas: 0, detallesTarjeta: '', descuentoGlobal: 0, detalles: [] };
-    this.itemTemp = { productoId: null, bodegaId: null, cantidad: null, descuento: null, productoNombre: '' };
+    this.nuevaFactura = { clienteId: null, metodoPago: 'EFECTIVO', numeroCuotas: 0, detallesTarjeta: '', descuentoGlobal: 0, descuentoGlobalPorcentaje: 0, detalles: [] };
+    this.itemTemp = { productoId: null, bodegaId: null, cantidad: null, descuento: null, descuentoPorcentaje: null, productoNombre: '' };
     this.terminoBusquedaCliente = '';
     this.clienteSeleccionadoInfo = null;
     this.mostrarDropdownClientes = false;
@@ -446,6 +473,7 @@ export class Facturas implements OnInit, OnDestroy {
         this.nuevaFactura.detalles = [];
         this.limpiarClienteSeleccionado();
         this.nuevaFactura.descuentoGlobal = 0;
+        this.nuevaFactura.descuentoGlobalPorcentaje = 0;
         this.nuevaFactura.detallesTarjeta = '';
         this.hablar("He vaciado el ticket por completo. Empecemos de cero.", () => this.escuchar());
         return;
@@ -503,10 +531,11 @@ export class Facturas implements OnInit, OnDestroy {
       
       REGLAS:
       1. Si dice "Consumidor final" o "sin datos", cliente es "CONSUMIDOR_FINAL".
-      2. "emitirFactura": true SIEMPRE que insinúe terminar.
+      2. "emitirFactura": true solo si pide cobrar/emitir/guardar de forma clara. Si solo agrega productos, false.
       3. TARJETA Y CUOTAS: Si menciona "tarjeta" o "crédito" es TARJETA_CREDITO. Si menciona banco o terminación, ponlo en "detallesTarjeta". Si dice "meses" extrae el número a "cuotas".
-      4. DESCUENTOS: Si dice "pon un descuento de 5 dolares a la factura" o "bájale 2 al total", ponlo en "descuentoGlobal". Si el descuento es solo para un producto específico, ponlo en el "descuento" del "item".
-      5. NO devuelvas texto fuera del JSON.
+      4. DESCUENTOS: Monto en dólares. "descuento de 5 dólares a la factura" → descuentoGlobal: 5. Descuento de un producto → "descuento" del item. No inventes descuentos.
+      5. PRODUCTOS: Usa el nombre MÁS CERCANO de la lista de Productos. Si pide varios, pon un objeto por cada uno en "items". Si repite el mismo producto, es otra línea con su cantidad.
+      6. NO devuelvas texto fuera del JSON.
     `;
 
     const payload = {
@@ -592,7 +621,9 @@ export class Facturas implements OnInit, OnDestroy {
     if (datos.descuentoGlobal !== undefined && datos.descuentoGlobal !== null) {
         const descGlobal = parseFloat(datos.descuentoGlobal);
         if (!isNaN(descGlobal) && descGlobal > 0) {
+            // Monto en dólares (voz). Limpiamos % para no doble-contar.
             this.nuevaFactura.descuentoGlobal = descGlobal;
+            this.nuevaFactura.descuentoGlobalPorcentaje = 0;
             algoAgregado = true;
         }
     }
@@ -657,14 +688,20 @@ export class Facturas implements OnInit, OnDestroy {
             }
 
             if (bodegaUsar) {
-                if (stockActual <= 0) {
+                // Restar lo ya en el carrito de esa bodega
+                const yaEnCarrito = this.nuevaFactura.detalles
+                  .filter((d: any) => d.productoId === prod.id && d.bodegaId === bodegaUsar)
+                  .reduce((s: number, d: any) => s + Number(d.cantidad || 0), 0);
+                const disponible = Math.max(0, stockActual - yaEnCarrito);
+
+                if (disponible <= 0) {
                     mensajesAlerta.push(`no hay stock de ${prod.nombre}`);
                 } else {
-                    if (cant > stockActual) {
-                        cant = stockActual;
+                    if (cant > disponible) {
+                        cant = disponible;
                         mensajesAlerta.push(`solo agregué ${cant} de ${prod.nombre} porque no hay más`);
                     }
-                    this.agregarProductoDirecto(prod, cant, bodegaUsar, desc);
+                    this.agregarProductoDirecto(prod, cant, bodegaUsar, desc, 0);
                     algoAgregado = true;
                 }
             } else {
@@ -694,47 +731,73 @@ export class Facturas implements OnInit, OnDestroy {
     const faltaItems = this.nuevaFactura.detalles.length === 0;
     let prefijoAviso = mensajesAlerta.length > 0 ? `A ver, ${mensajesAlerta.join(', y ')}. ` : '';
 
-    if ((quiereEmitir || this.quiereEmitirPendiente) && !faltaCliente && !faltaItems) {
-        this.quiereEmitirPendiente = false;
-        this.voiceState = VoiceStep.OFF;
-        this.hablar(`${prefijoAviso}¡Todo listo! Emitiendo factura.`);
-        setTimeout(() => { this.guardarFactura(); }, 1200);
-        return;
-    }
-
     this.quiereEmitirPendiente = false;
-    this.voiceState = VoiceStep.ESCUCHA_LIBRE;
 
     if (faltaCliente) {
+        this.voiceState = VoiceStep.ESCUCHA_LIBRE;
         this.hablar(`${prefijoAviso}Para cobrar necesito el cliente. ¿A quién le facturamos?`, () => this.escuchar());
     } 
     else if (faltaItems) {
+        this.voiceState = VoiceStep.ESCUCHA_LIBRE;
         this.hablar(`${prefijoAviso}El ticket está vacío. ¿Qué le agregamos?`, () => this.escuchar());
     } 
-    else {
+    else if (quiereEmitir || algoAgregado) {
+        // Siempre pedir confirmación verbal antes de emitir
         this.voiceState = VoiceStep.CONFIRMAR;
-        let msj = algoAgregado
-            ? `${prefijoAviso}Total a pagar $${this.totalCarrito.toFixed(2)}. ¿Emitimos?`
-            : `${prefijoAviso}Todo listo. Son $${this.totalCarrito.toFixed(2)}. ¿Deseas emitir ya?`;
+        const msj = `${prefijoAviso}Total a pagar $${this.totalCarrito.toFixed(2)}. ¿Confirmas que emitimos la factura?`;
         this.hablar(msj, () => this.escuchar());
+    } else {
+        this.voiceState = VoiceStep.ESCUCHA_LIBRE;
+        this.hablar(`${prefijoAviso}¿Algo más o emitimos?`, () => this.escuchar());
     }
   }             
 
   private buscarProductos(textoBuscado: string): any[] {
     const txt = this.limpiarTexto(textoBuscado);
-    let exact = this.productosList.filter(p => this.limpiarTexto(p.nombre) === txt);
+    if (!txt) return [];
+
+    // 1) Coincidencia exacta de nombre
+    const exact = this.productosList.filter(p => this.limpiarTexto(p.nombre) === txt);
     if (exact.length > 0) return exact;
 
-    let partial = this.productosList.filter(p => this.limpiarTexto(p.nombre).includes(txt) || txt.includes(this.limpiarTexto(p.nombre)));
-    if (partial.length > 0) return partial;
+    // 2) Código principal exacto
+    const porCodigo = this.productosList.filter(p =>
+      p.codigoPrincipal && this.limpiarTexto(String(p.codigoPrincipal)) === txt
+    );
+    if (porCodigo.length > 0) return porCodigo;
 
-    const palabras = txt.split(' ').filter(p => p.length > 2); 
+    // 3) Nombre contiene el texto completo (mejor ranking: más corto = más específico)
+    const partial = this.productosList
+      .filter(p => {
+        const nom = this.limpiarTexto(p.nombre);
+        return nom.includes(txt) || txt.includes(nom);
+      })
+      .sort((a, b) => this.limpiarTexto(a.nombre).length - this.limpiarTexto(b.nombre).length);
+    if (partial.length === 1) return partial;
+    if (partial.length > 1) {
+      // Si hay uno que empieza igual, priorizarlo
+      const starts = partial.filter(p => this.limpiarTexto(p.nombre).startsWith(txt));
+      if (starts.length === 1) return starts;
+      return partial;
+    }
+
+    // 4) Por palabras significativas (todas deben aparecer)
+    const palabras = txt.split(/\s+/).filter(p => p.length > 2);
     if (palabras.length > 0) {
-        let agresivo = this.productosList.filter(p => {
-            const nom = this.limpiarTexto(p.nombre);
-            return palabras.some(pal => nom.includes(pal)); 
-        });
-        if (agresivo.length > 0) return agresivo;
+      const porPalabras = this.productosList.filter(p => {
+        const nom = this.limpiarTexto(p.nombre);
+        return palabras.every(pal => nom.includes(pal));
+      });
+      if (porPalabras.length > 0) return porPalabras;
+
+      // Fallback: al menos la mitad de las palabras
+      const minMatch = Math.max(1, Math.ceil(palabras.length / 2));
+      const parciales = this.productosList.filter(p => {
+        const nom = this.limpiarTexto(p.nombre);
+        const hits = palabras.filter(pal => nom.includes(pal)).length;
+        return hits >= minMatch;
+      });
+      if (parciales.length > 0) return parciales;
     }
     return [];
   }
@@ -844,40 +907,96 @@ export class Facturas implements OnInit, OnDestroy {
   // 🔥 CARRITO Y PDF
   // =======================================================
   agregarAlCarrito() {
-    if (!this.itemTemp.productoId || !this.itemTemp.bodegaId || this.itemTemp.cantidad <= 0) return;
+    if (!this.itemTemp.productoId || !this.itemTemp.bodegaId || this.itemTemp.cantidad <= 0) {
+      Swal.fire('Atención', 'Selecciona producto, bodega y una cantidad válida.', 'warning');
+      return;
+    }
     const prodSelect = this.productosList.find(p => p.id === this.itemTemp.productoId);
-    
-    let cant = Math.abs(this.itemTemp.cantidad);
+    if (!prodSelect) return;
+
+    let cant = Math.abs(Number(this.itemTemp.cantidad));
     const stockActual = this.obtenerStock(prodSelect.id, this.itemTemp.bodegaId);
     if (stockActual !== null && cant > stockActual) {
-        cant = stockActual;
-        Swal.fire('Stock Limitado', `Solo quedan ${stockActual} unidades disponibles.`, 'info');
+      cant = stockActual;
+      Swal.fire('Stock Limitado', `Solo quedan ${stockActual} unidades disponibles.`, 'info');
     }
-    
-    let desc = Number(this.itemTemp.descuento || 0);
+
+    const precioUnit = Number(prodSelect.precioUnitario || 0);
+    let descPct = Number(this.itemTemp.descuentoPorcentaje || 0);
+    let descMonto = Number(this.itemTemp.descuento || 0);
+    if (descPct > 0) {
+      descMonto = (precioUnit * cant * descPct) / 100;
+    }
 
     if (cant > 0) {
-        this.agregarProductoDirecto(prodSelect, cant, this.itemTemp.bodegaId, desc);
+      this.agregarProductoDirecto(prodSelect, cant, this.itemTemp.bodegaId, descMonto, descPct);
     }
-    this.itemTemp = { productoId: null, bodegaId: this.itemTemp.bodegaId, cantidad: null, descuento: null, productoNombre: '' }; 
+    this.itemTemp = {
+      productoId: null,
+      bodegaId: this.itemTemp.bodegaId,
+      cantidad: null,
+      descuento: null,
+      descuentoPorcentaje: null,
+      productoNombre: ''
+    };
   }
 
-  private agregarProductoDirecto(producto: any, cantidad: number, bodegaId: any, descuento: number = 0) {
+  /**
+   * Usa el PVP (precioUnitario). Fusiona si el mismo producto+bodega ya está en el carrito.
+   * Respeta grabaIva del producto.
+   */
+  private agregarProductoDirecto(
+    producto: any,
+    cantidad: number,
+    bodegaId: any,
+    descuento: number = 0,
+    descuentoPorcentaje: number = 0
+  ) {
     if (!producto || !bodegaId || cantidad <= 0) return;
 
-    let precio = Number(producto.costoPromedioActual || 0);
-    if (precio <= 0) precio = Number(producto.precioUnitario || 0);
-
-    const subtotal = (precio * cantidad) - descuento;
-
-    if (subtotal < 0) {
-        Swal.fire('Error', `El descuento no puede ser mayor al precio total de ${producto.nombre}.`, 'error');
-        return;
+    const precio = Number(producto.precioUnitario || 0);
+    if (precio <= 0) {
+      Swal.fire('Error', `El producto "${producto.nombre}" no tiene precio de venta configurado.`, 'error');
+      return;
     }
 
-    const bodSelect = this.bodegasList.find(b => b.id === bodegaId);
+    const grabaIva = !!producto.grabaIva;
+    const bodSelect = this.bodegasList.find((b: any) => b.id === bodegaId);
     const bodegaNombre = bodSelect ? bodSelect.nombre : 'Principal';
-    
+
+    const idxExistente = this.nuevaFactura.detalles.findIndex(
+      (d: any) => d.productoId === producto.id && d.bodegaId === bodegaId
+    );
+
+    if (idxExistente !== -1) {
+      const existente = this.nuevaFactura.detalles[idxExistente];
+      const nuevaCant = Number(existente.cantidad) + cantidad;
+      let nuevoDesc = Number(existente.descuento || 0) + descuento;
+      let nuevoPct = Number(existente.descuentoPorcentaje || 0);
+      if (descuentoPorcentaje > 0) {
+        nuevoPct = descuentoPorcentaje;
+        nuevoDesc = (precio * nuevaCant * nuevoPct) / 100;
+      }
+      const nuevoSub = (precio * nuevaCant) - nuevoDesc;
+      if (nuevoSub < 0) {
+        Swal.fire('Error', `El descuento no puede ser mayor al precio total de ${producto.nombre}.`, 'error');
+        return;
+      }
+      existente.cantidad = nuevaCant;
+      existente.descuento = nuevoDesc;
+      existente.descuentoPorcentaje = nuevoPct;
+      existente.subtotal = nuevoSub;
+      existente.grabaIva = grabaIva;
+      this.cdr.detectChanges();
+      return;
+    }
+
+    const subtotal = (precio * cantidad) - descuento;
+    if (subtotal < 0) {
+      Swal.fire('Error', `El descuento no puede ser mayor al precio total de ${producto.nombre}.`, 'error');
+      return;
+    }
+
     this.nuevaFactura.detalles.push({
       productoId: producto.id,
       bodegaId: bodegaId,
@@ -885,7 +1004,9 @@ export class Facturas implements OnInit, OnDestroy {
       cantidad: cantidad,
       productoNombre: producto.nombre,
       precioUnitario: precio,
-      descuento: descuento, 
+      descuento: descuento,
+      descuentoPorcentaje: descuentoPorcentaje || 0,
+      grabaIva: grabaIva,
       subtotal: subtotal
     });
     this.cdr.detectChanges();
@@ -893,6 +1014,29 @@ export class Facturas implements OnInit, OnDestroy {
 
   eliminarDelCarrito(index: number) {
     this.nuevaFactura.detalles.splice(index, 1);
+  }
+
+  /** Confirmación obligatoria antes de emitir (botón manual y voz). */
+  confirmarYGuardarFactura() {
+    if ((!this.nuevaFactura.clienteId && !this.esConsumidorFinal) || this.nuevaFactura.detalles.length === 0) {
+      Swal.fire('Error', 'Faltan datos para emitir la factura (cliente y al menos un producto).', 'error');
+      return;
+    }
+    const total = this.totalCarrito;
+    Swal.fire({
+      title: '¿Confirmar emisión?',
+      html: `Total a cobrar: <strong>$${total.toFixed(2)}</strong><br>Se registrará la factura y se descontará el stock.`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#ed8936',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Sí, emitir',
+      cancelButtonText: 'Revisar'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.guardarFactura();
+      }
+    });
   }
 
   guardarFactura() {
@@ -904,12 +1048,16 @@ export class Facturas implements OnInit, OnDestroy {
     this.isSaving = true;
     Swal.fire({ title: 'Emitiendo Factura...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
+    // Sincronizar monto de descuento global desde % si aplica
+    const descGlobal = this.descuentoGlobalMonto;
+    this.nuevaFactura.descuentoGlobal = descGlobal;
+
     const payload = {
       clienteId: this.nuevaFactura.clienteId, 
       metodoPago: this.nuevaFactura.metodoPago,
       tarjeta: this.nuevaFactura.detallesTarjeta, 
       numeroCuotas: this.nuevaFactura.numeroCuotas,
-      descuentoGlobal: this.nuevaFactura.descuentoGlobal || 0,
+      descuentoGlobal: descGlobal,
       detalles: this.nuevaFactura.detalles.map((d: any) => ({
         productoId: d.productoId,
         bodegaId: d.bodegaId,
