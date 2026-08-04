@@ -451,8 +451,6 @@ export class Facturas implements OnInit, OnDestroy {
         return;
     }
 
-    // Se eliminó la regla agresiva de confirmación que cortaba la suma de productos.
-    // Ahora Groq decide si es momento de emitir o si estás agregando cosas.
     this.analizarConGroq(transcriptLimpio);
   }
 
@@ -700,7 +698,6 @@ export class Facturas implements OnInit, OnDestroy {
     }
   }
 
-  // 🔥 NUEVO SISTEMA DE BÚSQUEDA POR PUNTUACIÓN INTELIGENTE
   private buscarProductos(textoBuscado: string): any[] {
     const txt = this.limpiarTexto(textoBuscado);
     if (!txt) return [];
@@ -714,12 +711,10 @@ export class Facturas implements OnInit, OnDestroy {
         const nomLimpio = this.limpiarTexto(p.nombre);
         let score = 0;
         
-        // Bonificación fuerte si la frase contiene el nombre exacto de la base de datos
-        if (txt.includes(nomLimpio)) score += 20;
-        if (nomLimpio.includes(txt)) score += 10;
+        if (nomLimpio.includes(txt) || txt.includes(nomLimpio)) score += 15;
 
         palabrasUsuario.forEach(pal => {
-            if (nomLimpio.includes(pal)) score += 2;
+            if (nomLimpio.includes(pal)) score += 5;
         });
 
         return { producto: p, score };
@@ -727,12 +722,14 @@ export class Facturas implements OnInit, OnDestroy {
 
     if (conPuntaje.length > 0) {
         const maxScore = conPuntaje[0].score;
-        // Si el primer resultado es significativamente mejor que el segundo, es un match directo
-        if (conPuntaje.length === 1 || conPuntaje[0].score > conPuntaje[1].score + 3) {
-            return [conPuntaje[0].producto];
+        // Obliga a mostrar opciones SIEMPRE que haya 2 o más productos con un puntaje muy parecido (Diferencia de 2 o menos)
+        const similares = conPuntaje.filter(item => item.score >= maxScore - 2).map(item => item.producto);
+        
+        if (similares.length > 1) {
+            return similares; // Devuelve múltiples, forzando a Zoe a preguntar
+        } else {
+            return [conPuntaje[0].producto]; // Devuelve solo uno si está 100% seguro
         }
-        // Si hay empate, devolvemos las opciones para desambiguar
-        return conPuntaje.filter(item => item.score >= maxScore - 2).map(item => item.producto);
     }
 
     return [];
