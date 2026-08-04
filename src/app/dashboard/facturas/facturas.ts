@@ -439,6 +439,11 @@ export class Facturas implements OnInit, OnDestroy {
     this.transcriptAcumulado = ''; 
     const transcriptLimpio = transcript.toLowerCase().trim();
 
+    if (this.voiceState === VoiceStep.ELEGIR_OPCION) {
+        this.manejarDesambiguacion(transcriptLimpio);
+        return;
+    }
+
     const comandosLimpiar = ['borra todo', 'borrar todo', 'limpiar carrito', 'reiniciar', 'vaciar ticket', 'cancela todo'];
     if (comandosLimpiar.some(cmd => transcriptLimpio.includes(cmd))) {
         this.nuevaFactura.detalles = [];
@@ -449,20 +454,30 @@ export class Facturas implements OnInit, OnDestroy {
         return;
     }
 
-    const comandosEmitir = ['emite', 'emitir', 'factura ya', 'cobrar ya', 'guarda la factura', 'guardar factura', 'todo bien', 'listo', 'cobra', 'cobrar'];
-    const quiereEmitir = comandosEmitir.some(cmd => transcriptLimpio.includes(cmd));
+    // 🔥 REGLA ESTRICTA DE CONFIRMACIÓN DE EMISIÓN
+    if (this.voiceState === VoiceStep.CONFIRMAR) {
+        const afirmar = ['si', 'sí', 'ok', 'dale', 'emite', 'emitir', 'cobrar', 'cobra', 'listo', 'correcto', 'ya', 'guarda'];
+        const negar = ['no', 'espera', 'todavia no', 'aguanta', 'cancela', 'modificar', 'cambiar', 'falta'];
+        
+        const esNegacion = negar.some(cmd => transcriptLimpio.includes(cmd));
+        const esAfirmacion = afirmar.some(cmd => transcriptLimpio.includes(cmd) || transcriptLimpio === cmd);
 
-    if (this.voiceState === VoiceStep.CONFIRMAR && (quiereEmitir || transcriptLimpio.includes('si') || transcriptLimpio.includes('sí') || transcriptLimpio.includes('ok') || transcriptLimpio.includes('dale'))) {
-        this.voiceState = VoiceStep.OFF;
-        this.hablar("¡Listo! Emitiendo Factura de inmediato.");
-        setTimeout(() => { this.guardarFactura(); }, 800);
-        return;
+        if (esNegacion) {
+            this.voiceState = VoiceStep.ESCUCHA_LIBRE;
+            this.hablar("De acuerdo, no la emitiré todavía. ¿Qué deseas cambiar o agregar?", () => this.escuchar());
+            return;
+        } else if (esAfirmacion) {
+            this.voiceState = VoiceStep.OFF;
+            this.hablar("¡Perfecto! Emitiendo factura ahora mismo.");
+            setTimeout(() => { this.guardarFactura(); }, 800);
+            return;
+        }
     }
 
-    this.analizarConGroq(transcriptLimpio, quiereEmitir);
+    this.analizarConGroq(transcriptLimpio);
   }
 
-  private analizarConGroq(fraseUsuario: string, quiereEmitirPalabra: boolean) {
+  private analizarConGroq(fraseUsuario: string) {
     this.isThinking = true;
     this.cdr.detectChanges();
 
@@ -473,7 +488,7 @@ export class Facturas implements OnInit, OnDestroy {
 
     const instruccionCliente = (this.nuevaFactura.clienteId || this.esConsumidorFinal)
       ? `"cliente": null,` 
-      : `"cliente": "Extrae el nombre, cédula, o pon 'CONSUMIDOR_FINAL'",`;
+      : `"cliente": "Extrae el nombre del cliente con precisión, o pon 'CONSUMIDOR_FINAL'",`;
 
     const listaNombresCli = this.clientesList.map(c => c.nombreCompleto || c.primerNombre).join(', ').substring(0, 600);
     const listaNombresProd = this.productosList.map(p => p.nombre).join(', ').substring(0, 600);
@@ -494,16 +509,14 @@ export class Facturas implements OnInit, OnDestroy {
          "cuotas": numero_entero_o_null,
          "descuentoGlobal": numero_decimal_o_null,
          "items": [ { "producto": "Nombre", "cantidad": numero_entero_o_null, "descuento": numero_decimal_o_0 } ],
-         "eliminarProducto": "Nombre del producto a quitar del carrito (o null)",
-         "emitirFactura": true o false
+         "eliminarProducto": "Nombre del producto a quitar del carrito (o null)"
       }
       
       REGLAS:
       1. Si dice "Consumidor final" o "sin datos", cliente es "CONSUMIDOR_FINAL".
-      2. "emitirFactura": true SIEMPRE que insinúe terminar.
-      3. TARJETA Y CUOTAS: Si menciona "tarjeta" o "crédito" es TARJETA_CREDITO. Si menciona banco o terminación, ponlo en "detallesTarjeta". Si dice "meses" extrae el número a "cuotas".
-      4. DESCUENTOS: Si dice "pon un descuento de 5 dolares a la factura" o "bájale 2 al total", ponlo en "descuentoGlobal". Si el descuento es solo para un producto específico, ponlo en el "descuento" del "item".
-      5. NO devuelvas texto fuera del JSON.
+      2. TARJETA Y CUOTAS: Si menciona "tarjeta" o "crédito" es TARJETA_CREDITO.
+      3. DESCUENTOS: Si dice "descuento a la factura", ponlo en "descuentoGlobal". Si es para un ítem, ponlo en "descuento" del "item".
+      4. NO devuelvas texto fuera del JSON.
     `;
 
     const payload = {
@@ -528,9 +541,7 @@ export class Facturas implements OnInit, OnDestroy {
             jsonStr = jsonStr.replace(/```json/gi, '').replace(/```/g, '').trim();
             
             const datosExtraidos = JSON.parse(jsonStr);
-            const intencionEmitir = quiereEmitirPalabra || String(datosExtraidos.emitirFactura).toLowerCase() === 'true';
-            
-            this.aplicarDatosExtraidos(datosExtraidos, intencionEmitir);
+            this.aplicarDatosExtraidos(datosExtraidos);
           } catch (e) {
             console.error("Error parseando JSON:", e);
             this.hablar("Uy, me enredé con esa frase. ¿Me lo repites?", () => this.escuchar());
@@ -709,7 +720,7 @@ export class Facturas implements OnInit, OnDestroy {
     else {
         this.voiceState = VoiceStep.CONFIRMAR;
         let msj = algoAgregado
-            ? `${prefijoAviso}Total a pagar $${this.totalCarrito.toFixed(2)}. ¿Emitimos?`
+            ? `${prefijoAviso}Total a pagar $${this.totalCarrito.toFixed(2)}. ¿Emitimos la factura?`
             : `${prefijoAviso}Todo listo. Son $${this.totalCarrito.toFixed(2)}. ¿Deseas emitir ya?`;
         this.hablar(msj, () => this.escuchar());
     }
