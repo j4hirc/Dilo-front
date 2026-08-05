@@ -55,7 +55,7 @@ export class DashboardDefault implements OnInit, OnDestroy, AfterViewChecked {
     { nombre: 'Mi Equipo', ruta: '/dashboard/equipo', roles: ['PROPIETARIO'], descripcion: 'Agregar empleados/cajeros mediante un código de invitación.', disponible: true },
     { nombre: 'Configuración', ruta: '/dashboard/configuracion', roles: ['PROPIETARIO'], descripcion: 'Editar los datos del negocio.', disponible: true },
     { nombre: 'Mi Perfil', ruta: '/dashboard/perfil', roles: ['PROPIETARIO', 'VENDEDOR', 'BODEGUERO'], descripcion: 'Ver y editar los datos personales del usuario.', disponible: true },
-    { nombre: 'Reportes', ruta: null, roles: ['PROPIETARIO', 'VENDEDOR', 'BODEGUERO'], descripcion: 'Módulo de reportes del negocio.', disponible: false },
+    { nombre: 'Rendimiento', ruta: '/dashboard/reportes', roles: ['PROPIETARIO', 'VENDEDOR'], descripcion: 'Dashboard de rendimiento comercial: rachas de ventas, zonas de calor y comparativas.', disponible: true },
   ];
 
   private readonly rolesSistema = [
