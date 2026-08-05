@@ -257,6 +257,25 @@
                         <input type="number" [(ngModel)]="nuevaFactura.descuentoGlobalPorcentaje" min="0" max="100" class="modern-input text-right" style="width: 100px; padding: 6px 12px; height: auto;" placeholder="0%">
                     </div>
 
+                    <div *ngIf="nuevaFactura.detalles.length > 0" style="font-size: 0.85rem; color: #475569; margin-bottom: 10px; line-height: 1.7;">
+                        <div style="display:flex; justify-content:space-between;">
+                            <span>Subtotal</span>
+                            <span>${{ subtotalCarrito | number:'1.2-2' }}</span>
+                        </div>
+                        <div *ngIf="descuentoGlobalMonto > 0" style="display:flex; justify-content:space-between; color:#ea580c;">
+                            <span>Descuento</span>
+                            <span>-${{ descuentoGlobalMonto | number:'1.2-2' }}</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between;">
+                            <span>Base imponible</span>
+                            <span>${{ subtotalSinIva | number:'1.2-2' }}</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between;">
+                            <span>IVA ({{ (ivaActual * 100) | number:'1.0-0' }}%)</span>
+                            <span>${{ montoIva | number:'1.2-2' }}</span>
+                        </div>
+                    </div>
+
                     <div class="cart-total-box" [ngClass]="{'active': nuevaFactura.detalles.length > 0}">
                         <span>A COBRAR</span>
                         <span class="cart-total-amount">${{ totalCarrito | number:'1.2-2' }}</span>
