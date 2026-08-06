@@ -31,6 +31,7 @@ export const routes: Routes = [
       { path: 'cuentas-cobrar', loadComponent: () => import('./dashboard/cuentas-por-cobrar/cuentas-por-cobrar').then(m => m.CuentasPorCobrar) },
       
       { path: 'equipo', loadComponent: () => import('./dashboard/equipo/equipo').then(m => m.Equipo) },
+      { path: 'reportes', loadComponent: () => import('./dashboard/reportes/reportes').then(m => m.Reportes) },
       { path: 'configuracion', loadComponent: () => import('./dashboard/configuracion/configuracion').then(m => m.Configuracion) },
       { path: 'perfil', loadComponent: () => import('./dashboard/perfil/perfil').then(m => m.Perfil) },
 
