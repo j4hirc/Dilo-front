@@ -315,6 +315,54 @@ export class Facturas implements OnInit, OnDestroy {
     };
     this.terminoBusquedaCliente = 'Consumidor Final';
     this.mostrarDropdownClientes = false;
+    // Consumidor final NO puede pagar con tarjeta
+    this.bloquearTarjetaSiConsumidorFinal(true);
+    this.cdr.detectChanges();
+  }
+
+  /** Tarjeta solo con cliente registrado (no consumidor final) */
+  get permiteTarjetaCredito(): boolean {
+    return !this.esConsumidorFinal && !!this.nuevaFactura.clienteId;
+  }
+
+  /** Si es consumidor final y el método es tarjeta → fuerza efectivo */
+  private bloquearTarjetaSiConsumidorFinal(avisar = false): boolean {
+    if (this.esConsumidorFinal && this.nuevaFactura.metodoPago === 'TARJETA_CREDITO') {
+      this.nuevaFactura.metodoPago = 'EFECTIVO';
+      this.nuevaFactura.numeroCuotas = 0;
+      this.nuevaFactura.detallesTarjeta = '';
+      this.nuevaFactura.tarjetaNumero = '';
+      this.nuevaFactura.tarjetaVence = '';
+      this.nuevaFactura.tarjetaCvc = '';
+      this.metodoPagoConfirmado = true;
+      if (avisar) {
+        Swal.fire({
+          icon: 'info',
+          title: 'Tarjeta no permitida',
+          text: 'Con Consumidor Final solo se puede pagar en efectivo o transferencia. Elige un cliente registrado para usar tarjeta de crédito.',
+          confirmButtonColor: '#ed8936'
+        });
+      }
+      return true;
+    }
+    return false;
+  }
+
+  /** Cambio manual del select de método de pago */
+  onMetodoPagoChange() {
+    if (this.nuevaFactura.metodoPago === 'TARJETA_CREDITO' && !this.permiteTarjetaCredito) {
+      this.nuevaFactura.metodoPago = 'EFECTIVO';
+      this.nuevaFactura.numeroCuotas = 0;
+      Swal.fire({
+        icon: 'warning',
+        title: 'Tarjeta no permitida',
+        text: this.esConsumidorFinal
+          ? 'Consumidor Final no puede pagar con tarjeta de crédito. Usa efectivo o transferencia, o selecciona un cliente registrado.'
+          : 'Selecciona primero un cliente registrado para pagar con tarjeta.',
+        confirmButtonColor: '#ed8936'
+      });
+    }
+    this.metodoPagoConfirmado = true;
     this.cdr.detectChanges();
   }
 
@@ -754,7 +802,18 @@ export class Facturas implements OnInit, OnDestroy {
       else if (diceEfectivo) out.metodoPago = 'EFECTIVO';
     }
 
-    if (!diceTarjeta) {
+    // Consumidor final (ya activo o en la frase) → NUNCA tarjeta
+    const seraConsumidorFinal = this.esConsumidorFinal
+      || /\b(consumidor\s*final|sin\s*datos)\b/.test(f)
+      || String(out.cliente || '').toUpperCase().includes('CONSUMIDOR');
+    if (seraConsumidorFinal && out.metodoPago === 'TARJETA_CREDITO') {
+      out.metodoPago = diceEfectivo ? 'EFECTIVO' : (diceTransfer ? 'TRANSFERENCIA' : 'EFECTIVO');
+      out.detallesTarjeta = null;
+      out.cuotas = null;
+      (out as any)._tarjetaBloqueadaConsumidor = true;
+    }
+
+    if (!diceTarjeta || seraConsumidorFinal) {
       out.detallesTarjeta = null;
       out.cuotas = null;
     }
@@ -863,12 +922,23 @@ export class Facturas implements OnInit, OnDestroy {
 
     // metodoPago ya viene saneado: solo aplicar si no es null
     if (datos.metodoPago && datos.metodoPago !== 'null' && datos.metodoPago !== 'NULL') {
-        this.nuevaFactura.metodoPago = datos.metodoPago;
-        this.metodoPagoConfirmado = true;
+        // Doble chequeo: consumidor final nunca tarjeta
+        if (datos.metodoPago === 'TARJETA_CREDITO' && (this.esConsumidorFinal || !this.nuevaFactura.clienteId)) {
+          this.nuevaFactura.metodoPago = 'EFECTIVO';
+          this.metodoPagoConfirmado = true;
+          mensajesAlerta.push('tarjeta no permitida con Consumidor Final; usé efectivo');
+        } else {
+          this.nuevaFactura.metodoPago = datos.metodoPago;
+          this.metodoPagoConfirmado = true;
+        }
     }
 
-    // Tarjeta / cuotas: solo si el método quedó en TARJETA (saneado por frase)
-    if (this.nuevaFactura.metodoPago === 'TARJETA_CREDITO') {
+    if (datos._tarjetaBloqueadaConsumidor) {
+      mensajesAlerta.push('tarjeta no permitida con Consumidor Final');
+    }
+
+    // Tarjeta / cuotas: solo si el método quedó en TARJETA y hay cliente real
+    if (this.nuevaFactura.metodoPago === 'TARJETA_CREDITO' && this.permiteTarjetaCredito) {
       if (datos.detallesTarjeta && datos.detallesTarjeta !== 'null') {
         this.nuevaFactura.detallesTarjeta = datos.detallesTarjeta;
       }
@@ -878,6 +948,8 @@ export class Facturas implements OnInit, OnDestroy {
           this.nuevaFactura.numeroCuotas = numCuotas;
         }
       }
+    } else if (this.nuevaFactura.metodoPago === 'TARJETA_CREDITO') {
+      this.bloquearTarjetaSiConsumidorFinal(false);
     }
 
     // Al emitir sin método explícito → efectivo por defecto (no tarjeta)
@@ -885,6 +957,9 @@ export class Facturas implements OnInit, OnDestroy {
       this.nuevaFactura.metodoPago = 'EFECTIVO';
       this.metodoPagoConfirmado = true;
     }
+
+    // Seguridad final antes de seguir
+    this.bloquearTarjetaSiConsumidorFinal(false);
 
     if (datos.descuentoGlobalPorcentaje !== undefined && datos.descuentoGlobalPorcentaje !== null) {
         const pct = parseFloat(datos.descuentoGlobalPorcentaje);
@@ -1508,6 +1583,10 @@ export class Facturas implements OnInit, OnDestroy {
       Swal.fire('Error', 'Faltan datos para emitir la factura (cliente y al menos un producto).', 'error');
       return;
     }
+    if (this.nuevaFactura.metodoPago === 'TARJETA_CREDITO' && !this.permiteTarjetaCredito) {
+      this.bloquearTarjetaSiConsumidorFinal(true);
+      return;
+    }
     const total = this.totalCarrito;
     Swal.fire({
       title: '¿Confirmar emisión?',
@@ -1528,6 +1607,11 @@ export class Facturas implements OnInit, OnDestroy {
   guardarFactura() {
     if ((!this.nuevaFactura.clienteId && !this.esConsumidorFinal) || this.nuevaFactura.detalles.length === 0) {
       Swal.fire('Error', 'Faltan datos para emitir la factura.', 'error');
+      return;
+    }
+
+    if (this.nuevaFactura.metodoPago === 'TARJETA_CREDITO' && !this.permiteTarjetaCredito) {
+      this.bloquearTarjetaSiConsumidorFinal(true);
       return;
     }
 
