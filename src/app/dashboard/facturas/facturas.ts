@@ -645,37 +645,33 @@ export class Facturas implements OnInit, OnDestroy {
     const listaNombresCli = this.clientesList.map(c => c.nombreCompleto || c.primerNombre).join(', ').substring(0, 600);
     const listaNombresProd = this.productosList.map(p => p.nombre).join(', ').substring(0, 600);
 
-    // 🔥 PROMPT CON SOPORTE PARA TARJETAS Y DESCUENTOS GLOBALES Y POR ITEM
     const promptSystem = `
-      Eres la IA veloz de un sistema POS. El usuario habla de forma natural.
-      Extrae los datos en un JSON puro.
-      
-      Listas de BD:
+      Eres la IA de un POS. Extrae SOLO lo que el usuario dijo explícitamente. JSON puro, sin texto extra.
+
       Clientes: [${listaNombresCli}]
       Productos: [${listaNombresProd}]
 
-      Formato EXACTO:
+      Formato:
       {
          ${instruccionCliente}
          "metodoPago": "EFECTIVO" | "TRANSFERENCIA" | "TARJETA_CREDITO" | null,
-         "detallesTarjeta": "Ej: Visa terminada en 1234 (o null)",
-         "cuotas": numero_entero_o_null,
-         "descuentoGlobal": numero_decimal_o_null,
-         "descuentoGlobalPorcentaje": numero_0_a_100_o_null,
-         "items": [ { "producto": "Nombre exacto de la lista", "cantidad": numero_entero_o_1, "descuento": numero_decimal_en_dolares_o_0, "descuentoPorcentaje": numero_0_a_100_o_0 } ],
-         "eliminarProducto": "Nombre del producto a quitar del carrito (o null)",
-         "emitirFactura": true o false
+         "detallesTarjeta": null,
+         "cuotas": null,
+         "descuentoGlobal": null,
+         "descuentoGlobalPorcentaje": null,
+         "items": [],
+         "eliminarProducto": null,
+         "emitirFactura": false
       }
-      
-      REGLAS:
-      1. Si dice "Consumidor final" o "sin datos", cliente es "CONSUMIDOR_FINAL".
-      2. "emitirFactura": true solo si pide cobrar/emitir/guardar de forma clara. Si solo agrega productos, false.
-      3. TARJETA Y CUOTAS: Si menciona "tarjeta" o "crédito" es TARJETA_CREDITO. Si menciona banco o terminación, ponlo en "detallesTarjeta". Si dice "meses" extrae el número a "cuotas".
-      4. DESCUENTOS FACTURA: "descuento de 5 dólares a la factura" → descuentoGlobal: 5. "10 por ciento de descuento a la factura" → descuentoGlobalPorcentaje: 10. Si NO menciona descuento, deja null.
-      5. DESCUENTOS PRODUCTO: solo si lo dice junto al producto. "2 dólares de descuento" → descuento: 2. "15 por ciento" → descuentoPorcentaje: 15. NUNCA inventes descuentos. Si no dijo descuento, pon 0.
-      6. PRODUCTOS: usa un nombre de la lista lo más fiel posible. Varios productos = varios objetos en "items". Mismo producto otra vez = otra entrada.
-      7. eliminarProducto SOLO si pide quitar/borrar un producto del ticket. Un descuento NUNCA elimina productos.
-      8. NO devuelvas texto fuera del JSON.
+
+      REGLAS ESTRICTAS (no inventes NADA):
+      1. metodoPago: SOLO si dijo "efectivo", "transferencia/depósito" o "tarjeta/crédito". Si NO habló de pago → null. NUNCA pongas TARJETA_CREDITO por defecto.
+      2. detallesTarjeta / cuotas: SOLO si mencionó tarjeta Y datos de tarjeta o meses. Si no → null.
+      3. items: SOLO productos que el usuario nombró. Si solo habló de cliente/pago/descuento → items: []. No inventes productos de la lista.
+      4. descuentos: SOLO si los mencionó. Si no dijo descuento → null / 0.
+      5. emitirFactura: true SOLO si pide emitir/cobrar/guardar de forma clara.
+      6. eliminarProducto: SOLO si pide quitar/borrar un producto. Un descuento NO elimina.
+      7. cliente "CONSUMIDOR_FINAL" solo si dijo consumidor final / sin datos.
     `;
 
     const payload = {
@@ -684,35 +680,125 @@ export class Facturas implements OnInit, OnDestroy {
         { role: 'system', content: promptSystem },
         { role: 'user', content: fraseUsuario }
       ],
-      temperature: 0.0, 
+      temperature: 0.0,
       max_tokens: 450
     };
+
+    // Mantener mic bloqueado hasta terminar de aplicar (evita eco / comandos fantasma)
+    this.bloqueoEscucha = true;
+    this.isThinking = true;
 
     this.http.post<any>('https://api.groq.com/openai/v1/chat/completions', payload, { headers })
       .subscribe({
         next: (res) => {
-          this.isThinking = false;
           try {
             let respuestaStr = res.choices[0].message.content;
             let jsonStr = respuestaStr;
             const match = respuestaStr.match(/\{[\s\S]*\}/);
             if (match) jsonStr = match[0];
             jsonStr = jsonStr.replace(/```json/gi, '').replace(/```/g, '').trim();
-            
+
             const datosExtraidos = JSON.parse(jsonStr);
-            const intencionEmitir = quiereEmitirPalabra || String(datosExtraidos.emitirFactura).toLowerCase() === 'true';
-            
-            this.aplicarDatosExtraidos(datosExtraidos, intencionEmitir);
+            // Sanear alucinaciones antes de aplicar
+            const datosLimpios = this.sanearDatosVoz(datosExtraidos, fraseUsuario);
+            const intencionEmitir = quiereEmitirPalabra || String(datosLimpios.emitirFactura).toLowerCase() === 'true';
+
+            this.aplicarDatosExtraidos(datosLimpios, intencionEmitir);
           } catch (e) {
             console.error("Error parseando JSON:", e);
-            this.hablar("Uy, me enredé con esa frase. ¿Me lo repites?", () => this.escuchar());
+            this.isThinking = false;
+            this.hablar("Uy, me enredé con esa frase. ¿Me lo repites?", () => {
+              this.bloqueoEscucha = false;
+              this.isThinking = false;
+              this.escuchar();
+            });
           }
         },
         error: () => {
           this.isThinking = false;
-          this.hablar("Hubo un fallo de conexión. Repite, por favor.", () => this.escuchar());
+          this.hablar("Hubo un fallo de conexión. Repite, por favor.", () => {
+            this.bloqueoEscucha = false;
+            this.isThinking = false;
+            this.escuchar();
+          });
         }
       });
+  }
+
+  /**
+   * Rechaza datos que la IA inventó y el usuario NO dijo (pago, productos, etc.).
+   */
+  private sanearDatosVoz(datos: any, frase: string): any {
+    const f = this.limpiarTexto(frase || this.ultimaFraseUsuario);
+    const out: any = { ...(datos || {}) };
+
+    // --- Método de pago: solo si la frase lo respalda ---
+    const diceTarjeta = /\b(tarjeta|credito|visa|mastercard|american\s*express)\b/.test(f);
+    const diceTransfer = /\b(transferencia|transferir|deposito|deposito|banco)\b/.test(f);
+    const diceEfectivo = /\b(efectivo|cash|contado)\b/.test(f);
+
+    const m = String(out.metodoPago || '').toUpperCase();
+    if (m.includes('TARJETA')) {
+      out.metodoPago = diceTarjeta ? 'TARJETA_CREDITO' : null;
+    } else if (m.includes('TRANSFERENCIA')) {
+      out.metodoPago = diceTransfer ? 'TRANSFERENCIA' : null;
+    } else if (m.includes('EFECTIVO')) {
+      out.metodoPago = diceEfectivo ? 'EFECTIVO' : null;
+    } else {
+      out.metodoPago = null;
+    }
+    // Si la frase sí menciona pago pero la IA puso null, forzar
+    if (!out.metodoPago) {
+      if (diceTarjeta) out.metodoPago = 'TARJETA_CREDITO';
+      else if (diceTransfer) out.metodoPago = 'TRANSFERENCIA';
+      else if (diceEfectivo) out.metodoPago = 'EFECTIVO';
+    }
+
+    if (!diceTarjeta) {
+      out.detallesTarjeta = null;
+      out.cuotas = null;
+    }
+
+    // --- Descuentos: solo si mencionó descuento ---
+    const diceDesc = /\b(descuento|rebaja|menos\s+\d|%\s*off|por\s*ciento)\b/.test(f);
+    if (!diceDesc) {
+      out.descuentoGlobal = null;
+      out.descuentoGlobalPorcentaje = null;
+    }
+
+    // --- Items: descartar productos sin rastro en la frase ---
+    if (Array.isArray(out.items)) {
+      const tokensFrase = f.split(/\s+/).filter(t => t.length >= 3);
+      out.items = out.items.filter((it: any) => {
+        if (!it || !it.producto) return false;
+        const nom = this.limpiarTexto(String(it.producto));
+        // Si la frase es solo de pago/cliente, no debería haber items
+        if (tokensFrase.length === 0) return false;
+        // Al menos un token significativo del nombre del producto debe aparecer en la frase
+        // O un token de la frase debe aparecer en el nombre
+        const tokensNom = nom.split(/\s+/).filter(t => t.length >= 3);
+        const overlap = tokensNom.some(t => f.includes(t)) || tokensFrase.some(t => nom.includes(t));
+        return overlap;
+      });
+      // Si la frase no parece pedir productos, vaciar
+      const pideProducto = /\b(agrega|agregue|añade|pon|poner|quiero|dame|producto|un|una|dos|tres|\d+)\b/.test(f)
+        || tokensFrase.some(t => this.productosList.some(p => this.limpiarTexto(p.nombre).includes(t)));
+      if (!pideProducto && !diceDesc) {
+        // Permitir items solo si hay overlap fuerte; si no hay tokens de producto, limpiar
+        if (out.items.length && !tokensFrase.some(t =>
+          this.productosList.some(p => this.limpiarTexto(p.nombre).includes(t))
+        )) {
+          out.items = [];
+        }
+      }
+    }
+
+    if (out.eliminarProducto && out.eliminarProducto !== 'null') {
+      const diceQuitar = /\b(quita|quitar|borra|borrar|elimina|eliminar|saca|sacar)\b/.test(f);
+      if (!diceQuitar) out.eliminarProducto = null;
+    }
+
+    return out;
   }
 
   private aplicarDatosExtraidos(datos: any, quiereEmitir: boolean = false) {
@@ -731,31 +817,29 @@ export class Facturas implements OnInit, OnDestroy {
         }
     }
 
+    // metodoPago ya viene saneado: solo aplicar si no es null
     if (datos.metodoPago && datos.metodoPago !== 'null' && datos.metodoPago !== 'NULL') {
         this.nuevaFactura.metodoPago = datos.metodoPago;
         this.metodoPagoConfirmado = true;
     }
 
-    if (datos.detallesTarjeta && datos.detallesTarjeta !== 'null') {
+    // Tarjeta / cuotas: solo si el método quedó en TARJETA (saneado por frase)
+    if (this.nuevaFactura.metodoPago === 'TARJETA_CREDITO') {
+      if (datos.detallesTarjeta && datos.detallesTarjeta !== 'null') {
         this.nuevaFactura.detallesTarjeta = datos.detallesTarjeta;
-        if (this.nuevaFactura.metodoPago !== 'TARJETA_CREDITO') {
-            this.nuevaFactura.metodoPago = 'TARJETA_CREDITO';
-            this.metodoPagoConfirmado = true;
+      }
+      if (datos.cuotas !== undefined && datos.cuotas !== null) {
+        const numCuotas = parseInt(datos.cuotas, 10);
+        if (!isNaN(numCuotas) && numCuotas > 0) {
+          this.nuevaFactura.numeroCuotas = numCuotas;
         }
+      }
     }
 
-    if (datos.cuotas !== undefined && datos.cuotas !== null) {
-        let numCuotas = parseInt(datos.cuotas, 10);
-        if (!isNaN(numCuotas) && numCuotas > 0) {
-            this.nuevaFactura.numeroCuotas = numCuotas;
-            if (this.nuevaFactura.metodoPago !== 'TARJETA_CREDITO') {
-                this.nuevaFactura.metodoPago = 'TARJETA_CREDITO';
-                this.metodoPagoConfirmado = true;
-            }
-        }
-    } else if (quiereEmitir && !this.metodoPagoConfirmado) {
-        this.nuevaFactura.metodoPago = 'EFECTIVO'; 
-        this.metodoPagoConfirmado = true;
+    // Al emitir sin método explícito → efectivo por defecto (no tarjeta)
+    if (quiereEmitir && !this.metodoPagoConfirmado) {
+      this.nuevaFactura.metodoPago = 'EFECTIVO';
+      this.metodoPagoConfirmado = true;
     }
 
     if (datos.descuentoGlobalPorcentaje !== undefined && datos.descuentoGlobalPorcentaje !== null) {
@@ -1121,7 +1205,18 @@ export class Facturas implements OnInit, OnDestroy {
   private manejarDesambiguacion(transcript: string) {
     if (this.seleccionEnCurso) return;
 
-    const num = this.extraerIndice(transcript, this.opcionesVoz.length);
+    const t = (transcript || '').trim();
+    // Frases largas = ruido / eco de Zoe, no una opción
+    if (t.length > 45) {
+      this.hablar("Di solo el número de la opción, por ejemplo: uno, dos o tres.", () => {
+        this.bloqueoEscucha = false;
+        this.isThinking = false;
+        this.escuchar();
+      });
+      return;
+    }
+
+    const num = this.extraerIndice(t, this.opcionesVoz.length);
 
     if (num >= 0 && num < this.opcionesVoz.length) {
       this.seleccionEnCurso = true;
@@ -1130,31 +1225,41 @@ export class Facturas implements OnInit, OnDestroy {
       return;
     }
 
-    if (this.tipoOpciones === 'PRODUCTO') {
-      const porNombre = this.opcionesVoz.find(p =>
-        this.limpiarTexto(p.nombre).includes(transcript) || transcript.includes(this.limpiarTexto(p.nombre))
-      );
-      if (porNombre) {
+    // Match por nombre solo si es corto y específico (no frases sueltas)
+    if (this.tipoOpciones === 'PRODUCTO' && t.length >= 3) {
+      const porNombre = this.opcionesVoz.filter(p => {
+        const nom = this.limpiarTexto(p.nombre);
+        return nom === t || nom.startsWith(t) || (t.length >= 4 && nom.includes(t));
+      });
+      if (porNombre.length === 1) {
         this.seleccionEnCurso = true;
         this.pausarMicYVoz();
-        this.procesarSeleccionDesambiguacion(porNombre);
+        this.procesarSeleccionDesambiguacion(porNombre[0]);
+        return;
+      }
+      if (porNombre.length > 1) {
+        this.hablar("Hay varias con ese nombre. Di el número de la lista.", () => {
+          this.bloqueoEscucha = false;
+          this.isThinking = false;
+          this.escuchar();
+        });
         return;
       }
     }
-    if (this.tipoOpciones === 'CLIENTE') {
-      const porNombre = this.opcionesVoz.find(c => {
+    if (this.tipoOpciones === 'CLIENTE' && t.length >= 3) {
+      const porNombre = this.opcionesVoz.filter(c => {
         const nom = this.limpiarTexto(c.nombreCompleto || `${c.primerNombre || ''} ${c.apellidoPaterno || ''}`);
-        return nom.includes(transcript) || transcript.includes(nom);
+        return nom.includes(t) || t.includes(nom);
       });
-      if (porNombre) {
+      if (porNombre.length === 1) {
         this.seleccionEnCurso = true;
         this.pausarMicYVoz();
-        this.procesarSeleccionDesambiguacion(porNombre);
+        this.procesarSeleccionDesambiguacion(porNombre[0]);
         return;
       }
     }
 
-    this.hablar("Oye, no capté la opción. Di el número o el nombre.", () => {
+    this.hablar("No capté la opción. Di el número: uno, dos, tres...", () => {
       this.bloqueoEscucha = false;
       this.isThinking = false;
       this.escuchar();
