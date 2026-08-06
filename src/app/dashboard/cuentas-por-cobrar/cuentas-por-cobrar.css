@@ -197,3 +197,112 @@
     /* Ocultamos el scrollbar en chips para móviles pero dejamos que se deslice */
     .filter-chips::-webkit-scrollbar { display: none; }
 }
+/* =========================================
+   FILTROS DE FECHA Y ORDENACIÓN
+   ========================================= */
+.date-filters-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 16px;
+    flex-wrap: wrap;
+    background: white;
+    padding: 14px 24px;
+    border-radius: 16px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.02);
+    border: 1px solid #e2e8f0;
+    margin-top: 12px;
+}
+
+.date-filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.date-filter-group label {
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin: 0;
+}
+
+.date-input {
+    width: 170px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: 1px solid #cbd5e1;
+    background: #f8fafc;
+    font-size: 0.9rem;
+    color: #0f172a;
+    font-family: inherit;
+    transition: all 0.2s;
+    box-sizing: border-box;
+}
+
+.date-input:focus {
+    outline: none;
+    border-color: var(--primary-orange, #ea580c);
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.1);
+}
+
+.btn-clear-dates {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #dc2626;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    height: 42px;
+}
+
+.btn-clear-dates:hover {
+    background: #fee2e2;
+    transform: translateY(-1px);
+}
+
+.sort-hint {
+    margin-left: auto;
+    font-size: 0.85rem;
+    color: #64748b;
+    align-self: center;
+}
+
+.sort-hint strong {
+    color: #0f172a;
+    font-weight: 700;
+}
+
+.th-sortable {
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.2s, background 0.2s;
+    white-space: nowrap;
+}
+
+.th-sortable:hover {
+    color: var(--primary-orange, #ea580c);
+    background-color: #fff7ed;
+}
+
+@media (max-width: 768px) {
+    .date-filters-row {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 14px 16px;
+    }
+    .date-input {
+        width: 100%;
+    }
+    .sort-hint {
+        margin-left: 0;
+    }
+}

@@ -56,6 +56,26 @@
     </div>
 </div>
 
+<!-- Filtros por rango de fechas de vencimiento -->
+<div class="date-filters-row fade-in">
+    <div class="date-filter-group">
+        <label>Vencimiento desde</label>
+        <input type="date" class="modern-input date-input" [(ngModel)]="filtroFechaDesde" (change)="aplicarFiltros()">
+    </div>
+    <div class="date-filter-group">
+        <label>Vencimiento hasta</label>
+        <input type="date" class="modern-input date-input" [(ngModel)]="filtroFechaHasta" (change)="aplicarFiltros()">
+    </div>
+    <button class="btn-clear-dates" *ngIf="filtroFechaDesde || filtroFechaHasta" (click)="limpiarFiltrosFecha()" title="Limpiar fechas">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        Limpiar fechas
+    </button>
+    <div class="sort-hint">
+        Orden: <strong>{{ ordenCampo === 'fechaVencimiento' ? 'Fecha venc.' : ordenCampo === 'clienteNombre' ? 'Cliente' : ordenCampo === 'montoTotal' ? 'Monto' : 'Saldo' }}</strong>
+        ({{ ordenDireccion === 'asc' ? 'ascendente' : 'descendente' }})
+    </div>
+</div>
+
 <div class="card premium-card fade-in mt-4">
     <div class="card-body">
         <div *ngIf="isLoading" class="loading-container">
@@ -68,10 +88,18 @@
                 <thead>
                     <tr>
                         <th>Factura</th>
-                        <th>Cliente</th>
-                        <th>Vencimiento Global</th>
-                        <th>Monto Total</th>
-                        <th>Saldo Pendiente</th>
+                        <th class="th-sortable" (click)="ordenarPor('clienteNombre')" title="Ordenar por cliente">
+                            Cliente{{ iconoOrden('clienteNombre') }}
+                        </th>
+                        <th class="th-sortable" (click)="ordenarPor('fechaVencimiento')" title="Ordenar por fecha de vencimiento">
+                            Vencimiento Global{{ iconoOrden('fechaVencimiento') }}
+                        </th>
+                        <th class="th-sortable" (click)="ordenarPor('montoTotal')" title="Ordenar por monto total">
+                            Monto Total{{ iconoOrden('montoTotal') }}
+                        </th>
+                        <th class="th-sortable" (click)="ordenarPor('saldoPendiente')" title="Ordenar por saldo pendiente">
+                            Saldo Pendiente{{ iconoOrden('saldoPendiente') }}
+                        </th>
                         <th>Estado</th>
                         <th style="text-align: center;">Cuotas</th>
                         <th style="text-align: center;">Acción</th>

@@ -46,8 +46,71 @@ export class ZoeAiService {
   private transcriptAcumulado = '';
   keepListeningActive = false; 
 
+  /** Voz femenina en español cacheada (se carga de forma asíncrona en Chrome) */
+  private vozFemenina: SpeechSynthesisVoice | null = null;
+
   constructor() {
     this.initSpeechRecognition();
+    this.cargarVocesFemeninas();
+  }
+
+  /** Precarga y elige la mejor voz femenina en español disponible en el navegador */
+  private cargarVocesFemeninas() {
+    const elegir = () => {
+      const voices = window.speechSynthesis.getVoices();
+      if (!voices.length) return;
+      this.vozFemenina = this.seleccionarVozFemenina(voices);
+    };
+    elegir();
+    // Chrome carga las voces de forma asíncrona
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      window.speechSynthesis.onvoiceschanged = () => elegir();
+    }
+  }
+
+  /**
+   * Ranking de voces femeninas en español (nombres comunes por SO/navegador).
+   * Prioriza: Google español (US/ES), Sabina, Paulina, Mónica, Lucía, María, etc.
+   */
+  private seleccionarVozFemenina(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null {
+    const es = voices.filter(v => v.lang && v.lang.toLowerCase().startsWith('es'));
+    if (!es.length) return null;
+
+    const preferidas = [
+      /google español.*estados unidos/i,
+      /google us spanish/i,
+      /google español/i,
+      /microsoft sabina/i,
+      /sabina/i,
+      /microsoft paulina/i,
+      /paulina/i,
+      /microsoft monica/i,
+      /m[oó]nica/i,
+      /luc[ií]a/i,
+      /mar[ií]a/i,
+      /elena/i,
+      /conchita/i,
+      /dalia/i,
+      /soledad/i,
+      /paloma/i,
+      /female/i,
+      /mujer/i,
+    ];
+
+    const masculinas = /pablo|jorge|diego|carlos|juan|pedro|antonio|male|hombre|david|jorge/i;
+
+    for (const re of preferidas) {
+      const found = es.find(v => re.test(v.name) && !masculinas.test(v.name));
+      if (found) return found;
+    }
+
+    // Cualquier voz es-* que no suene masculina
+    const noMale = es.find(v => !masculinas.test(v.name));
+    if (noMale) return noMale;
+
+    // Preferir es-ES o es-MX / es-US si hay varias
+    const porLang = es.find(v => /es-(ES|MX|US|AR|CO|CL|PE)/i.test(v.lang)) || es[0];
+    return porLang;
   }
 
   inicializarChat(nombreUsuario: string, rol: string) {
@@ -262,17 +325,33 @@ REGLAS:
 
   private hablar(texto: string, onFinish?: () => void) {
     window.speechSynthesis.cancel();
-    setTimeout(() => {
-      const utterance = new SpeechSynthesisUtterance(texto);
-      const voices = window.speechSynthesis.getVoices();
-      
-      let femaleVoice = voices.find(v => v.lang.startsWith('es') && (v.name.includes('Google español') || /(sabina|paulina|monica|mujer|female)/i.test(v.name)));
-      if (!femaleVoice) femaleVoice = voices.find(v => v.lang.startsWith('es') && !/(pablo|jorge|diego|carlos|male|hombre)/i.test(v.name));
+    // Limpiar markdown residual para que suene natural
+    const limpio = (texto || '')
+      .replace(/\*\*/g, '')
+      .replace(/\*/g, '')
+      .replace(/#{1,6}\s*/g, '')
+      .replace(/\[\[NAVEGAR:[^\]]*\]\]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
 
-      if (femaleVoice) utterance.voice = femaleVoice;
-      utterance.lang = 'es-ES';
-      utterance.rate = 1.05;
-      utterance.pitch = 1.0;
+    setTimeout(() => {
+      // Asegurar que las voces estén cargadas
+      const voices = window.speechSynthesis.getVoices();
+      if (!this.vozFemenina && voices.length) {
+        this.vozFemenina = this.seleccionarVozFemenina(voices);
+      }
+
+      const utterance = new SpeechSynthesisUtterance(limpio);
+      if (this.vozFemenina) {
+        utterance.voice = this.vozFemenina;
+        utterance.lang = this.vozFemenina.lang || 'es-ES';
+      } else {
+        utterance.lang = 'es-ES';
+      }
+      // Tono y ritmo más naturales para voz femenina
+      utterance.rate = 1.0;
+      utterance.pitch = 1.12;
+      utterance.volume = 1;
 
       utterance.onend = () => {
           if (onFinish) onFinish();
@@ -282,7 +361,7 @@ REGLAS:
       };
 
       window.speechSynthesis.speak(utterance);
-    }, 50);
+    }, 80);
   }
 
   private extraerComandoNavegacion(texto: string): { textoLimpio: string; ruta: string | null } {

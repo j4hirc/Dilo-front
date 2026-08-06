@@ -40,6 +40,12 @@ export class DashboardDefault implements OnInit, OnDestroy, AfterViewChecked {
   private contextoNegocioTexto: string = 'Aún no se ha cargado la información del negocio.';
   nuevoMensajeTexto = '';
 
+  /** Chat flotante minimizado (solo pestaña lateral) — no estorba */
+  chatMinimizado = false;
+  /** Burbuja de ayuda "¿Necesitas ayuda?" ocultada por el usuario */
+  hintChatOculto = false;
+  private hintAutoHideTimer: ReturnType<typeof setTimeout> | null = null;
+
   private readonly modulosSistema = [
     { nombre: 'Dashboard', ruta: '/dashboard/propietario', roles: ['PROPIETARIO'], descripcion: 'Pantalla de inicio con resumen general del negocio.', disponible: true },
     { nombre: 'Facturas', ruta: '/dashboard/facturas', roles: ['PROPIETARIO', 'VENDEDOR'], descripcion: 'Registrar nuevas ventas, cobrar a clientes y emitir comprobantes.', disponible: true },
@@ -89,6 +95,11 @@ export class DashboardDefault implements OnInit, OnDestroy, AfterViewChecked {
 
     this.zoeService.inicializarChat(this.usuarioLogueado?.primerNombre || 'Usuario', this.rolUsuario);
 
+    // Preferencias del chat flotante (no estorbar)
+    this.chatMinimizado = localStorage.getItem('dilo_chat_minimizado') === '1';
+    // Burbuja de VOZ: se mantiene visible para hablar con la IA (solo se oculta si el usuario pulsa ×)
+    this.hintChatOculto = localStorage.getItem('dilo_chat_hint_oculto') === '1';
+
     if (this.negocioId) {
        this.cargarDatosNegocio();
        if (this.rolUsuario === 'PROPIETARIO' || this.rolUsuario === 'BODEGUERO') {
@@ -98,9 +109,35 @@ export class DashboardDefault implements OnInit, OnDestroy, AfterViewChecked {
     }
   }
 
+  /** Minimiza el chat a una pestaña lateral (deja de estorbar) */
+  minimizarChat() {
+    if (this.zoeService.isChatOpen) this.zoeService.toggleChat();
+    if (this.zoeService.isListening) this.zoeService.toggleEscucha();
+    this.chatMinimizado = true;
+    localStorage.setItem('dilo_chat_minimizado', '1');
+  }
+
+  /** Restaura el FAB del chat desde la pestaña minimizada */
+  restaurarChat() {
+    this.chatMinimizado = false;
+    localStorage.removeItem('dilo_chat_minimizado');
+  }
+
+  /** Cierra la burbuja de ayuda y no la vuelve a mostrar en esta sesión / navegador */
+  ocultarHintChat(event?: Event) {
+    if (event) event.stopPropagation();
+    this.hintChatOculto = true;
+    localStorage.setItem('dilo_chat_hint_oculto', '1');
+    if (this.hintAutoHideTimer) {
+      clearTimeout(this.hintAutoHideTimer);
+      this.hintAutoHideTimer = null;
+    }
+  }
+
   ngOnDestroy() {
     this.destroy$.next();
     this.destroy$.complete();
+    if (this.hintAutoHideTimer) clearTimeout(this.hintAutoHideTimer);
     if (this.zoeService.isListening) {
       this.zoeService.toggleEscucha();
     }

@@ -20,6 +20,14 @@ export class CuentasPorCobrar implements OnInit {
 
   terminoBusqueda: string = '';
   filtroEstado: string = 'TODAS';
+  /** Fecha desde (YYYY-MM-DD) para filtrar por vencimiento */
+  filtroFechaDesde: string = '';
+  /** Fecha hasta (YYYY-MM-DD) para filtrar por vencimiento */
+  filtroFechaHasta: string = '';
+  /** Campo por el que se ordena */
+  ordenCampo: string = 'fechaVencimiento';
+  /** Dirección: 'asc' | 'desc' */
+  ordenDireccion: 'asc' | 'desc' = 'asc';
 
   isLoading = true;
   negocioId: number | null = null;
@@ -78,13 +86,38 @@ export class CuentasPorCobrar implements OnInit {
       this.aplicarFiltros();
   }
 
+  /** Cambia el campo de ordenación (toggle asc/desc si es el mismo campo) */
+  ordenarPor(campo: string) {
+      if (this.ordenCampo === campo) {
+          this.ordenDireccion = this.ordenDireccion === 'asc' ? 'desc' : 'asc';
+      } else {
+          this.ordenCampo = campo;
+          this.ordenDireccion = campo === 'fechaVencimiento' ? 'asc' : 'desc';
+      }
+      this.aplicarFiltros();
+  }
+
+  /** Icono visual del orden actual en cabeceras */
+  iconoOrden(campo: string): string {
+      if (this.ordenCampo !== campo) return '';
+      return this.ordenDireccion === 'asc' ? ' ▲' : ' ▼';
+  }
+
+  limpiarFiltrosFecha() {
+      this.filtroFechaDesde = '';
+      this.filtroFechaHasta = '';
+      this.aplicarFiltros();
+  }
+
   aplicarFiltros() {
       let filtradas = [...this.cuentasBase];
 
+      // Filtro por estado
       if (this.filtroEstado !== 'TODAS') {
           filtradas = filtradas.filter(c => c.estado === this.filtroEstado);
       }
 
+      // Filtro por texto (cliente o factura)
       if (this.terminoBusqueda.trim()) {
           const term = this.terminoBusqueda.toLowerCase().trim();
           filtradas = filtradas.filter(c => 
@@ -92,6 +125,59 @@ export class CuentasPorCobrar implements OnInit {
               (c.clienteNombre && c.clienteNombre.toLowerCase().includes(term))
           );
       }
+
+      // Filtro por rango de fechas de vencimiento
+      if (this.filtroFechaDesde) {
+          const desde = new Date(this.filtroFechaDesde);
+          desde.setHours(0, 0, 0, 0);
+          filtradas = filtradas.filter(c => {
+              if (!c.fechaVencimiento) return false;
+              const fv = new Date(c.fechaVencimiento);
+              fv.setHours(0, 0, 0, 0);
+              return fv >= desde;
+          });
+      }
+      if (this.filtroFechaHasta) {
+          const hasta = new Date(this.filtroFechaHasta);
+          hasta.setHours(23, 59, 59, 999);
+          filtradas = filtradas.filter(c => {
+              if (!c.fechaVencimiento) return false;
+              const fv = new Date(c.fechaVencimiento);
+              return fv <= hasta;
+          });
+      }
+
+      // Ordenación
+      filtradas.sort((a, b) => {
+          let valA: any;
+          let valB: any;
+
+          switch (this.ordenCampo) {
+              case 'fechaVencimiento':
+                  valA = a.fechaVencimiento ? new Date(a.fechaVencimiento).getTime() : 0;
+                  valB = b.fechaVencimiento ? new Date(b.fechaVencimiento).getTime() : 0;
+                  break;
+              case 'montoTotal':
+                  valA = Number(a.montoTotal || 0);
+                  valB = Number(b.montoTotal || 0);
+                  break;
+              case 'saldoPendiente':
+                  valA = Number(a.saldoPendiente || 0);
+                  valB = Number(b.saldoPendiente || 0);
+                  break;
+              case 'clienteNombre':
+                  valA = (a.clienteNombre || '').toLowerCase();
+                  valB = (b.clienteNombre || '').toLowerCase();
+                  break;
+              default:
+                  valA = a.fechaVencimiento ? new Date(a.fechaVencimiento).getTime() : 0;
+                  valB = b.fechaVencimiento ? new Date(b.fechaVencimiento).getTime() : 0;
+          }
+
+          if (valA < valB) return this.ordenDireccion === 'asc' ? -1 : 1;
+          if (valA > valB) return this.ordenDireccion === 'asc' ? 1 : -1;
+          return 0;
+      });
 
       this.cuentas = filtradas;
   }
