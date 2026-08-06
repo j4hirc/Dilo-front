@@ -759,39 +759,33 @@ export class Facturas implements OnInit, OnDestroy {
       out.cuotas = null;
     }
 
-    // --- Descuentos: solo si mencionó descuento ---
-    const diceDesc = /\b(descuento|rebaja|menos\s+\d|%\s*off|por\s*ciento)\b/.test(f);
+    // --- Descuentos globales: solo si mencionó descuento ---
+    const diceDesc = /\b(descuento|rebaja|por\s*ciento|porcentaje)\b/.test(f);
     if (!diceDesc) {
       out.descuentoGlobal = null;
       out.descuentoGlobalPorcentaje = null;
     }
 
-    // --- Items: descartar productos sin rastro en la frase ---
-    if (Array.isArray(out.items)) {
-      const tokensFrase = f.split(/\s+/).filter(t => t.length >= 3);
-      out.items = out.items.filter((it: any) => {
-        if (!it || !it.producto) return false;
-        const nom = this.limpiarTexto(String(it.producto));
-        // Si la frase es solo de pago/cliente, no debería haber items
-        if (tokensFrase.length === 0) return false;
-        // Al menos un token significativo del nombre del producto debe aparecer en la frase
-        // O un token de la frase debe aparecer en el nombre
-        const tokensNom = nom.split(/\s+/).filter(t => t.length >= 3);
-        const overlap = tokensNom.some(t => f.includes(t)) || tokensFrase.some(t => nom.includes(t));
-        return overlap;
-      });
-      // Si la frase no parece pedir productos, vaciar
-      const pideProducto = /\b(agrega|agregue|añade|pon|poner|quiero|dame|producto|un|una|dos|tres|\d+)\b/.test(f)
-        || tokensFrase.some(t => this.productosList.some(p => this.limpiarTexto(p.nombre).includes(t)));
-      if (!pideProducto && !diceDesc) {
-        // Permitir items solo si hay overlap fuerte; si no hay tokens de producto, limpiar
-        if (out.items.length && !tokensFrase.some(t =>
-          this.productosList.some(p => this.limpiarTexto(p.nombre).includes(t))
-        )) {
-          out.items = [];
-        }
-      }
+    // --- Items: PERMISIVO (el filtro anterior borraba productos válidos) ---
+    if (!Array.isArray(out.items)) out.items = [];
+    out.items = out.items.filter((it: any) => it && it.producto && String(it.producto).toLowerCase() !== 'null');
+
+    // Vaciar solo si la frase es claramente SOLO pago/cliente, sin productos
+    const pideProducto =
+      /\b(agrega|agregue|agregar|añade|añadir|pon|poner|quiero|dame|producto|un|una|unos|unas|dos|tres|cuatro|cinco|\d+)\b/.test(f)
+      || this.fraseMencionaProducto(f);
+
+    const soloPagoOCliente =
+      !pideProducto &&
+      (diceTarjeta || diceTransfer || diceEfectivo || /\b(consumidor\s*final|cliente)\b/.test(f));
+
+    if (soloPagoOCliente) {
+      out.items = [];
+    } else if (out.items.length === 0 && this.fraseMencionaProducto(f)) {
+      // Fallback: la IA no trajo items pero sí hay productos en la frase
+      out.items = this.extraerItemsDesdeFrase(f);
     }
+    // Si la IA trajo items, se respetan (aunque el nombre no coincida letra por letra con el audio)
 
     if (out.eliminarProducto && out.eliminarProducto !== 'null') {
       const diceQuitar = /\b(quita|quitar|borra|borrar|elimina|eliminar|saca|sacar)\b/.test(f);
@@ -799,6 +793,56 @@ export class Facturas implements OnInit, OnDestroy {
     }
 
     return out;
+  }
+
+  /** ¿Algún token de la frase coincide con un producto del catálogo? */
+  private fraseMencionaProducto(frase: string): boolean {
+    const tokens = this.limpiarTexto(frase).split(/\s+/).filter(t => t.length >= 3);
+    const stop = new Set([
+      'agrega', 'agregue', 'agregar', 'añade', 'añadir', 'pon', 'poner', 'quiero', 'dame',
+      'factura', 'favor', 'porfa', 'descuento', 'cliente', 'consumidor', 'final',
+      'efectivo', 'tarjeta', 'credito', 'transferencia', 'emitir', 'cobrar', 'listo',
+      'con', 'del', 'los', 'las', 'por', 'para', 'que'
+    ]);
+    return tokens.some(t =>
+      !stop.has(t) &&
+      this.productosList.some(p => this.limpiarTexto(p.nombre).includes(t))
+    );
+  }
+
+  /** Arma items desde tokens de la frase que matchean el catálogo */
+  private extraerItemsDesdeFrase(frase: string): any[] {
+    const tokens = this.limpiarTexto(frase).split(/\s+/).filter(t => t.length >= 3);
+    const stop = new Set([
+      'agrega', 'agregue', 'agregar', 'añade', 'añadir', 'pon', 'poner', 'quiero', 'dame',
+      'factura', 'favor', 'porfa', 'descuento', 'cliente', 'consumidor', 'final',
+      'efectivo', 'tarjeta', 'credito', 'transferencia', 'con', 'del', 'los', 'las',
+      'una', 'uno', 'unos', 'unas', 'por', 'para', 'que'
+    ]);
+    let cant = 1;
+    const mCant = this.limpiarTexto(frase).match(/\b(\d+|un|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez)\b/);
+    if (mCant) {
+      const mapa: Record<string, number> = {
+        un: 1, una: 1, dos: 2, tres: 3, cuatro: 4, cinco: 5,
+        seis: 6, siete: 7, ocho: 8, nueve: 9, diez: 10
+      };
+      cant = mapa[mCant[1]] || parseInt(mCant[1], 10) || 1;
+    }
+
+    const usados = new Set<string>();
+    const items: any[] = [];
+    // Preferir tokens más largos primero (más específicos)
+    const ordenados = [...tokens].filter(t => !stop.has(t)).sort((a, b) => b.length - a.length);
+    for (const t of ordenados) {
+      const hits = this.productosList.filter(p => this.limpiarTexto(p.nombre).includes(t));
+      if (hits.length === 0) continue;
+      if (usados.has(t)) continue;
+      // Evitar tokens cortos contenidos en uno ya usado
+      if ([...usados].some(u => u.includes(t) || t.includes(u))) continue;
+      usados.add(t);
+      items.push({ producto: t, cantidad: cant, descuento: 0, descuentoPorcentaje: 0 });
+    }
+    return items;
   }
 
   private aplicarDatosExtraidos(datos: any, quiereEmitir: boolean = false) {
