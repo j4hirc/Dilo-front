@@ -38,10 +38,10 @@ export class Registro implements OnInit {
     this.cargarParroquias();
 
     const soloLetras = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/; 
-    const soloDiezNumeros = /^[0-9]{10}$/; // Valida exactamente 10 números
+    const soloDiezNumeros = /^[0-9]{10}$/;
 
     this.registerForm = this.fb.group({
-      dni: ['', [Validators.required, Validators.pattern(soloDiezNumeros)]],
+      dni: ['', [Validators.required, Validators.pattern(soloDiezNumeros), this.cedulaEcuatorianaValidator]],
       primerNombre: ['', [Validators.required, Validators.minLength(3), Validators.pattern(soloLetras)]],
       segundoNombre: ['', [Validators.pattern(soloLetras)]],
       apellidoPaterno: ['', [Validators.required, Validators.minLength(3), Validators.pattern(soloLetras)]],
@@ -51,14 +51,49 @@ export class Registro implements OnInit {
       fechaNacimiento: ['', [Validators.required, this.ageValidator]],
       direccion: ['', [Validators.required, Validators.minLength(5)]],
       id_parroquia: ['', Validators.required],
-      password: ['', [Validators.required, Validators.minLength(8)]],
+      password: ['', [Validators.required, Validators.minLength(8)]], // Mínimo 8 caracteres
       confirmPassword: ['', Validators.required],
       terminos: [false, Validators.requiredTrue]
     }, { validators: this.passwordMatchValidator });
   }
 
+  // Validador real de Cédula Ecuatoriana (Módulo 10)
+  cedulaEcuatorianaValidator(control: AbstractControl): ValidationErrors | null {
+    const cedula = control.value;
+    if (!cedula || cedula.length !== 10 || !/^\d+$/.test(cedula)) {
+      return null; // Deja que Validators.pattern maneje si no son 10 dígitos
+    }
+
+    const provincia = parseInt(cedula.substring(0, 2), 10);
+    if (provincia < 1 || (provincia > 24 && provincia !== 30)) {
+      return { cedulaInvalida: true };
+    }
+
+    const tercerDigito = parseInt(cedula.substring(2, 3), 10);
+    if (tercerDigito >= 6) {
+      return { cedulaInvalida: true };
+    }
+
+    let suma = 0;
+    for (let i = 0; i < 9; i++) {
+      let digito = parseInt(cedula.charAt(i), 10);
+      if (i % 2 === 0) {
+        digito *= 2;
+        if (digito > 9) digito -= 9;
+      }
+      suma += digito;
+    }
+
+    const digitoVerificador = parseInt(cedula.charAt(9), 10);
+    const decenaSuperior = (suma % 10 === 0) ? suma : ((Math.floor(suma / 10) + 1) * 10);
+    const resultado = decenaSuperior - suma;
+
+    return resultado === digitoVerificador ? null : { cedulaInvalida: true };
+  }
+
+  // Validador mayor de 18 años
   ageValidator(control: AbstractControl): ValidationErrors | null {
-    if (!control.value) return null; // Si está vacío, el required lo ataja
+    if (!control.value) return null; 
     
     const birthDate = new Date(control.value);
     const today = new Date();
@@ -165,12 +200,12 @@ export class Registro implements OnInit {
         }).then(() => {
           this.router.navigate(['/login']);
         });
-
       },
       error: (err) => {
         this.isLoading = false;
         
-        let errorMsg = 'Ocurrió un error en el servidor. Inténtalo más tarde.';
+        // Muestra el mensaje exacto que enviamos en IllegalArgumentException o conflicto de BD
+        let errorMsg = err.error?.message || 'Ocurrió un error en el servidor. Inténtalo más tarde.';
         if (err.status === 409) {
           errorMsg = 'Esta cédula o correo electrónico ya se encuentran registrados.';
         }

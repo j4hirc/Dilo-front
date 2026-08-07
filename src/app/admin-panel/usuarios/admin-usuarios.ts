@@ -104,7 +104,7 @@ export class AdminUsuarios implements OnInit {
     this.isEditingUser = !this.isEditingUser;
     if (this.isEditingUser) {
       this.usuarioEditando = { ...this.usuarioViendo };
-      // 🔥 Nos aseguramos de que el campo password nazca vacío para no enviar cosas raras
+      // Nos aseguramos de que el campo password nazca vacío para no enviar cosas raras
       this.usuarioEditando.password = '';
     }
   }
@@ -139,7 +139,7 @@ export class AdminUsuarios implements OnInit {
         return;
     }
 
-    // 🔥 4. Validación de Contraseña (SOLO SI ESCRIBIÓ ALGO)
+    // 4. Validación de Contraseña (SOLO SI ESCRIBIÓ ALGO)
     if (this.usuarioEditando.password && this.usuarioEditando.password.trim().length > 0) {
       if (this.usuarioEditando.password.length < 8) {
         Swal.fire('Contraseña Insegura', 'La nueva contraseña debe tener un mínimo de 8 caracteres.', 'warning');
@@ -164,7 +164,7 @@ export class AdminUsuarios implements OnInit {
         direccion: this.usuarioEditando.direccion ? this.usuarioEditando.direccion.trim() : "",
         id_parroquia: this.usuarioEditando.id_parroquia ? Number(this.usuarioEditando.id_parroquia) : null,
         fechaNacimiento: this.usuarioEditando.fechaNacimiento,
-        // 🔥 Mandamos la contraseña. Si está vacía, Java la ignorará.
+        // Mandamos la contraseña. Si está vacía, Java la ignorará.
         password: this.usuarioEditando.password ? this.usuarioEditando.password : "" 
       };
 
@@ -181,7 +181,17 @@ export class AdminUsuarios implements OnInit {
           console.error(err);
           this.showModalUsuario = true;
           this.cdr.detectChanges();
-          Swal.fire('Error al actualizar', 'No se pudo guardar la información.', 'error');
+          
+          let errorMsg = 'No se pudo guardar la información.';
+          // 🔥 Manejo del código 409 (Conflicto / Duplicados)
+          if (err.status === 409) {
+            errorMsg = 'La cédula o el correo electrónico ya están en uso por otro usuario.';
+          } else if (err.error && err.error.message) {
+            // Verifica si el backend devolvió un mensaje específico
+            errorMsg = typeof err.error.message === 'string' ? err.error.message : JSON.stringify(err.error.message);
+          }
+          
+          Swal.fire('Error al actualizar', errorMsg, 'error');
         }
       });
     }, 150);
@@ -263,12 +273,17 @@ export class AdminUsuarios implements OnInit {
           this.showModalCrear = true;
           this.cdr.detectChanges();
           
-          let errorMsg = 'No se pudo crear el usuario. Revisa que el DNI o Email no estén repetidos.';
-          if (err.error) {
+          let errorMsg = 'No se pudo crear el usuario. Revisa los datos.';
+          
+          // 🔥 Manejo del código 409 (Conflicto / Duplicados)
+          if (err.status === 409) {
+            errorMsg = 'Esta cédula o correo electrónico ya se encuentran registrados en el sistema.';
+          } else if (err.error) {
              if (typeof err.error === 'string') { errorMsg = err.error; } 
              else if (err.error.message) { errorMsg = err.error.message; } 
              else if (err.error.error) { errorMsg = err.error.error; }
           }
+          
           Swal.fire('Error al crear', errorMsg, 'error');
         }
       });
