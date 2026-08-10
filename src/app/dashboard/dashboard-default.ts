@@ -275,40 +275,105 @@ export class DashboardDefault implements OnInit, OnDestroy, AfterViewChecked {
     inventario: any[], facturas: any[], bodegas: any[], miembros: any[],
     cuentasPorCobrar: any[], negocioInfo: any
   ): string {
-    const listaProductos = productos.slice(0, 10).map(p => `${p.nombre} (Costo: $${Number(p.costoPromedioActual || p.costoPromedio || 0).toFixed(2)})`).join('; ');
-    const bodegasMap = new Map<string, string[]>();
-    
-    inventario.forEach(i => {
-      const bodega = i.bodegaNombre || 'Bodega Principal';
-      if (!bodegasMap.has(bodega)) bodegasMap.set(bodega, []);
-      
-      const prod = productos.find(p => p.id === i.productoId || p.id === i.producto?.id);
-      const costo = prod ? Number(prod.costoPromedioActual || prod.costoPromedio || 0).toFixed(2) : '0.00';
+    // Catálogo de productos (hasta 25 para no saturar el prompt)
+    const listaProductos = productos.slice(0, 25).map(p => {
+      const costo = Number(p.costoPromedioActual ?? p.costoPromedio ?? 0).toFixed(2);
+      const cat = p.categoriaNombre || p.categoria?.nombre || '';
+      return `${p.nombre}${cat ? ' [' + cat + ']' : ''} (id:${p.id}, costo:$${costo})`;
+    }).join('; ');
+    const avisoMasProductos = productos.length > 25 ? ` ...(+${productos.length - 25} productos más en el catálogo)` : '';
 
-      bodegasMap.get(bodega)!.push(`${i.productoNombre}: ${i.cantidadActual} uds disp. (Costo: $${costo})`);
+    // Categorías
+    const listaCategorias = categorias.slice(0, 15).map(c => c.nombre).filter(Boolean).join(', ') || 'Ninguna';
+
+    // Mapa de stock por bodega + detección de stock bajo / cero
+    const bodegasMap = new Map<string, { items: string[]; bajos: string[]; ceros: string[] }>();
+    const bajosGlobal: string[] = [];
+    const cerosGlobal: string[] = [];
+
+    inventario.forEach(i => {
+      const bodega = (i.bodegaNombre || 'Bodega Principal').trim();
+      if (!bodegasMap.has(bodega)) {
+        bodegasMap.set(bodega, { items: [], bajos: [], ceros: [] });
+      }
+      const entry = bodegasMap.get(bodega)!;
+      const cant = Number(i.cantidadActual ?? 0);
+      const min = Number(i.stockMinimo ?? 0);
+      const nombreProd = i.productoNombre || 'Producto';
+      const linea = `${nombreProd}: ${cant} uds (mín:${min})`;
+
+      entry.items.push(linea);
+
+      if (cant <= 0) {
+        entry.ceros.push(`${nombreProd} (0 en ${bodega})`);
+        cerosGlobal.push(`${nombreProd} → ${bodega}`);
+      } else if (min > 0 && cant <= min) {
+        entry.bajos.push(`${nombreProd}: ${cant}/${min} en ${bodega}`);
+        bajosGlobal.push(`${nombreProd}: ${cant} uds (mín ${min}) → ${bodega}`);
+      }
     });
 
     let inventarioPorBodegaTexto = '';
-    bodegasMap.forEach((items, bodega) => {
-        const itemsSeguros = items.slice(0, 10); 
-        const avisoMas = items.length > 10 ? `...(+${items.length - 10} más)` : '';
-        inventarioPorBodegaTexto += `\n       - ${bodega} (${items.length} prods totales): ${itemsSeguros.join(' | ')} ${avisoMas}`;
-    });
+    if (bodegasMap.size === 0) {
+      inventarioPorBodegaTexto = '\n       (Sin registros de inventario todavía)';
+    } else {
+      bodegasMap.forEach((data, bodega) => {
+        const itemsSeguros = data.items.slice(0, 18);
+        const avisoMas = data.items.length > 18 ? ` ...(+${data.items.length - 18} más)` : '';
+        inventarioPorBodegaTexto += `\n       • ${bodega} (${data.items.length} productos): ${itemsSeguros.join(' | ')}${avisoMas}`;
+        if (data.bajos.length) {
+          inventarioPorBodegaTexto += `\n         ⚠ Stock bajo en esta bodega: ${data.bajos.slice(0, 8).join('; ')}`;
+        }
+        if (data.ceros.length) {
+          inventarioPorBodegaTexto += `\n         ✖ Sin stock (0): ${data.ceros.slice(0, 8).join('; ')}`;
+        }
+      });
+    }
+
+    // Resumen explícito de faltantes / bajos (lo más útil para el usuario)
+    let resumenFaltantes = '';
+    if (cerosGlobal.length === 0 && bajosGlobal.length === 0) {
+      resumenFaltantes = 'Ningún producto con stock 0 ni por debajo del mínimo según los datos cargados.';
+    } else {
+      if (cerosGlobal.length) {
+        resumenFaltantes += `SIN STOCK (0 unidades): ${cerosGlobal.slice(0, 15).join('; ')}${cerosGlobal.length > 15 ? ` ...(+${cerosGlobal.length - 15} más)` : ''}. `;
+      }
+      if (bajosGlobal.length) {
+        resumenFaltantes += `STOCK BAJO (≤ mínimo): ${bajosGlobal.slice(0, 15).join('; ')}${bajosGlobal.length > 15 ? ` ...(+${bajosGlobal.length - 15} más)` : ''}.`;
+      }
+    }
 
     const totalVentas = facturas.reduce((acc, f) => acc + Number(f.totalFactura || f.total || 0), 0);
-    const nombresBodegas = bodegas.map(b => b.nombre).filter(Boolean).join(', ') || 'Ninguna';
+    const nombresBodegas = bodegas.map(b => b.nombre).filter(Boolean).join(', ') || 'Ninguna registrada';
     const miembrosActivos = miembros.filter(m => m.estadoInvitacion !== 'PENDIENTE');
-    const listaMiembros = miembrosActivos.map(m => `${m.nombreUsuario} (${m.rol})`).join(', ') || 'Solo propietario';
+    const listaMiembros = miembrosActivos.map(m => `${m.nombreUsuario || m.primerNombre || 'Usuario'} (${m.rol})`).join(', ') || 'Solo el propietario';
     const totalPorCobrar = cuentasPorCobrar.reduce((acc, c) => acc + Number(c.saldoPendiente || 0), 0);
-    
+
+    const ruc = negocioInfo?.ruc || negocioInfo?.identificacion || '';
+    const dir = negocioInfo?.direccion || '';
+
     return `
-      NEGOCIO: "${this.negocioNombre}"
-      - Bodegas: ${nombresBodegas}
-      - Catálogo Muestra: ${listaProductos}
-      - STOCK BODEGAS: ${inventarioPorBodegaTexto || 'Vacío'}
-      - Totales: ${clientes.length} Clientes | ${proveedores.length} Proveedores | ${miembros.length} Miembros: ${listaMiembros}
-      - Finanzas: Cuentas por cobrar $${totalPorCobrar.toFixed(2)}. Ventas Históricas $${totalVentas.toFixed(2)}.
-    `;
+NEGOCIO: "${this.negocioNombre}"${ruc ? ` | RUC: ${ruc}` : ''}${dir ? ` | Dir: ${dir}` : ''}
+
+BODEGAS REGISTRADAS: ${nombresBodegas}
+Total productos en catálogo: ${productos.length}
+Categorías: ${listaCategorias}
+
+CATÁLOGO (muestra): ${listaProductos || 'Sin productos'}${avisoMasProductos}
+
+STOCK POR BODEGA (cantidadActual y stockMinimo):
+${inventarioPorBodegaTexto}
+
+PRODUCTOS CON STOCK BAJO O CERO (lo que "falta" o está crítico):
+${resumenFaltantes}
+
+RESUMEN GENERAL:
+- Clientes: ${clientes.length} | Proveedores: ${proveedores.length}
+- Equipo: ${listaMiembros}
+- Cuentas por cobrar: $${totalPorCobrar.toFixed(2)}
+- Ventas históricas (suma facturas): $${totalVentas.toFixed(2)}
+- Registros de inventario: ${inventario.length}
+    `.trim();
   }
 
   enviarMensajeDesdeInput() {

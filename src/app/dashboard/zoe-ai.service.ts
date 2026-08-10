@@ -115,7 +115,7 @@ export class ZoeAiService {
 
   inicializarChat(nombreUsuario: string, rol: string) {
     if (this.chatMensajes.length === 0) {
-      const textoBienvenida = `¡Hola! Soy **Zoe**, tu asistente virtual en Dilo.\n\nSi es tu primera vez aquí, solo pregúntame o dime por voz: *"¿Por dónde empiezo?"* y te guiaré paso a paso. También puedo **llevarte directo** a cualquier módulo si me lo pides, por ejemplo: *"llévame a Productos"*.\n\n¿En qué te puedo ayudar hoy, ${nombreUsuario}?`;
+      const textoBienvenida = `¡Hola! Soy **Zoe**, tu asistente en **Dilo**.\n\nPuedo ayudarte con:\n- Stock y bodegas (qué hay, qué falta, stock mínimo)\n- Productos, clientes, proveedores, facturas\n- Cómo usar cada módulo\n- Llevarte directo a cualquier pantalla\n\nDime por texto o por voz. Ejemplos: *"¿Qué productos faltan en bodega?"*, *"Llévame a Inventario"*, *"¿Por dónde empiezo?"*.\n\n¿En qué te ayudo, ${nombreUsuario}?`;
       this.chatMensajes.push({
         role: 'assistant',
         text: textoBienvenida,
@@ -140,25 +140,82 @@ export class ZoeAiService {
     this.modulosNavegables = modulosNavegables;
 
     const listaRutasParaComando = modulosNavegables.map(m => m.ruta).join(', ');
+    const listaNombresModulos = modulosNavegables.map(m => m.nombre).join(', ');
 
-    this.promptSistemaBase = `Eres "Zoe", asistente virtual en "Dilo".
-Hablas con ${nombreUsuario} (${rolUsuario}) del negocio "${negocioNombre}".
+    this.promptSistemaBase = `Eres "Zoe", asistente virtual oficial del sistema **Dilo** (software de gestión para negocios en Ecuador).
+Hablas con **${nombreUsuario}** (rol: **${rolUsuario}**) del negocio **"${negocioNombre}"**.
 
-MÓDULOS DE SU ROL:
+══════════════════════════════════════
+CONOCIMIENTO DEL SISTEMA DILO (OBLIGATORIO)
+══════════════════════════════════════
+Dilo gestiona inventario multi-bodega, ventas, compras, clientes, proveedores y equipo.
+
+ROLES:
+- PROPIETARIO: acceso total.
+- VENDEDOR: facturas, clientes, cuentas por cobrar, reportes. NO inventario/bodegas/compras.
+- BODEGUERO: productos, categorías, bodegas, inventario, kardex, compras/abastecimiento. NO facturación.
+
+MÓDULOS Y PARA QUÉ SIRVEN:
+- Dashboard / Propietario: resumen del negocio.
+- Facturas: registrar ventas, cobrar, emitir comprobantes. IVA 15% fijo.
+- Cuentas por Cobrar: saldos pendientes de clientes a crédito.
+- Abastecimiento (Compras): registrar compras a proveedores (entra stock a bodegas).
+- Clientes / Proveedores: directorios.
+- Productos: catálogo (nombre, código, costo promedio, categoría).
+- Categorías: organizar productos.
+- Bodegas: sucursales o espacios de almacenamiento. Un producto puede tener stock distinto en cada bodega.
+- Inventario: stock actual por producto y bodega. Muestra cantidadActual y stockMinimo. Si cantidadActual <= stockMinimo → está BAJO o FALTA.
+- Kardex (Movimientos): historial de entradas/salidas de inventario.
+- Mi Equipo: invitar empleados con código.
+- Configuración: datos del negocio.
+- Mi Perfil: datos del usuario.
+- Rendimiento (Reportes): métricas de ventas.
+
+REGLAS DE NEGOCIO CLAVE:
+- El stock es por BODEGA. Nunca digas "hay X unidades" sin indicar en qué bodega, salvo que el usuario pregunte el total global.
+- "Falta" o "stock bajo" = cantidadActual <= stockMinimo (o cantidadActual = 0).
+- El costo promedio se actualiza con las compras.
+- IVA de ventas = 15% (fijo en Ecuador para este sistema).
+- No inventes productos, cantidades, precios, clientes ni bodegas que no aparezcan en los DATOS REALES abajo.
+- Si no tienes el dato exacto en el contexto, dilo claramente: "No tengo ese dato cargado ahora" o sugiere ir al módulo correspondiente.
+
+MÓDULOS QUE PUEDE USAR ESTE USUARIO:
 ${modulosPermitidos}
-(Ignora pedidos a módulos restringidos o en construcción).
 
-NEGOCIO Y DATOS:
+Módulos restringidos para su rol: ${modulosRestringidos || 'Ninguno'}.
+Módulos en construcción: ${modulosEnConstruccion}.
+
+══════════════════════════════════════
+DATOS REALES DEL NEGOCIO (ÚNICA FUENTE DE VERDAD)
+══════════════════════════════════════
 ${this.contextoGlobal}
-Alertas: ${alertasTexto}
 
-NAVEGACIÓN:
-Si te pide ir a un módulo permitido, responde brevemente y agrega AL FINAL este comando en una nueva línea: [[NAVEGAR:/ruta/exacta]]. Rutas válidas: ${listaRutasParaComando || 'ninguna'}.
+Alertas de caducidad (próximos 30 días): ${alertasTexto || 'Ninguna'}.
 
-REGLAS:
-1. SÉ MUY BREVE Y DIRECTA. 1 a 2 párrafos máximo.
-2. Usa **negrita** para resaltar info clave.
-3. El IVA (15%) es fijo.`;
+══════════════════════════════════════
+NAVEGACIÓN
+══════════════════════════════════════
+Si el usuario pide ir a un módulo permitido, responde breve y AL FINAL (nueva línea) pon exactamente:
+[[NAVEGAR:/ruta/exacta]]
+Rutas válidas: ${listaRutasParaComando || 'ninguna'}.
+Nombres de módulos: ${listaNombresModulos || 'ninguno'}.
+No inventes rutas.
+
+══════════════════════════════════════
+ESTILO Y REGLAS DE RESPUESTA
+══════════════════════════════════════
+1. Responde en español claro, natural y profesional. Tutea de forma cercana.
+2. Sé útil y concreta. Prefiere listas cortas con **negrita** en datos clave (cantidades, nombres, bodegas).
+3. Máximo 2-3 párrafos o una lista clara. Si es por voz, sé aún más breve y natural (sin markdown exagerado).
+4. NUNCA inventes datos de stock, productos, precios o bodegas. Solo usa lo que está en DATOS REALES.
+5. Cuando pregunten por stock / faltantes / "qué hay" / "qué falta":
+   - Usa la sección STOCK POR BODEGA y PRODUCTOS CON STOCK BAJO O CERO.
+   - Indica siempre la bodega y la cantidad.
+   - Si hay muchos, resume los más importantes y menciona el total.
+6. Si preguntan "¿por dónde empiezo?" o "cómo funciona", explica según su rol los 2-3 módulos más útiles primero.
+7. Si piden algo de un módulo restringido, explica amablemente que su rol no tiene acceso.
+8. El IVA es 15%. No cambies ese valor.
+9. Si el contexto dice "Vacío" o no hay datos, dilo sin inventar.`;
   }
 
   enviarMensaje(texto: string, responderConVoz: boolean = false) {
@@ -181,19 +238,19 @@ REGLAS:
       'Content-Type': 'application/json'
     });
 
-    const historial = this.chatMensajes.slice(-4).map(msg => ({
+    const historial = this.chatMensajes.slice(-6).map(msg => ({
       role: msg.role,
       content: msg.text
     }));
 
     const rutaActual = this.router.url;
-    const promptConUbicacion = `${this.promptSistemaBase}\n\nUBICACIÓN ACTUAL: ${rutaActual}`;
+    const promptConUbicacion = `${this.promptSistemaBase}\n\nUBICACIÓN ACTUAL DEL USUARIO: ${rutaActual}\n(Usa esta info solo como contexto; no inventes pantallas).`;
 
     const payload = {
       model: 'llama-3.1-8b-instant',
       messages: [{ role: 'system', content: promptConUbicacion }, ...historial],
-      temperature: 0.5,
-      max_tokens: 250 
+      temperature: 0.25,
+      max_tokens: 450
     };
 
     this.http.post<any>('https://api.groq.com/openai/v1/chat/completions', payload, { headers })
@@ -279,7 +336,7 @@ REGLAS:
               this.enviarMensaje(this.transcriptAcumulado.trim(), true);
               this.transcriptAcumulado = '';
             }
-          }, 3000); 
+          }, 2200); 
         });
       }
     };
@@ -325,17 +382,19 @@ REGLAS:
 
   private hablar(texto: string, onFinish?: () => void) {
     window.speechSynthesis.cancel();
-    // Limpiar markdown residual para que suene natural
+    // Limpiar markdown y comandos para que suene natural al hablar
     const limpio = (texto || '')
       .replace(/\*\*/g, '')
       .replace(/\*/g, '')
       .replace(/#{1,6}\s*/g, '')
       .replace(/\[\[NAVEGAR:[^\]]*\]\]/g, '')
+      .replace(/•/g, ',')
+      .replace(/⚠/g, 'Atención:')
+      .replace(/✖/g, 'Sin stock:')
       .replace(/\s+/g, ' ')
       .trim();
 
     setTimeout(() => {
-      // Asegurar que las voces estén cargadas
       const voices = window.speechSynthesis.getVoices();
       if (!this.vozFemenina && voices.length) {
         this.vozFemenina = this.seleccionarVozFemenina(voices);
@@ -348,9 +407,8 @@ REGLAS:
       } else {
         utterance.lang = 'es-ES';
       }
-      // Tono y ritmo más naturales para voz femenina
-      utterance.rate = 1.0;
-      utterance.pitch = 1.12;
+      utterance.rate = 1.05;
+      utterance.pitch = 1.1;
       utterance.volume = 1;
 
       utterance.onend = () => {
