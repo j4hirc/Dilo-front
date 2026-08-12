@@ -207,4 +207,104 @@ export class Login {
       clearInterval(this.lockoutTimer);
     }
   }
+
+  recuperarContrasena() {
+    Swal.fire({
+      title: 'Recuperar Contraseña',
+      text: 'Ingresa el correo electrónico asociado a tu cuenta.',
+      input: 'email',
+      inputPlaceholder: 'correo@ejemplo.com',
+      showCancelButton: true,
+      confirmButtonText: 'Enviar código',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#ed8936',
+      showLoaderOnConfirm: true,
+      preConfirm: (email) => {
+        if (!email) {
+          Swal.showValidationMessage('Debes ingresar un correo');
+          return false;
+        }
+        return this.http.post(`${this.apiUrl}/auth/forgot-password`, { email }, { responseType: 'text' }).toPromise()
+          .then(() => email)
+          .catch(err => {
+            Swal.showValidationMessage(err.error || 'No pudimos encontrar ese correo.');
+            return false;
+          });
+      }
+    }).then((result) => {
+      if (result.isConfirmed && result.value) {
+        this.ingresarCodigoRecuperacion(result.value); // Pasamos al siguiente paso
+      }
+    });
+  }
+
+  private ingresarCodigoRecuperacion(email: string) {
+    Swal.fire({
+      title: 'Verifica tu correo',
+      html: `Hemos enviado un código de 6 dígitos a <b>${email}</b>.<br>Revísalo e ingrésalo aquí:`,
+      input: 'text',
+      inputPlaceholder: 'Ej: 123456',
+      showCancelButton: true,
+      confirmButtonText: 'Verificar código',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#ed8936',
+      inputAttributes: {
+        maxlength: '6',
+        autocapitalize: 'off',
+        autocorrect: 'off'
+      },
+      preConfirm: (codigo) => {
+        if (!codigo || codigo.length < 6) {
+          Swal.showValidationMessage('El código debe tener 6 dígitos');
+          return false;
+        }
+        return codigo;
+      }
+    }).then((result) => {
+      if (result.isConfirmed && result.value) {
+        this.crearNuevaContrasena(email, result.value); // Último paso
+      }
+    });
+  }
+
+  private crearNuevaContrasena(email: string, codigo: string) {
+    Swal.fire({
+      title: 'Nueva Contraseña',
+      text: 'Crea tu nueva contraseña segura.',
+      input: 'password',
+      inputPlaceholder: 'Mínimo 8 caracteres',
+      showCancelButton: true,
+      confirmButtonText: 'Guardar cambios',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#ed8936',
+      showLoaderOnConfirm: true,
+      inputAttributes: {
+        minlength: '8',
+        autocapitalize: 'off',
+        autocorrect: 'off'
+      },
+      preConfirm: (nuevaPassword) => {
+        if (!nuevaPassword || nuevaPassword.length < 6) {
+          Swal.showValidationMessage('La contraseña debe tener al menos 6 caracteres');
+          return false;
+        }
+        
+        const payload = { email, codigo, nuevaPassword };
+        return this.http.post(`${this.apiUrl}/auth/reset-password`, payload, { responseType: 'text' }).toPromise()
+          .catch(err => {
+            Swal.showValidationMessage(err.error || 'El código es inválido o ha expirado.');
+            return false;
+          });
+      }
+    }).then((result) => {
+      if (result.isConfirmed) {
+        Swal.fire({
+          icon: 'success',
+          title: '¡Contraseña actualizada!',
+          text: 'Ya puedes iniciar sesión con tu nueva contraseña.',
+          confirmButtonColor: '#ed8936'
+        });
+      }
+    });
+  }
 }
