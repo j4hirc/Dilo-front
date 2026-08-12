@@ -92,9 +92,20 @@ export class Facturas implements OnInit, OnDestroy {
   private seleccionEnCurso = false;
 
   // 🔥 CÁLCULOS alineados con el backend:
-  // - precioUnitario = PVP SIN IVA incluido
+  // - precio de línea = costoPromedioActual (fallback: precioUnitario)
   // - IVA se suma solo sobre productos con grabaIva
   // - total = bases (tras descuento global) + IVA
+
+  /**
+   * Precio de la factura = costo promedio del producto.
+   * Si no hay costo (>0), usa PVP. Igual que FacturaServiceImpl.
+   */
+  private precioParaFactura(producto: any): number {
+    const costo = Number(producto?.costoPromedioActual ?? producto?.costoPromedio ?? 0);
+    if (costo > 0) return costo;
+    return Number(producto?.precioUnitario ?? producto?.precio ?? 0);
+  }
+
   get subtotalCarrito(): number {
     return this.nuevaFactura.detalles.reduce((sum: number, item: any) => sum + (Number(item.subtotal) || 0), 0);
   }
@@ -299,12 +310,18 @@ export class Facturas implements OnInit, OnDestroy {
       this.clientesList = Array.isArray(clientes) ? clientes : [];
       this.clientesFiltrados = [...this.clientesList];
       // PVP + costo promedio (el backend guarda el costo en el detalle de factura)
-      this.productosList = (Array.isArray(productos) ? productos : []).map((p: any) => ({
-        ...p,
-        precioUnitario: Number(p.precioUnitario ?? p.precio ?? 0),
-        costoPromedioActual: Number(p.costoPromedioActual ?? p.costoPromedio ?? 0),
-        grabaIva: !!p.grabaIva
-      }));
+      this.productosList = (Array.isArray(productos) ? productos : []).map((p: any) => {
+        const precioUnitario = Number(p.precioUnitario ?? p.precio ?? 0);
+        const costoPromedioActual = Number(p.costoPromedioActual ?? p.costoPromedio ?? 0);
+        return {
+          ...p,
+          precioUnitario,
+          costoPromedioActual,
+          // Precio visible en factura = costo promedio (o PVP si no hay)
+          precioFactura: costoPromedioActual > 0 ? costoPromedioActual : precioUnitario,
+          grabaIva: !!p.grabaIva
+        };
+      });
       this.bodegasList = Array.isArray(bodegas) ? bodegas : [];
       this.inventarioList = Array.isArray(inventario) ? inventario : [];
       this.cdr.detectChanges();
@@ -1097,7 +1114,7 @@ export class Facturas implements OnInit, OnDestroy {
     if (isNaN(descMonto) || descMonto < 0) descMonto = 0;
     // Solo aplicar descuento si el usuario lo dijo (valores > 0)
     if (descPct > 0) {
-      const precioUnit = Number(prod.precioUnitario || 0);
+      const precioUnit = this.precioParaFactura(prod);
       descMonto = (precioUnit * cant * Math.min(descPct, 100)) / 100;
     }
 
@@ -1488,7 +1505,7 @@ export class Facturas implements OnInit, OnDestroy {
       Swal.fire('Stock Limitado', `Solo quedan ${stockActual} unidades disponibles.`, 'info');
     }
 
-    const precioUnit = Number(prodSelect.precioUnitario || 0);
+    const precioUnit = this.precioParaFactura(prodSelect);
     let descPct = Number(this.itemTemp.descuentoPorcentaje || 0);
     let descMonto = Number(this.itemTemp.descuento || 0);
     if (descPct > 0) {
@@ -1509,8 +1526,8 @@ export class Facturas implements OnInit, OnDestroy {
   }
 
   /**
-   * Usa el PVP (precioUnitario). Fusiona si el mismo producto+bodega ya está en el carrito.
-   * Respeta grabaIva del producto.
+   * Usa costo promedio (fallback PVP). Fusiona si mismo producto+bodega ya está.
+   * Respeta grabaIva. Alineado con FacturaServiceImpl del backend.
    */
   private agregarProductoDirecto(
     producto: any,
@@ -1521,15 +1538,17 @@ export class Facturas implements OnInit, OnDestroy {
   ) {
     if (!producto || !bodegaId || cantidad <= 0) return;
 
-    const precio = Number(producto.precioUnitario || 0);
+    // 🔥 Costo promedio → precio de la factura (igual que el backend)
+    const precio = this.precioParaFactura(producto);
     if (precio <= 0) {
-      Swal.fire('Error', `El producto "${producto.nombre}" no tiene precio de venta configurado.`, 'error');
+      Swal.fire('Error', `El producto "${producto.nombre}" no tiene costo promedio ni precio configurado.`, 'error');
       return;
     }
 
     const grabaIva = !!producto.grabaIva;
     const bodSelect = this.bodegasList.find((b: any) => b.id === bodegaId);
     const bodegaNombre = bodSelect ? bodSelect.nombre : 'Principal';
+    const costoProm = Number(producto.costoPromedioActual || producto.costoPromedio || 0);
 
     const idxExistente = this.nuevaFactura.detalles.findIndex(
       (d: any) => d.productoId === producto.id && d.bodegaId === bodegaId
@@ -1546,13 +1565,15 @@ export class Facturas implements OnInit, OnDestroy {
       }
       const nuevoSub = (precio * nuevaCant) - nuevoDesc;
       if (nuevoSub < 0) {
-        Swal.fire('Error', `El descuento no puede ser mayor al precio total de ${producto.nombre}.`, 'error');
+        Swal.fire('Error', `El descuento no puede ser mayor al total de ${producto.nombre}.`, 'error');
         return;
       }
       existente.cantidad = nuevaCant;
       existente.descuento = nuevoDesc;
       existente.descuentoPorcentaje = nuevoPct;
       existente.subtotal = nuevoSub;
+      existente.precioUnitario = precio; // costo promedio (o PVP fallback)
+      existente.costoPromedioActual = costoProm;
       existente.grabaIva = grabaIva;
       this.cdr.detectChanges();
       return;
@@ -1560,7 +1581,7 @@ export class Facturas implements OnInit, OnDestroy {
 
     const subtotal = (precio * cantidad) - descuento;
     if (subtotal < 0) {
-      Swal.fire('Error', `El descuento no puede ser mayor al precio total de ${producto.nombre}.`, 'error');
+      Swal.fire('Error', `El descuento no puede ser mayor al total de ${producto.nombre}.`, 'error');
       return;
     }
 
@@ -1570,8 +1591,8 @@ export class Facturas implements OnInit, OnDestroy {
       bodegaNombre: bodegaNombre,
       cantidad: cantidad,
       productoNombre: producto.nombre,
-      precioUnitario: precio, // PVP (lo que cobra el cliente)
-      costoPromedioActual: Number(producto.costoPromedioActual || 0), // costeo; el backend lo guarda en el detalle
+      precioUnitario: precio, // costo promedio (o PVP si no hay costo)
+      costoPromedioActual: costoProm,
       descuento: descuento,
       descuentoPorcentaje: descuentoPorcentaje || 0,
       grabaIva: grabaIva,

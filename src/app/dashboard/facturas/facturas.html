@@ -299,7 +299,7 @@
                                     style="flex: 1; transition: all 0.3s ease;">
                                     <option [ngValue]="null" disabled>Seleccionar...</option>
                                     <option *ngFor="let prod of productosList" [ngValue]="prod.id">{{ prod.nombre }} -
-                                        ${{ prod.precioUnitario }}</option>
+                                        ${{ (prod.precioFactura ?? prod.costoPromedioActual ?? prod.precioUnitario) | number:'1.2-2' }}</option>
                                 </select>
                                 <button class="btn-primary"
                                     style="padding: 0 20px; height: 44px; margin-top: 0; border-radius: 8px;"
