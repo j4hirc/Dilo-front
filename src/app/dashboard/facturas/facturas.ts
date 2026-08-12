@@ -212,47 +212,23 @@ export class Facturas implements OnInit, OnDestroy {
     this.http.get<any[]>(`${this.apiUrl}/negocios/${id}/facturas`, { headers: this.getAuthHeaders() }).subscribe({
       next: (data) => {
         const arregloSeguro = Array.isArray(data) ? data : [];
-        this.facturas = arregloSeguro.map(f => {
-          // FacturaResponseDTO trae: clienteNombre + clienteIdentificacion
-          let nombreCli =
-            f.clienteNombre ||
-            f.nombreCliente ||
-            f.cliente?.nombreCompleto ||
-            f.cliente?.nombre ||
-            f.cliente?.razonSocial ||
-            'Consumidor Final';
+        this.facturas = arregloSeguro.map(f => ({
+          id: f.id,
+          numero: f.numeroFactura || 'S/N',
+          cliente: f.clienteNombre || f.cliente?.nombre || f.cliente?.razonSocial || 'Consumidor Final',
+          tipo: f.formaPago || 'Manual',
+          fecha: f.fechaEmision || new Date().toLocaleDateString(),
+          monto: Number(f.totalFactura || f.total || 0),
+          estado: f.estadoSri || 'Emitida',
+          descuentoGlobal: Number(f.totalDescuento || f.descuentoGlobal || 0),
+          subtotalIva0: Number(f.subtotalIva0 || 0),
+          subtotalIvaAplicado: Number(f.subtotalIvaAplicado || 0),
+          totalIva: Number(f.totalIva || 0),
+          porcentajeIva: Number(f.porcentajeIvaAplicado || (this.ivaActual * 100)),
+          detalles: f.detallesFactura || f.detalles || f.items || []
+        }));
 
-          // DNI / CI / RUC del DTO
-          const dni =
-            f.clienteIdentificacion ||
-            f.cliente?.dni ||
-            f.cliente?.identificacion ||
-            f.dniCliente ||
-            null;
-
-          if (dni && !String(nombreCli).includes(String(dni))) {
-            nombreCli = `${nombreCli} (${dni})`;
-          }
-
-          return {
-            id: f.id,
-            numero: f.numeroFactura || 'S/N',
-            cliente: nombreCli,
-            clienteIdentificacion: dni ? String(dni) : '',
-            tipo: f.formaPago || 'Manual',
-            fecha: f.fechaEmision || new Date().toLocaleDateString(),
-            monto: Number(f.totalFactura || f.total || 0),
-            estado: f.estadoSri || 'Emitida',
-            descuentoGlobal: Number(f.totalDescuento || f.descuentoGlobal || 0),
-            subtotalIva0: Number(f.subtotalIva0 || 0),
-            subtotalIvaAplicado: Number(f.subtotalIvaAplicado || 0),
-            totalIva: Number(f.totalIva || 0),
-            porcentajeIva: Number(f.porcentajeIvaAplicado || (this.ivaActual * 100)),
-            detalles: f.detallesFactura || f.detalles || f.items || []
-          };
-        });
-
-        this.facturasBase = [...this.facturas];
+        this.facturasBase = [...this.facturas]; // 🔥 NUEVO: Guardamos la original para buscar
 
         this.isLoading = false;
         this.cdr.detectChanges();
@@ -261,21 +237,17 @@ export class Facturas implements OnInit, OnDestroy {
     });
   }
 
-  /** Busca facturas en tiempo real (número, cliente o DNI/CI). Se ejecuta al escribir. */
+  // 🔥 NUEVO: Función para buscar facturas en tiempo real
   buscarFacturas() {
     if (!this.terminoBusqueda.trim()) {
       this.facturas = [...this.facturasBase];
-      this.cdr.detectChanges();
       return;
     }
-    const term = this.limpiarTexto(this.terminoBusqueda);
-    this.facturas = this.facturasBase.filter(f => {
-      const numero = this.limpiarTexto(f.numero);
-      const cliente = this.limpiarTexto(f.cliente);
-      const dni = this.limpiarTexto(f.clienteIdentificacion || '');
-      return numero.includes(term) || cliente.includes(term) || (dni && dni.includes(term));
-    });
-    this.cdr.detectChanges();
+    const term = this.terminoBusqueda.toLowerCase().trim();
+    this.facturas = this.facturasBase.filter(f =>
+      f.numero.toLowerCase().includes(term) ||
+      f.cliente.toLowerCase().includes(term)
+    );
   }
 
   abrirModalNuevo(porVoz = false) {
@@ -326,7 +298,13 @@ export class Facturas implements OnInit, OnDestroy {
     ]).subscribe(([clientes, productos, bodegas, inventario]) => {
       this.clientesList = Array.isArray(clientes) ? clientes : [];
       this.clientesFiltrados = [...this.clientesList];
-      this.productosList = Array.isArray(productos) ? productos : [];
+      // PVP + costo promedio (el backend guarda el costo en el detalle de factura)
+      this.productosList = (Array.isArray(productos) ? productos : []).map((p: any) => ({
+        ...p,
+        precioUnitario: Number(p.precioUnitario ?? p.precio ?? 0),
+        costoPromedioActual: Number(p.costoPromedioActual ?? p.costoPromedio ?? 0),
+        grabaIva: !!p.grabaIva
+      }));
       this.bodegasList = Array.isArray(bodegas) ? bodegas : [];
       this.inventarioList = Array.isArray(inventario) ? inventario : [];
       this.cdr.detectChanges();
@@ -1264,41 +1242,26 @@ export class Facturas implements OnInit, OnDestroy {
     if (porCodigo.length === 1) return porCodigo;
     if (porCodigo.length > 1) return porCodigo;
 
-    // 3) Por costo promedio o precio unitario (si el usuario dice un número)
-    const termNumerico = txt.replace(/[^0-9.,]/g, '').replace(',', '.');
-    if (termNumerico && !isNaN(Number(termNumerico))) {
-      const valor = Number(termNumerico);
-      const porCosto = this.productosList.filter(p => {
-        const costo = Number(p.costoPromedio ?? p.costo ?? NaN);
-        const precio = Number(p.precioUnitario ?? p.precio ?? NaN);
-        // Coincide exacto o con tolerancia de 0.01
-        const matchCosto = !isNaN(costo) && Math.abs(costo - valor) < 0.015;
-        const matchPrecio = !isNaN(precio) && Math.abs(precio - valor) < 0.015;
-        // También si el texto del número aparece en el string del costo/precio
-        const strCosto = this.limpiarTexto(String(p.costoPromedio ?? p.costo ?? ''));
-        const strPrecio = this.limpiarTexto(String(p.precioUnitario ?? p.precio ?? ''));
-        return matchCosto || matchPrecio || strCosto.includes(termNumerico) || strPrecio.includes(termNumerico);
-      });
-      const uniqCosto = this.dedupProductos(porCosto);
-      if (uniqCosto.length >= 1) return uniqCosto;
-    }
-
-    // 4) El nombre del producto CONTIENE lo dicho (o al revés)
+    // 3) El nombre del producto CONTIENE lo dicho (o al revés)
     const partial = this.productosList.filter(p => {
       const nom = this.limpiarTexto(p.nombre);
       return nom.includes(txt) || (txt.length >= 4 && txt.includes(nom));
     });
+    // Deduplicar por id
     const uniqPartial = this.dedupProductos(partial);
     if (uniqPartial.length === 1) return uniqPartial;
     if (uniqPartial.length > 1) {
+      // Preferir los que empiezan igual, pero SI HAY MÁS DE UNO → todos a opciones
       const starts = uniqPartial.filter(p => this.limpiarTexto(p.nombre).startsWith(txt));
       if (starts.length === 1 && uniqPartial.length <= 3) {
+        // Un solo que empieza igual y pocos candidatos: aún así, si hay varios similares, mostrar opciones
+        // Usuario pidió: siempre que se repita → opciones. Si starts=1 y hay otros, mostrar todos.
         return uniqPartial;
       }
       return starts.length > 1 ? starts : uniqPartial;
     }
 
-    // 5) Todas las palabras significativas deben aparecer en el nombre
+    // 4) Todas las palabras significativas deben aparecer en el nombre
     const palabras = txt.split(/\s+/).filter(p => p.length > 2);
     if (palabras.length > 0) {
       const porPalabras = this.productosList.filter(p => {
@@ -1309,7 +1272,7 @@ export class Facturas implements OnInit, OnDestroy {
       if (uniq.length >= 1) return uniq;
     }
 
-    // 6) Fallback suave: al menos una palabra larga (mín 4 chars)
+    // 5) Fallback suave: al menos una palabra larga (mín 4 chars) — siempre lista para desambiguar
     const largas = txt.split(/\s+/).filter(p => p.length >= 4);
     if (largas.length > 0) {
       const suaves = this.productosList.filter(p => {
@@ -1607,7 +1570,8 @@ export class Facturas implements OnInit, OnDestroy {
       bodegaNombre: bodegaNombre,
       cantidad: cantidad,
       productoNombre: producto.nombre,
-      precioUnitario: precio,
+      precioUnitario: precio, // PVP (lo que cobra el cliente)
+      costoPromedioActual: Number(producto.costoPromedioActual || 0), // costeo; el backend lo guarda en el detalle
       descuento: descuento,
       descuentoPorcentaje: descuentoPorcentaje || 0,
       grabaIva: grabaIva,
