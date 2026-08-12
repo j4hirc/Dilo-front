@@ -14,7 +14,7 @@ import Swal from 'sweetalert2';
 export class CuentasPorCobrar implements OnInit {
   private http = inject(HttpClient);
   private cdr = inject(ChangeDetectorRef);
-  
+
   cuentas: any[] = [];
   cuentasBase: any[] = [];
 
@@ -46,7 +46,7 @@ export class CuentasPorCobrar implements OnInit {
     const userStr = localStorage.getItem('usuario');
     const usuarioLogueado = userStr ? JSON.parse(userStr) : null;
     this.negocioId = usuarioLogueado?.negocioId;
-    
+
     if (this.negocioId) {
       this.cargarCuentas(this.negocioId);
     } else {
@@ -56,21 +56,34 @@ export class CuentasPorCobrar implements OnInit {
 
   private getAuthHeaders(): HttpHeaders {
     const rawToken = localStorage.getItem('dilo_token') || '';
-    const cleanToken = rawToken.replace(/['"]+/g, ''); 
+    const cleanToken = rawToken.replace(/['"]+/g, '');
     return new HttpHeaders().set('Authorization', `Bearer ${cleanToken}`);
   }
 
   cargarCuentas(id: number) {
     this.isLoading = true;
-    
-    this.http.get<any[]>(`${this.apiUrl}/cuentas-por-cobrar/negocio/${id}`, { headers: this.getAuthHeaders() }).subscribe({
+
+    this.http.get<any[]>(`${this.apiUrl}/cuentas-por-cobrar/negocio/${id}`, {
+      headers: this.getAuthHeaders()
+    }).subscribe({
       next: (data) => {
         setTimeout(() => {
-            this.cuentasBase = Array.isArray(data) ? data.map(c => ({ ...c, showCuotas: false })) : [];
-            this.calcularEstadisticas(); // Calcula sobre las de base
-            this.aplicarFiltros(); // Aplica por si había algo filtrado
-            this.isLoading = false;
-            this.cdr.detectChanges();
+          this.cuentasBase = Array.isArray(data)
+            ? data.map(c => {
+              const nombre = this.obtenerNombreCliente(c);
+              return {
+                ...c,
+                showCuotas: false,
+                // Unificamos en clienteNombre (el DTO trae "nombreCliente")
+                clienteNombre: nombre || 'Sin nombre',
+                nombreCliente: nombre || c.nombreCliente || null
+              };
+            })
+            : [];
+          this.calcularEstadisticas();
+          this.aplicarFiltros();
+          this.isLoading = false;
+          this.cdr.detectChanges();
         }, 0);
       },
       error: (err) => {
@@ -82,104 +95,135 @@ export class CuentasPorCobrar implements OnInit {
   }
 
   setFiltro(estado: string) {
-      this.filtroEstado = estado;
-      this.aplicarFiltros();
+    this.filtroEstado = estado;
+    this.aplicarFiltros();
   }
 
   /** Cambia el campo de ordenación (toggle asc/desc si es el mismo campo) */
   ordenarPor(campo: string) {
-      if (this.ordenCampo === campo) {
-          this.ordenDireccion = this.ordenDireccion === 'asc' ? 'desc' : 'asc';
-      } else {
-          this.ordenCampo = campo;
-          this.ordenDireccion = campo === 'fechaVencimiento' ? 'asc' : 'desc';
-      }
-      this.aplicarFiltros();
+    if (this.ordenCampo === campo) {
+      this.ordenDireccion = this.ordenDireccion === 'asc' ? 'desc' : 'asc';
+    } else {
+      this.ordenCampo = campo;
+      this.ordenDireccion = campo === 'fechaVencimiento' ? 'asc' : 'desc';
+    }
+    this.aplicarFiltros();
   }
 
   /** Icono visual del orden actual en cabeceras */
   iconoOrden(campo: string): string {
-      if (this.ordenCampo !== campo) return '';
-      return this.ordenDireccion === 'asc' ? ' ▲' : ' ▼';
+    if (this.ordenCampo !== campo) return '';
+    return this.ordenDireccion === 'asc' ? ' ▲' : ' ▼';
   }
 
   limpiarFiltrosFecha() {
-      this.filtroFechaDesde = '';
-      this.filtroFechaHasta = '';
-      this.aplicarFiltros();
+    this.filtroFechaDesde = '';
+    this.filtroFechaHasta = '';
+    this.aplicarFiltros();
+  }
+
+  /** Normaliza texto para búsquedas (quita acentos, minúsculas, trim) */
+  private limpiarTexto(texto: any): string {
+    if (texto === null || texto === undefined) return '';
+    return String(texto)
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+  }
+
+  /**
+   * Obtiene el nombre del cliente.
+   * El backend (CuentaPorCobrarResponseDTO) expone el campo como `nombreCliente`
+   * y ahora incluye el DNI: "Juan Pérez (12345678)"
+   */
+  private obtenerNombreCliente(c: any): string {
+    if (!c) return '';
+    const nombre =
+      c.nombreCliente ||
+      c.clienteNombre ||
+      c.cliente?.nombreCompleto ||
+      c.cliente?.nombre ||
+      c.cliente?.razonSocial ||
+      (c.cliente?.primerNombre
+        ? `${c.cliente.primerNombre || ''} ${c.cliente.apellidoPaterno || ''}`.trim()
+        : '');
+    return (nombre && String(nombre).trim()) || '';
   }
 
   aplicarFiltros() {
-      let filtradas = [...this.cuentasBase];
+    let filtradas = [...this.cuentasBase];
 
-      // Filtro por estado
-      if (this.filtroEstado !== 'TODAS') {
-          filtradas = filtradas.filter(c => c.estado === this.filtroEstado);
-      }
+    // Filtro por estado
+    if (this.filtroEstado !== 'TODAS') {
+      filtradas = filtradas.filter(c => c.estado === this.filtroEstado);
+    }
 
-      // Filtro por texto (cliente o factura)
-      if (this.terminoBusqueda.trim()) {
-          const term = this.terminoBusqueda.toLowerCase().trim();
-          filtradas = filtradas.filter(c => 
-              (c.numeroFactura && c.numeroFactura.toLowerCase().includes(term)) || 
-              (c.clienteNombre && c.clienteNombre.toLowerCase().includes(term))
-          );
-      }
-
-      // Filtro por rango de fechas de vencimiento
-      if (this.filtroFechaDesde) {
-          const desde = new Date(this.filtroFechaDesde);
-          desde.setHours(0, 0, 0, 0);
-          filtradas = filtradas.filter(c => {
-              if (!c.fechaVencimiento) return false;
-              const fv = new Date(c.fechaVencimiento);
-              fv.setHours(0, 0, 0, 0);
-              return fv >= desde;
-          });
-      }
-      if (this.filtroFechaHasta) {
-          const hasta = new Date(this.filtroFechaHasta);
-          hasta.setHours(23, 59, 59, 999);
-          filtradas = filtradas.filter(c => {
-              if (!c.fechaVencimiento) return false;
-              const fv = new Date(c.fechaVencimiento);
-              return fv <= hasta;
-          });
-      }
-
-      // Ordenación
-      filtradas.sort((a, b) => {
-          let valA: any;
-          let valB: any;
-
-          switch (this.ordenCampo) {
-              case 'fechaVencimiento':
-                  valA = a.fechaVencimiento ? new Date(a.fechaVencimiento).getTime() : 0;
-                  valB = b.fechaVencimiento ? new Date(b.fechaVencimiento).getTime() : 0;
-                  break;
-              case 'montoTotal':
-                  valA = Number(a.montoTotal || 0);
-                  valB = Number(b.montoTotal || 0);
-                  break;
-              case 'saldoPendiente':
-                  valA = Number(a.saldoPendiente || 0);
-                  valB = Number(b.saldoPendiente || 0);
-                  break;
-              case 'clienteNombre':
-                  valA = (a.clienteNombre || '').toLowerCase();
-                  valB = (b.clienteNombre || '').toLowerCase();
-                  break;
-              default:
-                  valA = a.fechaVencimiento ? new Date(a.fechaVencimiento).getTime() : 0;
-                  valB = b.fechaVencimiento ? new Date(b.fechaVencimiento).getTime() : 0;
-          }
-
-          if (valA < valB) return this.ordenDireccion === 'asc' ? -1 : 1;
-          if (valA > valB) return this.ordenDireccion === 'asc' ? 1 : -1;
-          return 0;
+    // Búsqueda por cliente (nombre o DNI) o número de factura
+    if (this.terminoBusqueda.trim()) {
+      const term = this.limpiarTexto(this.terminoBusqueda);
+      filtradas = filtradas.filter(c => {
+        const nombre = this.limpiarTexto(this.obtenerNombreCliente(c)); // incluye DNI
+        const factura = this.limpiarTexto(c.numeroFactura ?? c.numero ?? '');
+        return nombre.includes(term) || factura.includes(term);
       });
+    }
 
-      this.cuentas = filtradas;
+    // Filtro por rango de fechas de vencimiento
+    if (this.filtroFechaDesde) {
+      const desde = new Date(this.filtroFechaDesde);
+      desde.setHours(0, 0, 0, 0);
+      filtradas = filtradas.filter(c => {
+        if (!c.fechaVencimiento) return false;
+        const fv = new Date(c.fechaVencimiento);
+        fv.setHours(0, 0, 0, 0);
+        return fv >= desde;
+      });
+    }
+    if (this.filtroFechaHasta) {
+      const hasta = new Date(this.filtroFechaHasta);
+      hasta.setHours(23, 59, 59, 999);
+      filtradas = filtradas.filter(c => {
+        if (!c.fechaVencimiento) return false;
+        const fv = new Date(c.fechaVencimiento);
+        return fv <= hasta;
+      });
+    }
+
+    // Ordenación
+    filtradas.sort((a, b) => {
+      let valA: any;
+      let valB: any;
+
+      switch (this.ordenCampo) {
+        case 'fechaVencimiento':
+          valA = a.fechaVencimiento ? new Date(a.fechaVencimiento).getTime() : 0;
+          valB = b.fechaVencimiento ? new Date(b.fechaVencimiento).getTime() : 0;
+          break;
+        case 'montoTotal':
+          valA = Number(a.montoTotal || 0);
+          valB = Number(b.montoTotal || 0);
+          break;
+        case 'saldoPendiente':
+          valA = Number(a.saldoPendiente || 0);
+          valB = Number(b.saldoPendiente || 0);
+          break;
+        case 'clienteNombre':
+          valA = this.limpiarTexto(this.obtenerNombreCliente(a));
+          valB = this.limpiarTexto(this.obtenerNombreCliente(b));
+          break;
+        default:
+          valA = a.fechaVencimiento ? new Date(a.fechaVencimiento).getTime() : 0;
+          valB = b.fechaVencimiento ? new Date(b.fechaVencimiento).getTime() : 0;
+      }
+
+      if (valA < valB) return this.ordenDireccion === 'asc' ? -1 : 1;
+      if (valA > valB) return this.ordenDireccion === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    this.cuentas = filtradas;
+    this.cdr.detectChanges();
   }
 
   calcularEstadisticas() {
@@ -192,10 +236,10 @@ export class CuentasPorCobrar implements OnInit {
     this.cuentasBase.forEach(c => {
       const monto = Number(c.montoTotal || 0);
       const saldo = Number(c.saldoPendiente || 0);
-      
+
       this.totalPorCobrar += saldo;
       this.totalAbonado += (monto - saldo);
-      
+
       const fechaVence = new Date(c.fechaVencimiento).getTime();
       if (saldo > 0 && fechaVence < hoy) {
         this.cuentasVencidas++;
@@ -231,23 +275,27 @@ export class CuentasPorCobrar implements OnInit {
     }
 
     this.isSaving = true;
-    const payload = { montoPago: this.montoAbono }; 
+    const payload = { montoPago: this.montoAbono };
 
-    this.http.post(`${this.apiUrl}/cuentas-por-cobrar/${this.cuentaSeleccionada.id}/pagar`, payload, { 
-      headers: this.getAuthHeaders(),
-      responseType: 'text' 
-    }).subscribe({
-        next: () => {
-          this.isSaving = false;
-          this.cerrarModal();
-          Swal.fire('¡Pago Registrado!', 'El abono se aplicó correctamente.', 'success');
-          this.cargarCuentas(this.negocioId!);
-        },
-        error: (err) => {
-          this.isSaving = false;
-          console.error(err);
-          Swal.fire('Error', 'No se pudo registrar el pago.', 'error');
-        }
-      });
+    this.http.post(
+      `${this.apiUrl}/cuentas-por-cobrar/${this.cuentaSeleccionada.id}/pagar`,
+      payload,
+      {
+        headers: this.getAuthHeaders(),
+        responseType: 'text'
+      }
+    ).subscribe({
+      next: () => {
+        this.isSaving = false;
+        this.cerrarModal();
+        Swal.fire('¡Pago Registrado!', 'El abono se aplicó correctamente.', 'success');
+        this.cargarCuentas(this.negocioId!);
+      },
+      error: (err) => {
+        this.isSaving = false;
+        console.error(err);
+        Swal.fire('Error', 'No se pudo registrar el pago.', 'error');
+      }
+    });
   }
 }

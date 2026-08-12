@@ -2,7 +2,11 @@
     <div class="header-titles">
         <h2>
             <div class="icon-wrapper purple-glow">
-                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2.5">
+                    <rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect>
+                    <line x1="2" y1="10" x2="22" y2="10"></line>
+                </svg>
             </div>
             Cuentas por Cobrar
         </h2>
@@ -13,7 +17,11 @@
 <section class="stats-grid fade-in">
     <div class="stat-card">
         <div class="stat-icon-wrapper bg-orange">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                stroke="#ea580c" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
         </div>
         <div class="stat-info">
             <h3>${{ totalPorCobrar | number:'1.2-2' }}</h3>
@@ -23,7 +31,11 @@
 
     <div class="stat-card">
         <div class="stat-icon-wrapper bg-green">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                stroke="#16a34a" stroke-width="2">
+                <line x1="12" y1="1" x2="12" y2="23"></line>
+                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+            </svg>
         </div>
         <div class="stat-info">
             <h3>${{ totalAbonado | number:'1.2-2' }}</h3>
@@ -33,7 +45,13 @@
 
     <div class="stat-card">
         <div class="stat-icon-wrapper bg-red">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                stroke="#dc2626" stroke-width="2">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z">
+                </path>
+                <line x1="12" y1="9" x2="12" y2="13"></line>
+                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
         </div>
         <div class="stat-info">
             <h3 style="color: #dc2626;">{{ cuentasVencidas }}</h3>
@@ -44,15 +62,23 @@
 
 <div class="filters-container fade-in">
     <div class="search-box-modern">
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-        <input type="text" placeholder="Buscar por cliente o factura..." [(ngModel)]="terminoBusqueda" (input)="aplicarFiltros()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748b"
+            stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input type="text" placeholder="Buscar por cliente o factura..." [(ngModel)]="terminoBusqueda"
+            (input)="aplicarFiltros()">
     </div>
-    
+
     <div class="filter-chips">
         <button class="chip" [class.active]="filtroEstado === 'TODAS'" (click)="setFiltro('TODAS')">Todas</button>
-        <button class="chip chip-yellow" [class.active]="filtroEstado === 'PENDIENTE'" (click)="setFiltro('PENDIENTE')">Pendientes</button>
-        <button class="chip chip-red" [class.active]="filtroEstado === 'VENCIDA'" (click)="setFiltro('VENCIDA')">Vencidas</button>
-        <button class="chip chip-green" [class.active]="filtroEstado === 'PAGADA'" (click)="setFiltro('PAGADA')">Pagadas</button>
+        <button class="chip chip-yellow" [class.active]="filtroEstado === 'PENDIENTE'"
+            (click)="setFiltro('PENDIENTE')">Pendientes</button>
+        <button class="chip chip-red" [class.active]="filtroEstado === 'VENCIDA'"
+            (click)="setFiltro('VENCIDA')">Vencidas</button>
+        <button class="chip chip-green" [class.active]="filtroEstado === 'PAGADA'"
+            (click)="setFiltro('PAGADA')">Pagadas</button>
     </div>
 </div>
 
@@ -66,12 +92,18 @@
         <label>Vencimiento hasta</label>
         <input type="date" class="modern-input date-input" [(ngModel)]="filtroFechaHasta" (change)="aplicarFiltros()">
     </div>
-    <button class="btn-clear-dates" *ngIf="filtroFechaDesde || filtroFechaHasta" (click)="limpiarFiltrosFecha()" title="Limpiar fechas">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+    <button class="btn-clear-dates" *ngIf="filtroFechaDesde || filtroFechaHasta" (click)="limpiarFiltrosFecha()"
+        title="Limpiar fechas">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
         Limpiar fechas
     </button>
     <div class="sort-hint">
-        Orden: <strong>{{ ordenCampo === 'fechaVencimiento' ? 'Fecha venc.' : ordenCampo === 'clienteNombre' ? 'Cliente' : ordenCampo === 'montoTotal' ? 'Monto' : 'Saldo' }}</strong>
+        Orden: <strong>{{ ordenCampo === 'fechaVencimiento' ? 'Fecha venc.' : ordenCampo === 'clienteNombre' ? 'Cliente'
+            : ordenCampo === 'montoTotal' ? 'Monto' : 'Saldo' }}</strong>
         ({{ ordenDireccion === 'asc' ? 'ascendente' : 'descendente' }})
     </div>
 </div>
@@ -91,13 +123,15 @@
                         <th class="th-sortable" (click)="ordenarPor('clienteNombre')" title="Ordenar por cliente">
                             Cliente{{ iconoOrden('clienteNombre') }}
                         </th>
-                        <th class="th-sortable" (click)="ordenarPor('fechaVencimiento')" title="Ordenar por fecha de vencimiento">
+                        <th class="th-sortable" (click)="ordenarPor('fechaVencimiento')"
+                            title="Ordenar por fecha de vencimiento">
                             Vencimiento Global{{ iconoOrden('fechaVencimiento') }}
                         </th>
                         <th class="th-sortable" (click)="ordenarPor('montoTotal')" title="Ordenar por monto total">
                             Monto Total{{ iconoOrden('montoTotal') }}
                         </th>
-                        <th class="th-sortable" (click)="ordenarPor('saldoPendiente')" title="Ordenar por saldo pendiente">
+                        <th class="th-sortable" (click)="ordenarPor('saldoPendiente')"
+                            title="Ordenar por saldo pendiente">
                             Saldo Pendiente{{ iconoOrden('saldoPendiente') }}
                         </th>
                         <th>Estado</th>
@@ -109,20 +143,26 @@
                     <tr *ngIf="cuentas.length === 0">
                         <td colspan="8" class="empty-state">
                             <div class="empty-icon">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="1.5">
+                                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                                </svg>
                             </div>
                             <p *ngIf="cuentasBase.length === 0">¡Felicidades!</p>
-                            <span *ngIf="cuentasBase.length === 0">No tienes cuentas pendientes por cobrar en el sistema.</span>
-                            
+                            <span *ngIf="cuentasBase.length === 0">No tienes cuentas pendientes por cobrar en el
+                                sistema.</span>
+
                             <p *ngIf="cuentasBase.length > 0">Sin resultados</p>
-                            <span *ngIf="cuentasBase.length > 0">No se encontraron cuentas con esos filtros de búsqueda.</span>
+                            <span *ngIf="cuentasBase.length > 0">No se encontraron cuentas con esos filtros de
+                                búsqueda.</span>
                         </td>
                     </tr>
-                    
+
                     <ng-container *ngFor="let c of cuentas">
                         <tr class="table-row-hover">
                             <td class="td-bold">#{{ c.numeroFactura }}</td>
-                            <td class="td-muted">{{ c.clienteNombre }}</td>
+                            <td class="td-muted">{{ c.nombreCliente || c.clienteNombre || 'Sin nombre' }}</td>
                             <td>{{ c.fechaVencimiento | date:'dd/MM/yyyy' }}</td>
                             <td class="td-muted">${{ c.montoTotal | number:'1.2-2' }}</td>
                             <td class="td-price" [ngStyle]="{'color': c.saldoPendiente > 0 ? '#ea580c' : '#16a34a'}">
@@ -141,17 +181,21 @@
                                 </button>
                             </td>
                             <td class="action-cells">
-                                <button class="btn-primary-small" *ngIf="c.saldoPendiente > 0" (click)="abrirModalPago(c)">
+                                <button class="btn-primary-small" *ngIf="c.saldoPendiente > 0"
+                                    (click)="abrirModalPago(c)">
                                     Abonar
                                 </button>
-                                <span *ngIf="c.saldoPendiente <= 0" style="color: #94a3b8; font-size: 0.85rem; font-weight: 700;">Completado</span>
+                                <span *ngIf="c.saldoPendiente <= 0"
+                                    style="color: #94a3b8; font-size: 0.85rem; font-weight: 700;">Completado</span>
                             </td>
                         </tr>
 
                         <tr *ngIf="c.showCuotas" class="cuotas-dropdown-row">
                             <td colspan="8" style="background: #f8fafc; padding: 15px 30px;">
                                 <div class="cuotas-container">
-                                    <h4 style="margin: 0 0 10px 0; font-size: 0.9rem; color: #475569; text-transform: uppercase; font-weight: 800;">Desglose de Cuotas</h4>
+                                    <h4
+                                        style="margin: 0 0 10px 0; font-size: 0.9rem; color: #475569; text-transform: uppercase; font-weight: 800;">
+                                        Desglose de Cuotas</h4>
                                     <table class="sub-table">
                                         <thead>
                                             <tr>
@@ -193,7 +237,11 @@
         <div class="modal-header">
             <h3>Registrar Abono</h3>
             <button class="close-btn" (click)="cerrarModal()">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
             </button>
         </div>
 
@@ -205,7 +253,8 @@
                 </div>
                 <div class="summary-row">
                     <span>Cliente:</span>
-                    <strong>{{ cuentaSeleccionada?.clienteNombre }}</strong>
+                    <strong>{{ cuentaSeleccionada?.nombreCliente || cuentaSeleccionada?.clienteNombre || 'Sin nombre'
+                        }}</strong>
                 </div>
                 <div class="summary-row highlight">
                     <span>Saldo Pendiente Actual:</span>
@@ -215,17 +264,21 @@
 
             <div class="form-group">
                 <label>Monto a Abonar ($) <span class="required">*</span></label>
-                <input type="number" class="modern-input amount-input" [(ngModel)]="montoAbono" min="0.01" [max]="cuentaSeleccionada?.saldoPendiente" placeholder="0.00">
+                <input type="number" class="modern-input amount-input" [(ngModel)]="montoAbono" min="0.01"
+                    [max]="cuentaSeleccionada?.saldoPendiente" placeholder="0.00">
             </div>
-            
-            <div class="balance-preview mt-3" *ngIf="montoAbono && montoAbono > 0 && montoAbono <= cuentaSeleccionada?.saldoPendiente">
-                Nuevo saldo tras el pago: <strong>${{ (cuentaSeleccionada?.saldoPendiente - montoAbono) | number:'1.2-2' }}</strong>
+
+            <div class="balance-preview mt-3"
+                *ngIf="montoAbono && montoAbono > 0 && montoAbono <= cuentaSeleccionada?.saldoPendiente">
+                Nuevo saldo tras el pago: <strong>${{ (cuentaSeleccionada?.saldoPendiente - montoAbono) | number:'1.2-2'
+                    }}</strong>
             </div>
         </div>
 
         <div class="modal-footer">
             <button class="btn-outline-secondary" (click)="cerrarModal()" [disabled]="isSaving">Cancelar</button>
-            <button class="btn-primary" (click)="registrarPago()" [disabled]="isSaving || !montoAbono || montoAbono <= 0 || montoAbono > cuentaSeleccionada?.saldoPendiente">
+            <button class="btn-primary" (click)="registrarPago()"
+                [disabled]="isSaving || !montoAbono || montoAbono <= 0 || montoAbono > cuentaSeleccionada?.saldoPendiente">
                 <div class="spinner-small" *ngIf="isSaving"></div>
                 {{ isSaving ? 'Guardando...' : 'Confirmar Pago' }}
             </button>
