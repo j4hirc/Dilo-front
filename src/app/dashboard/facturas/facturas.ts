@@ -9,9 +9,9 @@ import Swal from 'sweetalert2';
 
 enum VoiceStep {
   OFF = 'OFF',
-  INICIANDO = 'INICIANDO', 
-  ESCUCHA_LIBRE = 'ESCUCHA_LIBRE', 
-  ELEGIR_OPCION = 'ELEGIR_OPCION', 
+  INICIANDO = 'INICIANDO',
+  ESCUCHA_LIBRE = 'ESCUCHA_LIBRE',
+  ELEGIR_OPCION = 'ELEGIR_OPCION',
   CONFIRMAR = 'CONFIRMAR'
 }
 
@@ -25,7 +25,7 @@ enum VoiceStep {
 export class Facturas implements OnInit, OnDestroy {
   private http = inject(HttpClient);
   private cdr = inject(ChangeDetectorRef);
-  
+
   facturas: any[] = [];
   facturasBase: any[] = []; // Guarda la lista original para el buscador
   terminoBusqueda: string = ''; // La variable que pide el HTML
@@ -34,11 +34,11 @@ export class Facturas implements OnInit, OnDestroy {
   private apiUrl = environment.apiUrl;
   private groqApiKey = environment.groqApiKey;
 
-  ivaActual: number = 0.15; 
+  ivaActual: number = 0.15;
 
   showModal = false;
   isSaving = false;
-  
+
   clientesList: any[] = [];
   productosList: any[] = [];
   bodegasList: any[] = [];
@@ -55,7 +55,7 @@ export class Facturas implements OnInit, OnDestroy {
     clienteId: null,
     metodoPago: 'EFECTIVO',
     numeroCuotas: 0,
-    detallesTarjeta: '', 
+    detallesTarjeta: '',
     descuentoGlobal: 0,
     descuentoGlobalPorcentaje: 0,
     detalles: []
@@ -67,17 +67,17 @@ export class Facturas implements OnInit, OnDestroy {
     cantidad: null,
     descuento: null,
     descuentoPorcentaje: null,
-    productoNombre: '' 
+    productoNombre: ''
   };
 
   voiceState: VoiceStep = VoiceStep.OFF;
-  voiceMessage: string = ''; 
-  userTranscript: string = ''; 
-  transcriptAcumulado: string = ''; 
+  voiceMessage: string = '';
+  userTranscript: string = '';
+  transcriptAcumulado: string = '';
   isListening: boolean = false;
-  isThinking: boolean = false; 
+  isThinking: boolean = false;
   private recognition: any;
-  private silenceTimer: any; 
+  private silenceTimer: any;
   opcionesVoz: any[] = [];
   tipoOpciones: 'CLIENTE' | 'BODEGA' | 'PRODUCTO' | null = null;
   metodoPagoConfirmado: boolean = false;
@@ -159,11 +159,11 @@ export class Facturas implements OnInit, OnDestroy {
 
   private obtenerStock(productoId: any, bodegaId: any): number | null {
     if (!productoId || !bodegaId) return null;
-    const inv = this.inventarioList.find(i => 
-      (i.productoId === productoId || i.producto?.id === productoId) && 
+    const inv = this.inventarioList.find(i =>
+      (i.productoId === productoId || i.producto?.id === productoId) &&
       (i.bodegaId === bodegaId || i.bodega?.id === bodegaId)
     );
-    
+
     return inv ? Number(inv.cantidadActual || inv.cantidad || inv.stock || 0) : 0;
   }
 
@@ -171,7 +171,7 @@ export class Facturas implements OnInit, OnDestroy {
     const userStr = localStorage.getItem('usuario');
     const usuarioLogueado = userStr ? JSON.parse(userStr) : null;
     this.negocioId = usuarioLogueado?.negocioId;
-    
+
     this.cargarIvaDelSistema();
 
     if (this.negocioId) {
@@ -190,46 +190,70 @@ export class Facturas implements OnInit, OnDestroy {
 
   private getAuthHeaders(): HttpHeaders {
     const rawToken = localStorage.getItem('dilo_token') || '';
-    const cleanToken = rawToken.replace(/['"]+/g, ''); 
+    const cleanToken = rawToken.replace(/['"]+/g, '');
     return new HttpHeaders().set('Authorization', `Bearer ${cleanToken}`);
   }
 
   cargarIvaDelSistema() {
-      this.http.get<any>(`${this.apiUrl}/parametros/iva`, { headers: this.getAuthHeaders() }).subscribe({
-          next: (res) => {
-              if (res && res.ivaActual) {
-                  this.ivaActual = parseFloat(res.ivaActual);
-              }
-          },
-          error: (err) => {
-              console.warn("No se pudo cargar el IVA, usando 15%", err);
-          }
-      });
+    this.http.get<any>(`${this.apiUrl}/parametros/iva`, { headers: this.getAuthHeaders() }).subscribe({
+      next: (res) => {
+        if (res && res.ivaActual) {
+          this.ivaActual = parseFloat(res.ivaActual);
+        }
+      },
+      error: (err) => {
+        console.warn("No se pudo cargar el IVA, usando 15%", err);
+      }
+    });
   }
 
- cargarTodasLasFacturas(id: number) {
+  cargarTodasLasFacturas(id: number) {
     this.isLoading = true;
     this.http.get<any[]>(`${this.apiUrl}/negocios/${id}/facturas`, { headers: this.getAuthHeaders() }).subscribe({
       next: (data) => {
         const arregloSeguro = Array.isArray(data) ? data : [];
-        this.facturas = arregloSeguro.map(f => ({
-          id: f.id,
-          numero: f.numeroFactura || 'S/N',
-          cliente: f.clienteNombre || f.cliente?.nombre || f.cliente?.razonSocial || 'Consumidor Final',
-          tipo: f.formaPago || 'Manual',
-          fecha: f.fechaEmision || new Date().toLocaleDateString(),
-          monto: Number(f.totalFactura || f.total || 0),
-          estado: f.estadoSri || 'Emitida',
-          descuentoGlobal: Number(f.totalDescuento || f.descuentoGlobal || 0),
-          subtotalIva0: Number(f.subtotalIva0 || 0),
-          subtotalIvaAplicado: Number(f.subtotalIvaAplicado || 0),
-          totalIva: Number(f.totalIva || 0),
-          porcentajeIva: Number(f.porcentajeIvaAplicado || (this.ivaActual * 100)),
-          detalles: f.detallesFactura || f.detalles || f.items || []
-        }));
-        
-        this.facturasBase = [...this.facturas]; // 🔥 NUEVO: Guardamos la original para buscar
-        
+        this.facturas = arregloSeguro.map(f => {
+          // FacturaResponseDTO trae: clienteNombre + clienteIdentificacion
+          let nombreCli =
+            f.clienteNombre ||
+            f.nombreCliente ||
+            f.cliente?.nombreCompleto ||
+            f.cliente?.nombre ||
+            f.cliente?.razonSocial ||
+            'Consumidor Final';
+
+          // DNI / CI / RUC del DTO
+          const dni =
+            f.clienteIdentificacion ||
+            f.cliente?.dni ||
+            f.cliente?.identificacion ||
+            f.dniCliente ||
+            null;
+
+          if (dni && !String(nombreCli).includes(String(dni))) {
+            nombreCli = `${nombreCli} (${dni})`;
+          }
+
+          return {
+            id: f.id,
+            numero: f.numeroFactura || 'S/N',
+            cliente: nombreCli,
+            clienteIdentificacion: dni ? String(dni) : '',
+            tipo: f.formaPago || 'Manual',
+            fecha: f.fechaEmision || new Date().toLocaleDateString(),
+            monto: Number(f.totalFactura || f.total || 0),
+            estado: f.estadoSri || 'Emitida',
+            descuentoGlobal: Number(f.totalDescuento || f.descuentoGlobal || 0),
+            subtotalIva0: Number(f.subtotalIva0 || 0),
+            subtotalIvaAplicado: Number(f.subtotalIvaAplicado || 0),
+            totalIva: Number(f.totalIva || 0),
+            porcentajeIva: Number(f.porcentajeIvaAplicado || (this.ivaActual * 100)),
+            detalles: f.detallesFactura || f.detalles || f.items || []
+          };
+        });
+
+        this.facturasBase = [...this.facturas];
+
         this.isLoading = false;
         this.cdr.detectChanges();
       },
@@ -237,22 +261,26 @@ export class Facturas implements OnInit, OnDestroy {
     });
   }
 
-  // 🔥 NUEVO: Función para buscar facturas en tiempo real
+  /** Busca facturas en tiempo real (número, cliente o DNI/CI). Se ejecuta al escribir. */
   buscarFacturas() {
     if (!this.terminoBusqueda.trim()) {
       this.facturas = [...this.facturasBase];
+      this.cdr.detectChanges();
       return;
     }
-    const term = this.terminoBusqueda.toLowerCase().trim();
-    this.facturas = this.facturasBase.filter(f => 
-      f.numero.toLowerCase().includes(term) || 
-      f.cliente.toLowerCase().includes(term)
-    );
+    const term = this.limpiarTexto(this.terminoBusqueda);
+    this.facturas = this.facturasBase.filter(f => {
+      const numero = this.limpiarTexto(f.numero);
+      const cliente = this.limpiarTexto(f.cliente);
+      const dni = this.limpiarTexto(f.clienteIdentificacion || '');
+      return numero.includes(term) || cliente.includes(term) || (dni && dni.includes(term));
+    });
+    this.cdr.detectChanges();
   }
 
   abrirModalNuevo(porVoz = false) {
     this.showModal = true;
-    this.cdr.detectChanges(); 
+    this.cdr.detectChanges();
 
     this.cargarCatalogos();
     this.nuevaFactura = { clienteId: null, metodoPago: 'EFECTIVO', numeroCuotas: 0, detallesTarjeta: '', descuentoGlobal: 0, descuentoGlobalPorcentaje: 0, detalles: [] };
@@ -261,7 +289,7 @@ export class Facturas implements OnInit, OnDestroy {
     this.clienteSeleccionadoInfo = null;
     this.mostrarDropdownClientes = false;
     this.esConsumidorFinal = false;
-    
+
     this.opcionesVoz = [];
     this.tipoOpciones = null;
     this.metodoPagoConfirmado = false;
@@ -289,7 +317,7 @@ export class Facturas implements OnInit, OnDestroy {
   cargarCatalogos() {
     if (!this.negocioId) return;
     const headers = this.getAuthHeaders();
-    
+
     forkJoin([
       this.http.get<any[]>(`${this.apiUrl}/negocios/${this.negocioId}/clientes`, { headers }).pipe(catchError(() => of([]))),
       this.http.get<any[]>(`${this.apiUrl}/negocios/${this.negocioId}/productos`, { headers }).pipe(catchError(() => of([]))),
@@ -307,11 +335,11 @@ export class Facturas implements OnInit, OnDestroy {
 
   setConsumidorFinal() {
     this.esConsumidorFinal = true;
-    this.nuevaFactura.clienteId = null; 
+    this.nuevaFactura.clienteId = null;
     this.clienteSeleccionadoInfo = {
-        nombreCompleto: 'Consumidor Final',
-        dni: '9999999999999',
-        email: 'N/A'
+      nombreCompleto: 'Consumidor Final',
+      dni: '9999999999999',
+      email: 'N/A'
     };
     this.terminoBusquedaCliente = 'Consumidor Final';
     this.mostrarDropdownClientes = false;
@@ -374,27 +402,27 @@ export class Facturas implements OnInit, OnDestroy {
   private buscarClientesUniversales(textoBuscado: string): any[] {
     const txt = this.limpiarTexto(textoBuscado);
     if (!txt) return [...this.clientesList];
-    
-    let exact = this.clientesList.filter(cli => 
-        this.limpiarTexto(cli.nombreCompleto) === txt || this.limpiarTexto(cli.primerNombre) === txt ||
-        this.limpiarTexto(cli.apellidoPaterno) === txt || this.limpiarTexto(cli.dni) === txt ||
-        this.limpiarTexto(cli.identificacion) === txt || this.limpiarTexto(cli.email) === txt || this.limpiarTexto(cli.correo) === txt
+
+    let exact = this.clientesList.filter(cli =>
+      this.limpiarTexto(cli.nombreCompleto) === txt || this.limpiarTexto(cli.primerNombre) === txt ||
+      this.limpiarTexto(cli.apellidoPaterno) === txt || this.limpiarTexto(cli.dni) === txt ||
+      this.limpiarTexto(cli.identificacion) === txt || this.limpiarTexto(cli.email) === txt || this.limpiarTexto(cli.correo) === txt
     );
     if (exact.length > 0) return exact;
 
     let partial = this.clientesList.filter(cli => {
-        const nom = this.limpiarTexto(cli.nombreCompleto || `${cli.primerNombre || ''} ${cli.apellidoPaterno || ''}`);
-        const doc = this.limpiarTexto(cli.dni || cli.identificacion || '');
-        const corr = this.limpiarTexto(cli.email || cli.correo || '');
-        return nom.includes(txt) || txt.includes(nom) || (doc && doc.includes(txt)) || (corr && corr.includes(txt));
+      const nom = this.limpiarTexto(cli.nombreCompleto || `${cli.primerNombre || ''} ${cli.apellidoPaterno || ''}`);
+      const doc = this.limpiarTexto(cli.dni || cli.identificacion || '');
+      const corr = this.limpiarTexto(cli.email || cli.correo || '');
+      return nom.includes(txt) || txt.includes(nom) || (doc && doc.includes(txt)) || (corr && corr.includes(txt));
     });
     if (partial.length > 0) return partial;
 
     const palabras = txt.split(' ').filter(p => p.length > 2);
     if (palabras.length === 0) return [];
     return this.clientesList.filter(cli => {
-        const nom = this.limpiarTexto(cli.nombreCompleto || `${cli.primerNombre || ''} ${cli.apellidoPaterno || ''}`);
-        return palabras.every(pal => nom.includes(pal));
+      const nom = this.limpiarTexto(cli.nombreCompleto || `${cli.primerNombre || ''} ${cli.apellidoPaterno || ''}`);
+      return palabras.every(pal => nom.includes(pal));
     });
   }
 
@@ -408,8 +436,8 @@ export class Facturas implements OnInit, OnDestroy {
     this.nuevaFactura.clienteId = cliente.id;
     this.clienteSeleccionadoInfo = cliente;
     this.terminoBusquedaCliente = cliente.nombreCompleto || `${cliente.primerNombre || ''} ${cliente.apellidoPaterno || ''}`.trim();
-    this.mostrarDropdownClientes = false; 
-    this.cdr.detectChanges(); 
+    this.mostrarDropdownClientes = false;
+    this.cdr.detectChanges();
   }
 
   limpiarClienteSeleccionado() {
@@ -425,9 +453,9 @@ export class Facturas implements OnInit, OnDestroy {
     if (!webkitSpeechRecognition) return;
 
     this.recognition = new webkitSpeechRecognition();
-    this.recognition.lang = 'es-EC'; 
-    this.recognition.continuous = true; 
-    this.recognition.interimResults = true; 
+    this.recognition.lang = 'es-EC';
+    this.recognition.continuous = true;
+    this.recognition.interimResults = true;
 
     this.recognition.onresult = (event: any) => {
       // Ignorar audio mientras se procesa un clic o la IA está pensando
@@ -437,15 +465,15 @@ export class Facturas implements OnInit, OnDestroy {
       let final = '';
 
       for (let i = event.resultIndex; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) {
-              final += event.results[i][0].transcript + ' ';
-          } else {
-              interim += event.results[i][0].transcript;
-          }
+        if (event.results[i].isFinal) {
+          final += event.results[i][0].transcript + ' ';
+        } else {
+          interim += event.results[i][0].transcript;
+        }
       }
 
       if (final) {
-          this.transcriptAcumulado += final;
+        this.transcriptAcumulado += final;
       }
 
       this.userTranscript = (this.transcriptAcumulado + interim).toLowerCase().trim().replace(/\.$/, '');
@@ -455,14 +483,14 @@ export class Facturas implements OnInit, OnDestroy {
       // En desambiguación responde más rápido (2.2s); en libre 4.5s
       const espera = this.voiceState === VoiceStep.ELEGIR_OPCION ? 2200 : 4500;
       this.silenceTimer = setTimeout(() => {
-          if (this.bloqueoEscucha || this.seleccionEnCurso || this.isThinking) return;
-          try { this.recognition.stop(); } catch (e) {}
-          if (this.userTranscript) {
-              this.isListening = false;
-              this.procesarComandoVoz(this.userTranscript);
-          } else if (!this.bloqueoEscucha) {
-              this.escuchar();
-          }
+        if (this.bloqueoEscucha || this.seleccionEnCurso || this.isThinking) return;
+        try { this.recognition.stop(); } catch (e) { }
+        if (this.userTranscript) {
+          this.isListening = false;
+          this.procesarComandoVoz(this.userTranscript);
+        } else if (!this.bloqueoEscucha) {
+          this.escuchar();
+        }
       }, espera);
     };
 
@@ -484,10 +512,10 @@ export class Facturas implements OnInit, OnDestroy {
         !this.seleccionEnCurso &&
         this.isListening
       ) {
-          try { this.recognition.start(); } catch (e) {}
+        try { this.recognition.start(); } catch (e) { }
       } else {
-          this.isListening = false;
-          this.cdr.detectChanges();
+        this.isListening = false;
+        this.cdr.detectChanges();
       }
     };
   }
@@ -496,15 +524,15 @@ export class Facturas implements OnInit, OnDestroy {
     if (!this.recognition) return;
     this.transcriptAcumulado = '';
     this.voiceState = VoiceStep.ESCUCHA_LIBRE;
-    
+
     if (!this.nuevaFactura.clienteId && !this.esConsumidorFinal) {
-        this.voiceMessage = "¿A quién le facturamos y qué le agregamos?";
+      this.voiceMessage = "¿A quién le facturamos y qué le agregamos?";
     } else if (!this.metodoPagoConfirmado) {
-        this.voiceMessage = "Cliente listo. ¿Con qué paga?";
+      this.voiceMessage = "Cliente listo. ¿Con qué paga?";
     } else {
-        this.voiceMessage = "¿Qué productos deseas agregar o modificar?";
+      this.voiceMessage = "¿Qué productos deseas agregar o modificar?";
     }
-    
+
     this.cdr.detectChanges();
     this.escuchar();
   }
@@ -520,7 +548,7 @@ export class Facturas implements OnInit, OnDestroy {
     clearTimeout(this.silenceTimer);
     window.speechSynthesis.cancel();
     if (this.recognition) {
-      try { this.recognition.abort(); } catch (e) {}
+      try { this.recognition.abort(); } catch (e) { }
     }
     this.cdr.detectChanges();
   }
@@ -535,7 +563,7 @@ export class Facturas implements OnInit, OnDestroy {
     clearTimeout(this.silenceTimer);
     window.speechSynthesis.cancel();
     if (this.recognition) {
-      try { this.recognition.abort(); } catch (e) {}
+      try { this.recognition.abort(); } catch (e) { }
     }
     this.cdr.detectChanges();
   }
@@ -549,44 +577,44 @@ export class Facturas implements OnInit, OnDestroy {
     this.transcriptAcumulado = '';
     window.speechSynthesis.cancel();
     if (this.recognition) {
-      try { this.recognition.abort(); } catch (e) {}
+      try { this.recognition.abort(); } catch (e) { }
     }
 
     setTimeout(() => {
-        if (this.voiceState === VoiceStep.OFF) return;
+      if (this.voiceState === VoiceStep.OFF) return;
 
-        this.voiceMessage = texto;
-        this.userTranscript = '';
-        this.cdr.detectChanges();
+      this.voiceMessage = texto;
+      this.userTranscript = '';
+      this.cdr.detectChanges();
 
-        const utterance = new SpeechSynthesisUtterance(texto);
-        utterance.lang = 'es-ES';
-        utterance.rate = 1.35;
-        utterance.pitch = 1.2;
+      const utterance = new SpeechSynthesisUtterance(texto);
+      utterance.lang = 'es-ES';
+      utterance.rate = 1.35;
+      utterance.pitch = 1.2;
 
-        let voices = window.speechSynthesis.getVoices();
-        let femaleVoice = voices.find(v =>
-          v.lang.startsWith('es') &&
-          /(sabina|paulina|helena|monica|victoria|lucia|sofia|laura|isabel|carmen|female|mujer|google español)/i.test(v.name)
+      let voices = window.speechSynthesis.getVoices();
+      let femaleVoice = voices.find(v =>
+        v.lang.startsWith('es') &&
+        /(sabina|paulina|helena|monica|victoria|lucia|sofia|laura|isabel|carmen|female|mujer|google español)/i.test(v.name)
+      );
+      if (!femaleVoice) {
+        femaleVoice = voices.find(v =>
+          v.lang.startsWith('es') && !/(pablo|jorge|diego|carlos|male|hombre)/i.test(v.name)
         );
-        if (!femaleVoice) {
-          femaleVoice = voices.find(v =>
-            v.lang.startsWith('es') && !/(pablo|jorge|diego|carlos|male|hombre)/i.test(v.name)
-          );
+      }
+      if (femaleVoice) utterance.voice = femaleVoice;
+
+      const fin = () => {
+        this.isThinking = false;
+        this.bloqueoEscucha = false;
+        if (callback && this.voiceState !== VoiceStep.OFF && !this.seleccionEnCurso) {
+          callback();
         }
-        if (femaleVoice) utterance.voice = femaleVoice;
+      };
+      utterance.onend = fin;
+      utterance.onerror = fin;
 
-        const fin = () => {
-          this.isThinking = false;
-          this.bloqueoEscucha = false;
-          if (callback && this.voiceState !== VoiceStep.OFF && !this.seleccionEnCurso) {
-            callback();
-          }
-        };
-        utterance.onend = fin;
-        utterance.onerror = fin;
-
-        window.speechSynthesis.speak(utterance);
+      window.speechSynthesis.speak(utterance);
     }, 80);
   }
 
@@ -602,23 +630,23 @@ export class Facturas implements OnInit, OnDestroy {
     }
     this.isListening = true;
     this.cdr.detectChanges();
-    try { this.recognition.start(); } catch (e) {}
+    try { this.recognition.start(); } catch (e) { }
   }
 
   private procesarComandoVoz(transcript: string) {
-    this.transcriptAcumulado = ''; 
+    this.transcriptAcumulado = '';
     // Normalizar: minúsculas, sin acentos, sin puntuación al final
     const transcriptLimpio = this.limpiarTexto(transcript).replace(/[.,;:!?¡¿]+/g, ' ').replace(/\s+/g, ' ').trim();
 
     const comandosLimpiar = ['borra todo', 'borrar todo', 'limpiar carrito', 'reiniciar', 'vaciar ticket', 'cancela todo'];
     if (comandosLimpiar.some(cmd => transcriptLimpio.includes(cmd))) {
-        this.nuevaFactura.detalles = [];
-        this.limpiarClienteSeleccionado();
-        this.nuevaFactura.descuentoGlobal = 0;
-        this.nuevaFactura.descuentoGlobalPorcentaje = 0;
-        this.nuevaFactura.detallesTarjeta = '';
-        this.hablar("He vaciado el ticket por completo. Empecemos de cero.", () => this.escuchar());
-        return;
+      this.nuevaFactura.detalles = [];
+      this.limpiarClienteSeleccionado();
+      this.nuevaFactura.descuentoGlobal = 0;
+      this.nuevaFactura.descuentoGlobalPorcentaje = 0;
+      this.nuevaFactura.detallesTarjeta = '';
+      this.hablar("He vaciado el ticket por completo. Empecemos de cero.", () => this.escuchar());
+      return;
     }
 
     // 🔥 Desambiguación por número/clic: NO mandar a Groq
@@ -687,7 +715,7 @@ export class Facturas implements OnInit, OnDestroy {
     });
 
     const instruccionCliente = (this.nuevaFactura.clienteId || this.esConsumidorFinal)
-      ? `"cliente": null,` 
+      ? `"cliente": null,`
       : `"cliente": "Extrae el nombre, cédula, o pon 'CONSUMIDOR_FINAL'",`;
 
     const listaNombresCli = this.clientesList.map(c => c.nombreCompleto || c.primerNombre).join(', ').substring(0, 600);
@@ -906,31 +934,31 @@ export class Facturas implements OnInit, OnDestroy {
 
   private aplicarDatosExtraidos(datos: any, quiereEmitir: boolean = false) {
     let algoAgregado = false;
-    let mensajesAlerta: string[] = []; 
+    let mensajesAlerta: string[] = [];
 
     if (datos.eliminarProducto && datos.eliminarProducto !== 'null') {
-        const index = this.nuevaFactura.detalles.findIndex((d: any) => 
-            d.productoNombre.toLowerCase().includes(datos.eliminarProducto.toLowerCase())
-        );
-        if (index !== -1) {
-            const nombreQuitado = this.nuevaFactura.detalles[index].productoNombre;
-            this.eliminarDelCarrito(index);
-            this.hablar(`Listo, acabo de quitar ${nombreQuitado} del ticket. ¿Qué más hacemos?`, () => this.escuchar());
-            return; 
-        }
+      const index = this.nuevaFactura.detalles.findIndex((d: any) =>
+        d.productoNombre.toLowerCase().includes(datos.eliminarProducto.toLowerCase())
+      );
+      if (index !== -1) {
+        const nombreQuitado = this.nuevaFactura.detalles[index].productoNombre;
+        this.eliminarDelCarrito(index);
+        this.hablar(`Listo, acabo de quitar ${nombreQuitado} del ticket. ¿Qué más hacemos?`, () => this.escuchar());
+        return;
+      }
     }
 
     // metodoPago ya viene saneado: solo aplicar si no es null
     if (datos.metodoPago && datos.metodoPago !== 'null' && datos.metodoPago !== 'NULL') {
-        // Doble chequeo: consumidor final nunca tarjeta
-        if (datos.metodoPago === 'TARJETA_CREDITO' && (this.esConsumidorFinal || !this.nuevaFactura.clienteId)) {
-          this.nuevaFactura.metodoPago = 'EFECTIVO';
-          this.metodoPagoConfirmado = true;
-          mensajesAlerta.push('tarjeta no permitida con Consumidor Final; usé efectivo');
-        } else {
-          this.nuevaFactura.metodoPago = datos.metodoPago;
-          this.metodoPagoConfirmado = true;
-        }
+      // Doble chequeo: consumidor final nunca tarjeta
+      if (datos.metodoPago === 'TARJETA_CREDITO' && (this.esConsumidorFinal || !this.nuevaFactura.clienteId)) {
+        this.nuevaFactura.metodoPago = 'EFECTIVO';
+        this.metodoPagoConfirmado = true;
+        mensajesAlerta.push('tarjeta no permitida con Consumidor Final; usé efectivo');
+      } else {
+        this.nuevaFactura.metodoPago = datos.metodoPago;
+        this.metodoPagoConfirmado = true;
+      }
     }
 
     if (datos._tarjetaBloqueadaConsumidor) {
@@ -962,42 +990,42 @@ export class Facturas implements OnInit, OnDestroy {
     this.bloquearTarjetaSiConsumidorFinal(false);
 
     if (datos.descuentoGlobalPorcentaje !== undefined && datos.descuentoGlobalPorcentaje !== null) {
-        const pct = parseFloat(datos.descuentoGlobalPorcentaje);
-        if (!isNaN(pct) && pct > 0) {
-          this.nuevaFactura.descuentoGlobalPorcentaje = Math.min(pct, 100);
-          this.nuevaFactura.descuentoGlobal = 0;
-          algoAgregado = true;
-        }
+      const pct = parseFloat(datos.descuentoGlobalPorcentaje);
+      if (!isNaN(pct) && pct > 0) {
+        this.nuevaFactura.descuentoGlobalPorcentaje = Math.min(pct, 100);
+        this.nuevaFactura.descuentoGlobal = 0;
+        algoAgregado = true;
+      }
     } else if (datos.descuentoGlobal !== undefined && datos.descuentoGlobal !== null) {
-        const descGlobal = parseFloat(datos.descuentoGlobal);
-        if (!isNaN(descGlobal) && descGlobal > 0) {
-            this.nuevaFactura.descuentoGlobal = descGlobal;
-            this.nuevaFactura.descuentoGlobalPorcentaje = 0;
-            algoAgregado = true;
-        }
+      const descGlobal = parseFloat(datos.descuentoGlobal);
+      if (!isNaN(descGlobal) && descGlobal > 0) {
+        this.nuevaFactura.descuentoGlobal = descGlobal;
+        this.nuevaFactura.descuentoGlobalPorcentaje = 0;
+        algoAgregado = true;
+      }
     }
 
     // 🔥 EVALUAR CLIENTES Y MOSTRAR OPCIONES VISUALES
     let requiereDesambiguacionCli = null;
     if (datos.cliente && datos.cliente !== 'null' && !this.nuevaFactura.clienteId && !this.esConsumidorFinal) {
-        if (datos.cliente === 'CONSUMIDOR_FINAL' || String(datos.cliente).toLowerCase().includes('consumidor')) {
-            this.setConsumidorFinal();
+      if (datos.cliente === 'CONSUMIDOR_FINAL' || String(datos.cliente).toLowerCase().includes('consumidor')) {
+        this.setConsumidorFinal();
+      } else {
+        const matchesCli = this.buscarClientesUniversales(datos.cliente);
+        if (matchesCli.length === 1) {
+          this.seleccionarCliente(matchesCli[0]);
+        } else if (matchesCli.length > 1) {
+          requiereDesambiguacionCli = matchesCli;
         } else {
-            const matchesCli = this.buscarClientesUniversales(datos.cliente);
-            if (matchesCli.length === 1) {
-                this.seleccionarCliente(matchesCli[0]); 
-            } else if (matchesCli.length > 1) {
-                requiereDesambiguacionCli = matchesCli; 
-            } else {
-                mensajesAlerta.push(`no encontré a ${datos.cliente}`);
-            }
+          mensajesAlerta.push(`no encontré a ${datos.cliente}`);
         }
+      }
     }
 
     if (requiereDesambiguacionCli) {
-        this.quiereEmitirPendiente = quiereEmitir;
-        this.iniciarDesambiguacion('CLIENTE', requiereDesambiguacionCli, "Encontré varios clientes parecidos. Di el número o haz clic en la pantalla.");
-        return;
+      this.quiereEmitirPendiente = quiereEmitir;
+      this.iniciarDesambiguacion('CLIENTE', requiereDesambiguacionCli, "Encontré varios clientes parecidos. Di el número o haz clic en la pantalla.");
+      return;
     }
 
     const items = Array.isArray(datos.items) ? datos.items.filter((it: any) => it && it.producto && it.producto !== 'null') : [];
@@ -1010,45 +1038,45 @@ export class Facturas implements OnInit, OnDestroy {
     const itemsRestantes: any[] = [];
 
     for (let i = 0; i < items.length; i++) {
-        const item = items[i];
-        // Cruza lo que dijo el usuario + lo que devolvió la IA → si hay varias máscaras, lista opciones
-        const matchesProd = this.resolverMatchesProductoVoz(String(item.producto), this.ultimaFraseUsuario);
+      const item = items[i];
+      // Cruza lo que dijo el usuario + lo que devolvió la IA → si hay varias máscaras, lista opciones
+      const matchesProd = this.resolverMatchesProductoVoz(String(item.producto), this.ultimaFraseUsuario);
 
-        if (matchesProd.length === 1) {
-            const ok = this.intentarAgregarProductoVoz(matchesProd[0], item, mensajesAlerta);
-            if (ok) algoAgregado = true;
-        } else if (matchesProd.length > 1) {
-            // Siempre pedir opción si hay más de uno (nunca elegir al azar)
-            requiereDesambiguacionProd = matchesProd;
-            cantTemp = Number(item.cantidad);
-            if (isNaN(cantTemp) || cantTemp <= 0) cantTemp = 1;
-            descTemp = Number(item.descuento || 0) || 0;
-            descPctTemp = Number(item.descuentoPorcentaje || 0) || 0;
-            for (let j = i + 1; j < items.length; j++) itemsRestantes.push(items[j]);
-            break;
-        } else {
-            mensajesAlerta.push(`no tengo "${item.producto}" en el catálogo`);
-        }
+      if (matchesProd.length === 1) {
+        const ok = this.intentarAgregarProductoVoz(matchesProd[0], item, mensajesAlerta);
+        if (ok) algoAgregado = true;
+      } else if (matchesProd.length > 1) {
+        // Siempre pedir opción si hay más de uno (nunca elegir al azar)
+        requiereDesambiguacionProd = matchesProd;
+        cantTemp = Number(item.cantidad);
+        if (isNaN(cantTemp) || cantTemp <= 0) cantTemp = 1;
+        descTemp = Number(item.descuento || 0) || 0;
+        descPctTemp = Number(item.descuentoPorcentaje || 0) || 0;
+        for (let j = i + 1; j < items.length; j++) itemsRestantes.push(items[j]);
+        break;
+      } else {
+        mensajesAlerta.push(`no tengo "${item.producto}" en el catálogo`);
+      }
     }
     this.cdr.detectChanges();
 
     if (requiereDesambiguacionProd) {
-        this.quiereEmitirPendiente = quiereEmitir;
-        this.itemsVozPendientes = itemsRestantes;
-        this.datosVozPendientes = { ...datos, items: itemsRestantes };
-        this.itemTemp.cantidad = cantTemp;
-        this.itemTemp.descuento = descTemp;
-        this.itemTemp.descuentoPorcentaje = descPctTemp > 0 ? descPctTemp : null;
-        const totalOps = requiereDesambiguacionProd.length;
-        const muestra = requiereDesambiguacionProd.slice(0, 8);
-        const nombres = muestra.map((p, idx) => `${idx + 1}) ${p.nombre}`).join('. ');
-        const extra = totalOps > 8 ? ` Hay ${totalOps} en total; te muestro las primeras 8.` : '';
-        this.iniciarDesambiguacion(
-          'PRODUCTO',
-          requiereDesambiguacionProd,
-          `Encontré ${totalOps} productos parecidos. ${nombres}.${extra} Di el número o toca el correcto.`
-        );
-        return;
+      this.quiereEmitirPendiente = quiereEmitir;
+      this.itemsVozPendientes = itemsRestantes;
+      this.datosVozPendientes = { ...datos, items: itemsRestantes };
+      this.itemTemp.cantidad = cantTemp;
+      this.itemTemp.descuento = descTemp;
+      this.itemTemp.descuentoPorcentaje = descPctTemp > 0 ? descPctTemp : null;
+      const totalOps = requiereDesambiguacionProd.length;
+      const muestra = requiereDesambiguacionProd.slice(0, 8);
+      const nombres = muestra.map((p, idx) => `${idx + 1}) ${p.nombre}`).join('. ');
+      const extra = totalOps > 8 ? ` Hay ${totalOps} en total; te muestro las primeras 8.` : '';
+      this.iniciarDesambiguacion(
+        'PRODUCTO',
+        requiereDesambiguacionProd,
+        `Encontré ${totalOps} productos parecidos. ${nombres}.${extra} Di el número o toca el correcto.`
+      );
+      return;
     }
 
     const faltaCliente = !this.nuevaFactura.clienteId && !this.esConsumidorFinal;
@@ -1058,27 +1086,27 @@ export class Facturas implements OnInit, OnDestroy {
     this.quiereEmitirPendiente = false;
 
     if (faltaCliente) {
-        this.voiceState = VoiceStep.ESCUCHA_LIBRE;
-        this.hablar(`${prefijoAviso}Para cobrar necesito el cliente. ¿A quién le facturamos?`, () => this.escuchar());
-    } 
-    else if (faltaItems) {
-        this.voiceState = VoiceStep.ESCUCHA_LIBRE;
-        this.hablar(`${prefijoAviso}El ticket está vacío. ¿Qué le agregamos?`, () => this.escuchar());
-    } 
-    else if (quiereEmitir) {
-        // Solo cuando pide emitir → pedir confirmación explícita
-        this.voiceState = VoiceStep.CONFIRMAR;
-        const msj = `${prefijoAviso}Total a pagar $${this.totalCarrito.toFixed(2)}. ¿Confirmas que emitimos la factura? Di sí o no.`;
-        this.hablar(msj, () => this.escuchar());
-    } else if (algoAgregado) {
-        // Solo agregó productos/descuento: informar y seguir escuchando (sin bloquear en CONFIRMAR)
-        this.voiceState = VoiceStep.ESCUCHA_LIBRE;
-        this.hablar(`${prefijoAviso}Listo. Total $${this.totalCarrito.toFixed(2)}. ¿Algo más o emitimos?`, () => this.escuchar());
-    } else {
-        this.voiceState = VoiceStep.ESCUCHA_LIBRE;
-        this.hablar(`${prefijoAviso}¿Algo más o emitimos?`, () => this.escuchar());
+      this.voiceState = VoiceStep.ESCUCHA_LIBRE;
+      this.hablar(`${prefijoAviso}Para cobrar necesito el cliente. ¿A quién le facturamos?`, () => this.escuchar());
     }
-  }             
+    else if (faltaItems) {
+      this.voiceState = VoiceStep.ESCUCHA_LIBRE;
+      this.hablar(`${prefijoAviso}El ticket está vacío. ¿Qué le agregamos?`, () => this.escuchar());
+    }
+    else if (quiereEmitir) {
+      // Solo cuando pide emitir → pedir confirmación explícita
+      this.voiceState = VoiceStep.CONFIRMAR;
+      const msj = `${prefijoAviso}Total a pagar $${this.totalCarrito.toFixed(2)}. ¿Confirmas que emitimos la factura? Di sí o no.`;
+      this.hablar(msj, () => this.escuchar());
+    } else if (algoAgregado) {
+      // Solo agregó productos/descuento: informar y seguir escuchando (sin bloquear en CONFIRMAR)
+      this.voiceState = VoiceStep.ESCUCHA_LIBRE;
+      this.hablar(`${prefijoAviso}Listo. Total $${this.totalCarrito.toFixed(2)}. ¿Algo más o emitimos?`, () => this.escuchar());
+    } else {
+      this.voiceState = VoiceStep.ESCUCHA_LIBRE;
+      this.hablar(`${prefijoAviso}¿Algo más o emitimos?`, () => this.escuchar());
+    }
+  }
 
   /** Agrega un producto resuelto por voz (1 match). Devuelve true si se agregó. */
   private intentarAgregarProductoVoz(prod: any, item: any, mensajesAlerta: string[]): boolean {
@@ -1236,26 +1264,41 @@ export class Facturas implements OnInit, OnDestroy {
     if (porCodigo.length === 1) return porCodigo;
     if (porCodigo.length > 1) return porCodigo;
 
-    // 3) El nombre del producto CONTIENE lo dicho (o al revés)
+    // 3) Por costo promedio o precio unitario (si el usuario dice un número)
+    const termNumerico = txt.replace(/[^0-9.,]/g, '').replace(',', '.');
+    if (termNumerico && !isNaN(Number(termNumerico))) {
+      const valor = Number(termNumerico);
+      const porCosto = this.productosList.filter(p => {
+        const costo = Number(p.costoPromedio ?? p.costo ?? NaN);
+        const precio = Number(p.precioUnitario ?? p.precio ?? NaN);
+        // Coincide exacto o con tolerancia de 0.01
+        const matchCosto = !isNaN(costo) && Math.abs(costo - valor) < 0.015;
+        const matchPrecio = !isNaN(precio) && Math.abs(precio - valor) < 0.015;
+        // También si el texto del número aparece en el string del costo/precio
+        const strCosto = this.limpiarTexto(String(p.costoPromedio ?? p.costo ?? ''));
+        const strPrecio = this.limpiarTexto(String(p.precioUnitario ?? p.precio ?? ''));
+        return matchCosto || matchPrecio || strCosto.includes(termNumerico) || strPrecio.includes(termNumerico);
+      });
+      const uniqCosto = this.dedupProductos(porCosto);
+      if (uniqCosto.length >= 1) return uniqCosto;
+    }
+
+    // 4) El nombre del producto CONTIENE lo dicho (o al revés)
     const partial = this.productosList.filter(p => {
       const nom = this.limpiarTexto(p.nombre);
       return nom.includes(txt) || (txt.length >= 4 && txt.includes(nom));
     });
-    // Deduplicar por id
     const uniqPartial = this.dedupProductos(partial);
     if (uniqPartial.length === 1) return uniqPartial;
     if (uniqPartial.length > 1) {
-      // Preferir los que empiezan igual, pero SI HAY MÁS DE UNO → todos a opciones
       const starts = uniqPartial.filter(p => this.limpiarTexto(p.nombre).startsWith(txt));
       if (starts.length === 1 && uniqPartial.length <= 3) {
-        // Un solo que empieza igual y pocos candidatos: aún así, si hay varios similares, mostrar opciones
-        // Usuario pidió: siempre que se repita → opciones. Si starts=1 y hay otros, mostrar todos.
         return uniqPartial;
       }
       return starts.length > 1 ? starts : uniqPartial;
     }
 
-    // 4) Todas las palabras significativas deben aparecer en el nombre
+    // 5) Todas las palabras significativas deben aparecer en el nombre
     const palabras = txt.split(/\s+/).filter(p => p.length > 2);
     if (palabras.length > 0) {
       const porPalabras = this.productosList.filter(p => {
@@ -1266,7 +1309,7 @@ export class Facturas implements OnInit, OnDestroy {
       if (uniq.length >= 1) return uniq;
     }
 
-    // 5) Fallback suave: al menos una palabra larga (mín 4 chars) — siempre lista para desambiguar
+    // 6) Fallback suave: al menos una palabra larga (mín 4 chars)
     const largas = txt.split(/\s+/).filter(p => p.length >= 4);
     if (largas.length > 0) {
       const suaves = this.productosList.filter(p => {
@@ -1392,57 +1435,57 @@ export class Facturas implements OnInit, OnDestroy {
     this.voiceState = VoiceStep.ESCUCHA_LIBRE;
 
     if (tipo === 'CLIENTE') {
-        this.seleccionarCliente(seleccionado);
-        this.seleccionEnCurso = false;
-        this.aplicarDatosExtraidos({}, this.quiereEmitirPendiente);
-        return;
+      this.seleccionarCliente(seleccionado);
+      this.seleccionEnCurso = false;
+      this.aplicarDatosExtraidos({}, this.quiereEmitirPendiente);
+      return;
     }
 
     if (tipo === 'PRODUCTO') {
-        const itemFake = {
-          cantidad: this.itemTemp.cantidad || 1,
-          descuento: this.itemTemp.descuento || 0,
-          descuentoPorcentaje: this.itemTemp.descuentoPorcentaje || 0
-        };
-        const alertas: string[] = [];
-        const ok = this.intentarAgregarProductoVoz(seleccionado, itemFake, alertas);
+      const itemFake = {
+        cantidad: this.itemTemp.cantidad || 1,
+        descuento: this.itemTemp.descuento || 0,
+        descuentoPorcentaje: this.itemTemp.descuentoPorcentaje || 0
+      };
+      const alertas: string[] = [];
+      const ok = this.intentarAgregarProductoVoz(seleccionado, itemFake, alertas);
 
-        this.itemTemp.cantidad = null;
-        this.itemTemp.descuento = null;
-        this.itemTemp.descuentoPorcentaje = null;
+      this.itemTemp.cantidad = null;
+      this.itemTemp.descuento = null;
+      this.itemTemp.descuentoPorcentaje = null;
 
-        const pendientes = [...this.itemsVozPendientes];
-        const emitir = this.quiereEmitirPendiente;
-        this.itemsVozPendientes = [];
-        this.datosVozPendientes = null;
-        this.seleccionEnCurso = false;
+      const pendientes = [...this.itemsVozPendientes];
+      const emitir = this.quiereEmitirPendiente;
+      this.itemsVozPendientes = [];
+      this.datosVozPendientes = null;
+      this.seleccionEnCurso = false;
 
-        if (pendientes.length > 0) {
-          this.aplicarDatosExtraidos({ items: pendientes }, emitir);
-          return;
-        }
+      if (pendientes.length > 0) {
+        this.aplicarDatosExtraidos({ items: pendientes }, emitir);
+        return;
+      }
 
-        if (!ok && alertas.length > 0) {
-          this.hablar(`${alertas.join(', ')}. ¿Qué más agregamos?`, () => {
+      if (!ok && alertas.length > 0) {
+        this.hablar(`${alertas.join(', ')}. ¿Qué más agregamos?`, () => {
+          this.bloqueoEscucha = false;
+          this.isThinking = false;
+          this.escuchar();
+        });
+        return;
+      }
+
+      if (emitir) {
+        this.aplicarDatosExtraidos({}, true);
+      } else {
+        this.hablar(
+          `Agregué ${seleccionado.nombre}. Total $${this.totalCarrito.toFixed(2)}. ¿Algo más o emitimos?`,
+          () => {
             this.bloqueoEscucha = false;
             this.isThinking = false;
             this.escuchar();
-          });
-          return;
-        }
-
-        if (emitir) {
-          this.aplicarDatosExtraidos({}, true);
-        } else {
-          this.hablar(
-            `Agregué ${seleccionado.nombre}. Total $${this.totalCarrito.toFixed(2)}. ¿Algo más o emitimos?`,
-            () => {
-              this.bloqueoEscucha = false;
-              this.isThinking = false;
-              this.escuchar();
-            }
-          );
-        }
+          }
+        );
+      }
     } else {
       this.seleccionEnCurso = false;
       this.bloqueoEscucha = false;
@@ -1453,8 +1496,8 @@ export class Facturas implements OnInit, OnDestroy {
   private extraerIndice(texto: string, maxOpciones: number): number {
     const matchDigito = texto.match(/\d+/);
     if (matchDigito) {
-        const idx = parseInt(matchDigito[0], 10) - 1;
-        if (idx >= 0 && idx < maxOpciones) return idx;
+      const idx = parseInt(matchDigito[0], 10) - 1;
+      if (idx >= 0 && idx < maxOpciones) return idx;
     }
     if (texto.includes('primer') || texto.includes('uno')) return 0;
     if (texto.includes('segund') || texto.includes('dos')) return 1;
@@ -1623,9 +1666,9 @@ export class Facturas implements OnInit, OnDestroy {
     this.nuevaFactura.descuentoGlobal = descGlobal;
 
     const payload = {
-      clienteId: this.nuevaFactura.clienteId, 
+      clienteId: this.nuevaFactura.clienteId,
       metodoPago: this.nuevaFactura.metodoPago,
-      tarjeta: this.nuevaFactura.detallesTarjeta, 
+      tarjeta: this.nuevaFactura.detallesTarjeta,
       numeroCuotas: this.nuevaFactura.numeroCuotas,
       descuentoGlobal: descGlobal,
       detalles: this.nuevaFactura.detalles.map((d: any) => ({
@@ -1646,45 +1689,45 @@ export class Facturas implements OnInit, OnDestroy {
       payload,
       { headers: this.getAuthHeaders() }
     ).subscribe({
-        next: (res) => {
-          this.isSaving = false;
-          this.showModal = false;
-          if (this.negocioId) this.cargarTodasLasFacturas(this.negocioId);
+      next: (res) => {
+        this.isSaving = false;
+        this.showModal = false;
+        if (this.negocioId) this.cargarTodasLasFacturas(this.negocioId);
 
-          // Snapshot del carrito en pantalla → el PDF debe coincidir con lo que vio el usuario
-          const detallesCarrito = this.nuevaFactura.detalles.map((d: any) => ({ ...d }));
-          const totalApi = Number(res.totalFactura ?? res.total ?? 0);
-          const ivaApi = Number(res.totalIva ?? 0);
-          const sub0Api = Number(res.subtotalIva0 ?? 0);
-          const subGravApi = Number(res.subtotalIvaAplicado ?? 0);
+        // Snapshot del carrito en pantalla → el PDF debe coincidir con lo que vio el usuario
+        const detallesCarrito = this.nuevaFactura.detalles.map((d: any) => ({ ...d }));
+        const totalApi = Number(res.totalFactura ?? res.total ?? 0);
+        const ivaApi = Number(res.totalIva ?? 0);
+        const sub0Api = Number(res.subtotalIva0 ?? 0);
+        const subGravApi = Number(res.subtotalIvaAplicado ?? 0);
 
-          const facturaParaPDF = {
-            numero: res.numeroFactura || 'S/N',
-            cliente: res.clienteNombre || (this.esConsumidorFinal ? 'Consumidor Final' : 'Cliente'),
-            fecha: res.fechaEmision ? new Date(res.fechaEmision).toLocaleDateString() : new Date().toLocaleDateString(),
-            // Preferir carrito si el API no trajo IVA (campos nulos / 0 por mapper)
-            monto: totalApi > 0 ? totalApi : this.totalCarrito,
-            tipo: res.formaPago || this.nuevaFactura.metodoPago || 'Manual',
-            descuentoGlobal: descGlobal,
-            subtotalIva0: sub0Api > 0 ? sub0Api : this.subtotalExento,
-            subtotalIvaAplicado: subGravApi > 0 ? subGravApi : this.subtotalGravado,
-            totalIva: ivaApi > 0 ? ivaApi : this.montoIva,
-            porcentajeIva: Number(res.porcentajeIvaAplicado || (this.ivaActual * 100)),
-            // Detalles del carrito garantizan PVP y descuentos de línea iguales a la web
-            detalles: (res.detallesFactura || res.detalles || []).length
-              ? this.fusionarDetallesPdf(res.detallesFactura || res.detalles, detallesCarrito)
-              : detallesCarrito
-          };
+        const facturaParaPDF = {
+          numero: res.numeroFactura || 'S/N',
+          cliente: res.clienteNombre || (this.esConsumidorFinal ? 'Consumidor Final' : 'Cliente'),
+          fecha: res.fechaEmision ? new Date(res.fechaEmision).toLocaleDateString() : new Date().toLocaleDateString(),
+          // Preferir carrito si el API no trajo IVA (campos nulos / 0 por mapper)
+          monto: totalApi > 0 ? totalApi : this.totalCarrito,
+          tipo: res.formaPago || this.nuevaFactura.metodoPago || 'Manual',
+          descuentoGlobal: descGlobal,
+          subtotalIva0: sub0Api > 0 ? sub0Api : this.subtotalExento,
+          subtotalIvaAplicado: subGravApi > 0 ? subGravApi : this.subtotalGravado,
+          totalIva: ivaApi > 0 ? ivaApi : this.montoIva,
+          porcentajeIva: Number(res.porcentajeIvaAplicado || (this.ivaActual * 100)),
+          // Detalles del carrito garantizan PVP y descuentos de línea iguales a la web
+          detalles: (res.detallesFactura || res.detalles || []).length
+            ? this.fusionarDetallesPdf(res.detallesFactura || res.detalles, detallesCarrito)
+            : detallesCarrito
+        };
 
-          this.imprimirFacturaPDF(facturaParaPDF);
-          Swal.fire({ icon: 'success', title: '¡Factura Emitida!', timer: 1500, showConfirmButton: false });
-        },
-        error: (err) => {
-          this.isSaving = false;
-          const msg = typeof err.error === 'string' ? err.error : (err.error?.message || 'Error al emitir');
-          Swal.fire('Error', msg, 'error');
-        }
-      });
+        this.imprimirFacturaPDF(facturaParaPDF);
+        Swal.fire({ icon: 'success', title: '¡Factura Emitida!', timer: 1500, showConfirmButton: false });
+      },
+      error: (err) => {
+        this.isSaving = false;
+        const msg = typeof err.error === 'string' ? err.error : (err.error?.message || 'Error al emitir');
+        Swal.fire('Error', msg, 'error');
+      }
+    });
   }
 
   descargarPDF(fac: any) {
@@ -1928,18 +1971,18 @@ export class Facturas implements OnInit, OnDestroy {
       </body>
       </html>
     `);
-    
+
     ventana?.document.close();
     ventana?.focus();
-    
-    setTimeout(() => { 
-        ventana?.print(); 
+
+    setTimeout(() => {
+      ventana?.print();
     }, 800);
 
     if (ventana) {
-        ventana.onafterprint = () => {
-            ventana.close();
-        };  
+      ventana.onafterprint = () => {
+        ventana.close();
+      };
     }
   }
 
