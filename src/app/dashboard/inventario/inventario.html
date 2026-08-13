@@ -95,7 +95,7 @@
                         </td>
 
                         <td style="text-align: right; font-weight: 600; color: #475569;">
-                            ${{ item.costoPromedio | number:'1.4-4' }}
+                            ${{ formatCosto(item.costoPromedio) }}
                         </td>
                         
                         <td style="text-align: center;">
@@ -192,7 +192,7 @@
                             
                             <td style="text-align: center; font-weight: 900; font-size: 1.15rem; color: #16a34a;">{{ lote.cantidadDisponible }}</td>
                             
-                            <td style="text-align: right; font-weight: 700;">${{ lote.costoUnitario | number:'1.4-4' }}</td>
+                            <td style="text-align: right; font-weight: 700;">${{ formatCosto(lote.costoUnitario) }}</td>
                             
                             <td style="text-align: center;">
                                 <span class="tag-caducidad" *ngIf="lote.fechaCaducidad">{{ lote.fechaCaducidad | date:'dd/MM/yyyy' }}</span>

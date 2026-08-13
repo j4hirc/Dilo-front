@@ -97,7 +97,7 @@
                         </td>
 
                         <td style="text-align: right; font-weight: 600; color: #475569;">
-                            {{ kx.costoUnitario ? '$' + (kx.costoUnitario | number:'1.4-4') : '-' }}
+                            {{ kx.costoUnitario != null ? ('$' + formatCosto(kx.costoUnitario)) : '-' }}
                         </td>
 
                         <td style="text-align: right;">

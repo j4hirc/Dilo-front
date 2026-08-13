@@ -28,7 +28,6 @@
                 <option value="">Categoría: Todas</option>
                 <option *ngFor="let cat of categorias" [value]="cat.id">{{ cat.nombre }}</option>
             </select>
-            <!-- Botón Limpiar Filtros -->
             <button class="btn-clear-filters" *ngIf="searchTerm || categoriaFiltro" (click)="limpiarFiltros()" title="Limpiar Filtros">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
             </button>
@@ -45,18 +44,17 @@
             <table class="data-table">
                 <thead>
                     <tr>
-                        <th style="width: 10%;">Código</th>
-                        <th style="width: 25%;">Producto / Marca</th>
-                        <th style="width: 15%;">Categoría</th>
-                        <th style="text-align: right; width: 12%;">Costo Prom.</th>
-                        <th style="text-align: right; width: 12%;">PVP Venta</th>
+                        <th style="width: 12%;">Código</th>
+                        <th style="width: 30%;">Producto / Marca</th>
+                        <th style="width: 18%;">Categoría</th>
+                        <th style="text-align: right; width: 14%;">Costo Prom.</th>
                         <th style="text-align: center; width: 12%;">Impuesto</th>
                         <th style="text-align: center; width: 14%;">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr *ngIf="productosFiltrados.length === 0">
-                        <td colspan="7" style="text-align: center; padding: 50px; color: #64748b;">
+                        <td colspan="6" style="text-align: center; padding: 50px; color: #64748b;">
                             <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 15px;"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>
                             <br>No se encontraron productos con esos filtros.
                         </td>
@@ -86,12 +84,8 @@
                         </td>
                         <td><span class="tag tag-purple">{{ prod.categoriaNombre }}</span></td>
                         
-                        <td style="text-align: right; font-weight: 600; color: #ea580c;">
-                            ${{ prod.costoPromedioActual | number:'1.2-4' }}
-                        </td>
-                        
-                        <td style="text-align: right; font-weight: 800; color: #0f172a; font-size: 1.05rem;">
-                            ${{ prod.precioUnitario | number:'1.2-2' }}
+                        <td style="text-align: right; font-weight: 700; color: #ea580c; font-size: 1.05rem;">
+                            ${{ formatCosto(prod.costoPromedioActual) }}
                         </td>
                         
                         <td style="text-align: center;">
@@ -155,18 +149,12 @@
                     </div>
                 </div>
 
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Precio Unitario (PVP) *</label>
-                        <input type="number" [(ngModel)]="productoForm.precioUnitario" min="0" step="0.01" placeholder="0.00">
-                    </div>
-                    <div class="form-group">
-                        <label>Categoría *</label>
-                        <select [(ngModel)]="productoForm.categoriaId" class="custom-select">
-                            <option [ngValue]="0" disabled>Selecciona una categoría</option>
-                            <option *ngFor="let cat of categorias" [ngValue]="cat.id">{{ cat.nombre }}</option>
-                        </select>
-                    </div>
+                <div class="form-group">
+                    <label>Categoría *</label>
+                    <select [(ngModel)]="productoForm.categoriaId" class="custom-select">
+                        <option [ngValue]="0" disabled>Selecciona una categoría</option>
+                        <option *ngFor="let cat of categorias" [ngValue]="cat.id">{{ cat.nombre }}</option>
+                    </select>
                 </div>
 
                 <div class="form-group">

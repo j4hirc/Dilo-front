@@ -2,13 +2,14 @@ import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router'; 
+import { RouterLink } from '@angular/router';
+import { environment } from '../../../environments/environment';
 import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-kardex',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink], 
+  imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './kardex.html',
   styleUrls: ['./kardex.css'],
 })
@@ -18,25 +19,25 @@ export class Kardex implements OnInit {
 
   kardex: any[] = [];
   kardexFiltrado: any[] = [];
-  
+
   productos: any[] = [];
   bodegas: any[] = [];
-  inventarioTotal: any[] = []; 
-  bodegasOrigenDisponibles: any[] = []; 
-  maxCantidad: number | null = null; 
+  inventarioTotal: any[] = [];
+  bodegasOrigenDisponibles: any[] = [];
+  maxCantidad: number | null = null;
 
   isLoading = true;
   negocioId: number | null = null;
-  private apiUrl = 'https://dilo-backend-mxlu.onrender.com/api/v1';
+  private apiUrl = environment.apiUrl;
 
   searchTerm: string = '';
-  filtroTipo: string = ''; 
-  bodegaFiltro: string | number = ''; 
-  fechaInicio: string = ''; 
-  fechaFin: string = ''; 
+  filtroTipo: string = '';
+  bodegaFiltro: string | number = '';
+  fechaInicio: string = '';
+  fechaFin: string = '';
 
   showModal = false;
-  
+
   transaccionForm = {
     tipo: 'INGRESO',
     productoId: null as number | null,
@@ -64,11 +65,25 @@ export class Kardex implements OnInit {
     }
   }
 
+  private getAuthHeaders(): HttpHeaders {
+    const rawToken = localStorage.getItem('dilo_token') || '';
+    const cleanToken = rawToken.replace(/['"]+/g, '');
+    return new HttpHeaders().set('Authorization', `Bearer ${cleanToken}`);
+  }
+
+  /**
+   * Formatea montos sin ceros de más:
+   * 10.0000 -> 10.00 | 25.6700 -> 25.67 | 1000.0000 -> 1000.00
+   */
+  formatCosto(valor: any): string {
+    const n = Number(valor);
+    if (!isFinite(n)) return '0.00';
+    return n.toFixed(2);
+  }
+
   cargarKardex(id: number) {
     this.isLoading = true;
-    const rawToken = localStorage.getItem('dilo_token') || '';
-    const cleanToken = rawToken.replace(/['"]+/g, ''); 
-    const headers = new HttpHeaders().set('Authorization', `Bearer ${cleanToken}`);
+    const headers = this.getAuthHeaders();
 
     this.http.get<any[]>(`${this.apiUrl}/negocios/${id}/kardex`, { headers }).subscribe({
       next: (data) => {
@@ -88,65 +103,56 @@ export class Kardex implements OnInit {
   }
 
   cargarListas(id: number) {
-    const rawToken = localStorage.getItem('dilo_token') || '';
-    const cleanToken = rawToken.replace(/['"]+/g, ''); 
-    const headers = new HttpHeaders().set('Authorization', `Bearer ${cleanToken}`);
-
-    this.http.get<any[]>(`${this.apiUrl}/negocios/${id}/productos`, { headers }).subscribe(res => this.productos = res);
+    const headers = this.getAuthHeaders();
+    this.http.get<any[]>(`${this.apiUrl}/negocios/${id}/productos`, { headers }).subscribe(res => this.productos = res || []);
     this.http.get<any[]>(`${this.apiUrl}/negocios/${id}/bodegas`, { headers }).subscribe(res => {
-      this.bodegas = res;
-      this.bodegasOrigenDisponibles = [...res]; 
+      this.bodegas = res || [];
+      this.bodegasOrigenDisponibles = [...this.bodegas];
     });
-    this.http.get<any[]>(`${this.apiUrl}/negocios/${id}/inventario`, { headers }).subscribe(res => this.inventarioTotal = res);
+    this.http.get<any[]>(`${this.apiUrl}/negocios/${id}/inventario`, { headers }).subscribe(res => this.inventarioTotal = res || []);
   }
 
   limpiarFiltros() {
-      this.searchTerm = '';
-      this.filtroTipo = '';
-      this.bodegaFiltro = '';
-      this.fechaInicio = '';
-      this.fechaFin = '';
-      this.aplicarFiltros();
+    this.searchTerm = '';
+    this.filtroTipo = '';
+    this.bodegaFiltro = '';
+    this.fechaInicio = '';
+    this.fechaFin = '';
+    this.aplicarFiltros();
   }
 
-  
   aplicarFiltros() {
     let result = this.kardex;
-    
+
     if (this.filtroTipo) {
       result = result.filter(k => k.tipo === this.filtroTipo);
     }
 
     if (this.bodegaFiltro && this.bodegaFiltro !== '') {
-        const idBodegaBuscada = Number(this.bodegaFiltro);
-        
-        const bodegaEncontrada = this.bodegas.find(b => b.id === idBodegaBuscada);
-        
-        if (bodegaEncontrada) {
-            const nombreBodega = bodegaEncontrada.nombre;
-            
-            result = result.filter(k => {
-                const esOrigen = k.bodegaOrigenNombre === nombreBodega;
-                const esDestino = k.bodegaDestinoNombre === nombreBodega;
-                
-                return esOrigen || esDestino;
-            });
-        }
+      const idBodegaBuscada = Number(this.bodegaFiltro);
+      const bodegaEncontrada = this.bodegas.find(b => b.id === idBodegaBuscada);
+      if (bodegaEncontrada) {
+        const nombreBodega = bodegaEncontrada.nombre;
+        result = result.filter(k => {
+          const esOrigen = k.bodegaOrigenNombre === nombreBodega;
+          const esDestino = k.bodegaDestinoNombre === nombreBodega;
+          return esOrigen || esDestino;
+        });
+      }
     }
 
     if (this.fechaInicio) {
-        const inicioTimeStamp = new Date(this.fechaInicio + 'T00:00:00').getTime();
-        result = result.filter(k => new Date(k.fechaTransaccion).getTime() >= inicioTimeStamp);
+      const inicioTimeStamp = new Date(this.fechaInicio + 'T00:00:00').getTime();
+      result = result.filter(k => new Date(k.fechaTransaccion).getTime() >= inicioTimeStamp);
     }
-
     if (this.fechaFin) {
-        const finDate = new Date(this.fechaFin + 'T23:59:59');
-        result = result.filter(k => new Date(k.fechaTransaccion).getTime() <= finDate.getTime());
+      const finDate = new Date(this.fechaFin + 'T23:59:59');
+      result = result.filter(k => new Date(k.fechaTransaccion).getTime() <= finDate.getTime());
     }
 
     if (this.searchTerm.trim()) {
       const term = this.searchTerm.toLowerCase();
-      result = result.filter(k => 
+      result = result.filter(k =>
         (k.productoNombre && k.productoNombre.toLowerCase().includes(term)) ||
         (k.numeroLote && k.numeroLote.toLowerCase().includes(term)) ||
         (k.documentoReferencia && k.documentoReferencia.toLowerCase().includes(term)) ||
@@ -154,21 +160,21 @@ export class Kardex implements OnInit {
         (k.usuarioResponsableNombre && k.usuarioResponsableNombre.toLowerCase().includes(term))
       );
     }
-    
+
     this.kardexFiltrado = result;
     this.cdr.detectChanges();
   }
 
   abrirModalNuevo() {
-    this.transaccionForm = { 
-        tipo: 'INGRESO', 
-        productoId: null, 
-        bodegaOrigenId: null, 
-        bodegaDestinoId: null, 
-        cantidad: 1, 
-        costoUnitario: null,
-        documentoReferencia: '',
-        motivo: '' 
+    this.transaccionForm = {
+      tipo: 'INGRESO',
+      productoId: null,
+      bodegaOrigenId: null,
+      bodegaDestinoId: null,
+      cantidad: 1,
+      costoUnitario: null,
+      documentoReferencia: '',
+      motivo: ''
     };
     this.maxCantidad = null;
     this.bodegasOrigenDisponibles = [...this.bodegas];
@@ -179,7 +185,7 @@ export class Kardex implements OnInit {
     this.showModal = false;
     this.cdr.detectChanges();
   }
-  
+
   onTipoChange() {
     this.transaccionForm.bodegaOrigenId = null;
     this.transaccionForm.bodegaDestinoId = null;
@@ -203,9 +209,11 @@ export class Kardex implements OnInit {
     if (!this.transaccionForm.productoId) return;
 
     if (this.transaccionForm.tipo === 'EGRESO' || this.transaccionForm.tipo === 'TRANSFERENCIA') {
-      const invProducto = this.inventarioTotal.filter(i => i.productoId === this.transaccionForm.productoId && i.cantidadActual > 0);
+      const invProducto = this.inventarioTotal.filter(
+        i => i.productoId === this.transaccionForm.productoId && i.cantidadActual > 0
+      );
       const idsBodegasConStock = invProducto.map(i => i.bodegaId);
-      
+
       this.bodegasOrigenDisponibles = this.bodegas.filter(b => idsBodegasConStock.includes(b.id));
 
       if (this.bodegasOrigenDisponibles.length === 1) {
@@ -216,7 +224,7 @@ export class Kardex implements OnInit {
         this.transaccionForm.cantidad = 0;
         Swal.fire('Sin Existencias', 'Este producto no tiene stock en ninguna bodega. No puedes transferir ni egresar.', 'info');
       } else {
-        this.maxCantidad = null; 
+        this.maxCantidad = null;
       }
     } else {
       this.bodegasOrigenDisponibles = [...this.bodegas];
@@ -226,7 +234,9 @@ export class Kardex implements OnInit {
 
   actualizarMaxCantidad() {
     if (this.transaccionForm.productoId && this.transaccionForm.bodegaOrigenId) {
-      const inv = this.inventarioTotal.find(i => i.productoId === this.transaccionForm.productoId && i.bodegaId === this.transaccionForm.bodegaOrigenId);
+      const inv = this.inventarioTotal.find(
+        i => i.productoId === this.transaccionForm.productoId && i.bodegaId === this.transaccionForm.bodegaOrigenId
+      );
       this.maxCantidad = inv ? inv.cantidadActual : 0;
       this.validarCantidad();
     } else {
@@ -247,7 +257,6 @@ export class Kardex implements OnInit {
       Swal.fire('Error', 'Completa los campos obligatorios (*).', 'error');
       return;
     }
-
     if (this.transaccionForm.tipo === 'INGRESO' && !this.transaccionForm.bodegaDestinoId) {
       Swal.fire('Error', 'Debes seleccionar una bodega destino para el ingreso.', 'error');
       return;
@@ -269,45 +278,44 @@ export class Kardex implements OnInit {
 
     const userStr = localStorage.getItem('usuario');
     const usuarioLogueado = userStr ? JSON.parse(userStr) : null;
-    const emailUsuario = usuarioLogueado?.email || '';
-
-    const rawToken = localStorage.getItem('dilo_token') || '';
-    const cleanToken = rawToken.replace(/['"]+/g, ''); 
-    const headers = new HttpHeaders().set('Authorization', `Bearer ${cleanToken}`);
+    const emailUsuario = encodeURIComponent(usuarioLogueado?.email || '');
+    const headers = this.getAuthHeaders();
 
     Swal.fire({ title: 'Registrando ajuste...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
     const payload = {
-        tipo: this.transaccionForm.tipo,
-        productoId: this.transaccionForm.productoId,
-        bodegaOrigenId: this.transaccionForm.bodegaOrigenId,
-        bodegaDestinoId: this.transaccionForm.bodegaDestinoId,
-        cantidad: this.transaccionForm.cantidad,
-        motivo: this.transaccionForm.motivo, 
-        costoUnitario: this.transaccionForm.costoUnitario,
-        documentoReferencia: this.transaccionForm.documentoReferencia
+      tipo: this.transaccionForm.tipo,
+      productoId: this.transaccionForm.productoId,
+      bodegaOrigenId: this.transaccionForm.bodegaOrigenId,
+      bodegaDestinoId: this.transaccionForm.bodegaDestinoId,
+      cantidad: this.transaccionForm.cantidad,
+      motivo: this.transaccionForm.motivo,
+      costoUnitario: this.transaccionForm.costoUnitario,
+      documentoReferencia: this.transaccionForm.documentoReferencia
     };
 
-    this.http.post(`${this.apiUrl}/negocios/${this.negocioId}/kardex?emailUsuario=${emailUsuario}`, payload, { headers })
-      .subscribe({
-        next: () => {
-          this.cerrarModal(); 
-          
-          Swal.fire({
-            title: '¡Éxito!',
-            text: 'Ajuste manual registrado correctamente en el Kardex.',
-            icon: 'success',
-            confirmButtonColor: '#ed8936'
-          }).then(() => {
-            this.cargarKardex(this.negocioId!);
-            this.cargarListas(this.negocioId!); 
-          });
-        },
-        error: (err) => {
-          Swal.close();
-          console.error(err);
-          Swal.fire('Error', err.error?.message || 'No se pudo registrar la transacción.', 'error');
-        }
-      });
+    this.http.post(
+      `${this.apiUrl}/negocios/${this.negocioId}/kardex?emailUsuario=${emailUsuario}`,
+      payload,
+      { headers }
+    ).subscribe({
+      next: () => {
+        this.cerrarModal();
+        Swal.fire({
+          title: '¡Éxito!',
+          text: 'Ajuste manual registrado correctamente en el Kardex.',
+          icon: 'success',
+          confirmButtonColor: '#ed8936'
+        }).then(() => {
+          this.cargarKardex(this.negocioId!);
+          this.cargarListas(this.negocioId!);
+        });
+      },
+      error: (err) => {
+        Swal.close();
+        console.error(err);
+        Swal.fire('Error', err.error?.message || 'No se pudo registrar la transacción.', 'error');
+      }
+    });
   }
 }
