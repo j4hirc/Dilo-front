@@ -202,31 +202,34 @@ No inventes rutas.
 ══════════════════════════════════════
 ESTILO Y REGLAS DE RESPUESTA
 ══════════════════════════════════════
-1. Responde en español claro, natural y profesional. Tutea de forma cercana.
-2. Sé útil y concreta. Prefiere listas cortas con **negrita** en datos clave (cantidades, nombres, bodegas).
-3. Máximo 2-3 párrafos o una lista clara. Si es por voz, sé aún más breve y natural (sin markdown exagerado).
-4. NUNCA inventes datos de stock, productos, precios o bodegas. Solo usa lo que está en DATOS REALES.
-5. Cuando pregunten por stock / faltantes / "qué hay" / "qué falta":
+1. 🚨 REGLA DE ORO: DEBES RESPONDER ÚNICA Y EXCLUSIVAMENTE EN ESPAÑOL. ESTÁ TOTALMENTE PROHIBIDO USAR INGLÉS. 🚨
+2. Tu tono debe ser en español claro, natural y profesional de Ecuador. Tutea de forma cercana.
+3. Sé útil y concreta. Prefiere listas cortas con **negrita** en datos clave (cantidades, nombres, bodegas).
+4. Máximo 2-3 párrafos o una lista clara. Si es por voz, sé aún más breve y natural (sin markdown exagerado).
+5. NUNCA inventes datos de stock, productos, precios o bodegas. Solo usa lo que está en DATOS REALES.
+6. Cuando pregunten por stock / faltantes / "qué hay" / "qué falta":
    - Usa la sección STOCK POR BODEGA y PRODUCTOS CON STOCK BAJO O CERO.
    - Indica siempre la bodega y la cantidad.
    - Si hay muchos, resume los más importantes y menciona el total.
-6. Si preguntan "¿por dónde empiezo?" o "cómo funciona", explica según su rol los 2-3 módulos más útiles primero.
-7. Si piden algo de un módulo restringido, explica amablemente que su rol no tiene acceso.
-8. El IVA es 15%. No cambies ese valor.
-9. Si el contexto dice "Vacío" o no hay datos, dilo sin inventar.`;
+7. Si preguntan "¿por dónde empiezo?" o "cómo funciona", explica según su rol los 2-3 módulos más útiles primero.
+8. Si piden algo de un módulo restringido, explica amablemente que su rol no tiene acceso.
+9. El IVA es 15%. No cambies ese valor.
+10. Si el contexto dice "Vacío" o no hay datos, dilo sin inventar.`;
   }
 
   enviarMensaje(texto: string, responderConVoz: boolean = false) {
     if (!texto.trim() || this.isChatLoading) return;
 
-    this.chatMensajes.push({
-      role: 'user',
-      text: texto,
-      safeHtml: this.formatearMensaje(texto)
+    // FORZAMOS A ANGULAR A VER EL CAMBIO CREANDO UN NUEVO ARREGLO
+    this.zone.run(() => {
+      this.chatMensajes = [...this.chatMensajes, {
+        role: 'user',
+        text: texto,
+        safeHtml: this.formatearMensaje(texto)
+      }];
+      this.isChatLoading = true;
     });
 
-    this.isChatLoading = true;
-    
     if (this.recognition) {
         try { this.recognition.stop(); } catch(e){}
     }
@@ -245,7 +248,7 @@ ESTILO Y REGLAS DE RESPUESTA
     const promptConUbicacion = `${this.promptSistemaBase}\n\nUBICACIÓN ACTUAL DEL USUARIO: ${rutaActual}\n(Usa esta info solo como contexto; no inventes pantallas).`;
 
     const payload = {
-      model: 'gpt-oss-20b', 
+      model: 'openai/gpt-oss-120b', // <-- O el modelo que te esté funcionando bien
       messages: [{ role: 'system', content: promptConUbicacion }, ...historial],
       temperature: 0.25,
       max_tokens: 450
@@ -254,68 +257,73 @@ ESTILO Y REGLAS DE RESPUESTA
     this.http.post<any>('https://api.groq.com/openai/v1/chat/completions', payload, { headers })
       .subscribe({
         next: (res) => {
-          const respuestaCruda = res.choices[0].message.content;
-          const { textoLimpio: respuestaBot, ruta: rutaSolicitada } = this.extraerComandoNavegacion(respuestaCruda);
+          this.zone.run(() => {
+            let respuestaCruda = res.choices[0].message.content || '';
+            respuestaCruda = respuestaCruda.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+            
+            const { textoLimpio: respuestaBot, ruta: rutaSolicitada } = this.extraerComandoNavegacion(respuestaCruda);
 
-          this.chatMensajes.push({
-            role: 'assistant',
-            text: respuestaBot,
-            safeHtml: this.formatearMensaje(respuestaBot)
-          });
-          this.isChatLoading = false;
+            // NUEVAMENTE FORZAMOS EL CAMBIO DE DETECCIÓN CON SPREAD OPERATOR
+            this.chatMensajes = [...this.chatMensajes, {
+              role: 'assistant',
+              text: respuestaBot,
+              safeHtml: this.formatearMensaje(respuestaBot)
+            }];
+            this.isChatLoading = false;
 
-          if (rutaSolicitada && this.modulosNavegables.some(m => m.ruta === rutaSolicitada)) {
-            setTimeout(() => this.zone.run(() => this.router.navigate([rutaSolicitada])), 600);
-          }
+            if (rutaSolicitada && this.modulosNavegables.some(m => m.ruta === rutaSolicitada)) {
+              setTimeout(() => this.zone.run(() => this.router.navigate([rutaSolicitada])), 600);
+            }
 
-          if (responderConVoz) {
-            this.hablar(respuestaBot.replace(/\*\*/g, ''), () => {
-                if (this.keepListeningActive) {
-                    this.iniciarEscucha();
-                }
-            }); 
-          } else {
-             if (this.keepListeningActive) {
-                 this.iniciarEscucha();
-             }
-          }
-        },
-        error: (err) => {
-          // 2. CAMBIO: Imprimir el error EXACTO para saber qué pasa
-          console.error("❌ Error de comunicación con Groq:");
-          console.error("Status:", err.status);
-          console.error("Detalle del error:", err.error);
-
-          let msjError = 'Lo siento, hubo un fallo en mi conexión. Revisa tu internet.';
-          let detenerMicrofonoPorError = false;
-
-          // Groq devuelve 404 si el modelo no existe o si hay error de CORS
-          if (err.status === 404) {
-             msjError = 'Error 404: Groq rechazó la conexión o el modelo no existe. (Ver consola)';
-          } else if (err.status === 429) {
-              msjError = 'Uy, me hiciste pensar demasiado rápido y me quedé sin aire. Espera unos segundos, por favor.';
-              detenerMicrofonoPorError = true; 
-              this.keepListeningActive = false; 
-          }
-
-          this.chatMensajes.push({ role: 'assistant', text: msjError, safeHtml: this.formatearMensaje(msjError) });
-          this.isChatLoading = false;
-
-          if (responderConVoz) {
-              this.hablar(msjError, () => {
-                  if (this.keepListeningActive && !detenerMicrofonoPorError) {
+            if (responderConVoz) {
+              this.hablar(respuestaBot.replace(/\*\*/g, ''), () => {
+                  if (this.keepListeningActive) {
                       this.iniciarEscucha();
                   }
-              });
-          } else {
-              if (this.keepListeningActive && !detenerMicrofonoPorError) {
-                  this.iniciarEscucha();
-              }
-          }
+              }); 
+            } else {
+               if (this.keepListeningActive) {
+                   this.iniciarEscucha();
+               }
+            }
+          });
+        },
+        error: (err) => {
+          this.zone.run(() => {
+            console.error("❌ Error de comunicación con Groq:", err);
+            let msjError = 'Lo siento, hubo un fallo en mi conexión. Revisa tu internet.';
+            let detenerMicrofonoPorError = false;
+
+            if (err.status === 404) {
+               msjError = 'Error 404: Groq rechazó la conexión o el modelo no existe.';
+            } else if (err.status === 429) {
+                msjError = 'Uy, me hiciste pensar demasiado rápido y me quedé sin aire. Espera unos segundos.';
+                detenerMicrofonoPorError = true; 
+                this.keepListeningActive = false; 
+            }
+
+            this.chatMensajes = [...this.chatMensajes, { 
+              role: 'assistant', 
+              text: msjError, 
+              safeHtml: this.formatearMensaje(msjError) 
+            }];
+            this.isChatLoading = false;
+
+            if (responderConVoz) {
+                this.hablar(msjError, () => {
+                    if (this.keepListeningActive && !detenerMicrofonoPorError) {
+                        this.iniciarEscucha();
+                    }
+                });
+            } else {
+                if (this.keepListeningActive && !detenerMicrofonoPorError) {
+                    this.iniciarEscucha();
+                }
+            }
+          });
         }
       });
   }
-
   private initSpeechRecognition() {
     const { webkitSpeechRecognition } = window as any;
     if (!webkitSpeechRecognition) return;
@@ -385,9 +393,9 @@ ESTILO Y REGLAS DE RESPUESTA
     this.isListening = false;
   }
 
-  private hablar(texto: string, onFinish?: () => void) {
+ private hablar(texto: string, onFinish?: () => void) {
     window.speechSynthesis.cancel();
-    // Limpiar markdown y comandos para que suene natural al hablar
+    // Diccionario de limpieza para que lea natural y no como robot
     const limpio = (texto || '')
       .replace(/\*\*/g, '')
       .replace(/\*/g, '')
@@ -396,6 +404,16 @@ ESTILO Y REGLAS DE RESPUESTA
       .replace(/•/g, ',')
       .replace(/⚠/g, 'Atención:')
       .replace(/✖/g, 'Sin stock:')
+      // --- TRADUCCIÓN DE ABREVIATURAS ---
+      .replace(/\buds\.?/gi, ' unidades')
+      .replace(/\bud\.?/gi, ' unidad')
+      .replace(/\bmín\.?/gi, ' mínimo')
+      .replace(/\bmin\.?/gi, ' mínimo')
+      .replace(/\bmáx\.?/gi, ' máximo')
+      .replace(/\bmax\.?/gi, ' máximo')
+      .replace(/\bcant\.?/gi, ' cantidad')
+      .replace(/\bdesc\.?/gi, ' descuento')
+      .replace(/\bdir\.?/gi, ' dirección')
       .replace(/\s+/g, ' ')
       .trim();
 

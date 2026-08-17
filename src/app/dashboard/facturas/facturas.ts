@@ -718,7 +718,7 @@ export class Facturas implements OnInit, OnDestroy {
 
     const promptSystem = `
       Eres la IA de un POS. Extrae SOLO lo que el usuario dijo explícitamente. JSON puro, sin texto extra.
-
+      🚨 REGLA DE ORO: LOS NOMBRES DE LOS CAMPOS DEL JSON Y LOS VALORES DEBEN ESTAR EN ESPAÑOL 🚨
       Clientes: [${listaNombresCli}]
       Productos: [${listaNombresProd}]
 
@@ -746,7 +746,7 @@ export class Facturas implements OnInit, OnDestroy {
     `;
 
     const payload = {
-      model: 'gpt-oss-20b',
+      model: 'openai/gpt-oss-120b',
       messages: [
         { role: 'system', content: promptSystem },
         { role: 'user', content: fraseUsuario }
