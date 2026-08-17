@@ -26,14 +26,12 @@ export class ZoeAiService {
 
   private groqApiKey = environment.groqApiKey;
 
-  // Estado del Chat
   isChatOpen = false;
   isChatLoading = false;
   isListening = false;
   
   chatMensajes: ChatMessage[] = [];
   
-  // Contexto del Negocio
   private contextoGlobal = '';
   private promptSistemaBase = '';
 
@@ -247,7 +245,8 @@ ESTILO Y REGLAS DE RESPUESTA
     const promptConUbicacion = `${this.promptSistemaBase}\n\nUBICACIÓN ACTUAL DEL USUARIO: ${rutaActual}\n(Usa esta info solo como contexto; no inventes pantallas).`;
 
     const payload = {
-      model: 'llama-3.1-8b-instant',
+      // 1. CAMBIO: Usamos un modelo base altamente estable en Groq
+      model: 'llama3-8b-8192', 
       messages: [{ role: 'system', content: promptConUbicacion }, ...historial],
       temperature: 0.25,
       max_tokens: 450
@@ -283,11 +282,18 @@ ESTILO Y REGLAS DE RESPUESTA
           }
         },
         error: (err) => {
-          console.error("Error de Groq:", err);
+          // 2. CAMBIO: Imprimir el error EXACTO para saber qué pasa
+          console.error("❌ Error de comunicación con Groq:");
+          console.error("Status:", err.status);
+          console.error("Detalle del error:", err.error);
+
           let msjError = 'Lo siento, hubo un fallo en mi conexión. Revisa tu internet.';
           let detenerMicrofonoPorError = false;
 
-          if (err.status === 429) {
+          // Groq devuelve 404 si el modelo no existe o si hay error de CORS
+          if (err.status === 404) {
+             msjError = 'Error 404: Groq rechazó la conexión o el modelo no existe. (Ver consola)';
+          } else if (err.status === 429) {
               msjError = 'Uy, me hiciste pensar demasiado rápido y me quedé sin aire. Espera unos segundos, por favor.';
               detenerMicrofonoPorError = true; 
               this.keepListeningActive = false; 
