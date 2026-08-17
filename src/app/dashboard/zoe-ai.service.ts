@@ -245,8 +245,7 @@ ESTILO Y REGLAS DE RESPUESTA
     const promptConUbicacion = `${this.promptSistemaBase}\n\nUBICACIÓN ACTUAL DEL USUARIO: ${rutaActual}\n(Usa esta info solo como contexto; no inventes pantallas).`;
 
     const payload = {
-      // 1. CAMBIO: Usamos un modelo base altamente estable en Groq
-      model: 'llama3-8b-8192', 
+      model: 'gpt-oss-20b', 
       messages: [{ role: 'system', content: promptConUbicacion }, ...historial],
       temperature: 0.25,
       max_tokens: 450
