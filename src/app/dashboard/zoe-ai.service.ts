@@ -2,6 +2,7 @@ import { Injectable, NgZone, inject } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { Router } from '@angular/router';
+import { BehaviorSubject } from 'rxjs';
 import { environment } from '../../environments/environment';
 
 export interface ModuloNavegable {
@@ -21,17 +22,30 @@ export interface ChatMessage {
 export class ZoeAiService {
   private http = inject(HttpClient);
   private sanitizer = inject(DomSanitizer);
-  private zone = inject(NgZone); 
+  private zone = inject(NgZone);
   private router = inject(Router);
 
   private groqApiKey = environment.groqApiKey;
 
   isChatOpen = false;
-  isChatLoading = false;
   isListening = false;
-  
-  chatMensajes: ChatMessage[] = [];
-  
+
+  // ========== ESTADO REACTIVO (esto soluciona el problema) ==========
+  private chatMensajesSubject = new BehaviorSubject<ChatMessage[]>([]);
+  chatMensajes$ = this.chatMensajesSubject.asObservable();
+
+  private isChatLoadingSubject = new BehaviorSubject<boolean>(false);
+  isChatLoading$ = this.isChatLoadingSubject.asObservable();
+
+  // Getters de compatibilidad (por si los usas en otros sitios)
+  get chatMensajes(): ChatMessage[] {
+    return this.chatMensajesSubject.value;
+  }
+  get isChatLoading(): boolean {
+    return this.isChatLoadingSubject.value;
+  }
+  // ================================================================
+
   private contextoGlobal = '';
   private promptSistemaBase = '';
 
@@ -42,9 +56,8 @@ export class ZoeAiService {
   private recognition: any;
   private silenceTimer: any;
   private transcriptAcumulado = '';
-  keepListeningActive = false; 
+  keepListeningActive = false;
 
-  /** Voz femenina en español cacheada (se carga de forma asíncrona en Chrome) */
   private vozFemenina: SpeechSynthesisVoice | null = null;
 
   constructor() {
@@ -52,7 +65,6 @@ export class ZoeAiService {
     this.cargarVocesFemeninas();
   }
 
-  /** Precarga y elige la mejor voz femenina en español disponible en el navegador */
   private cargarVocesFemeninas() {
     const elegir = () => {
       const voices = window.speechSynthesis.getVoices();
@@ -60,16 +72,11 @@ export class ZoeAiService {
       this.vozFemenina = this.seleccionarVozFemenina(voices);
     };
     elegir();
-    // Chrome carga las voces de forma asíncrona
     if (typeof window !== 'undefined' && window.speechSynthesis) {
       window.speechSynthesis.onvoiceschanged = () => elegir();
     }
   }
 
-  /**
-   * Ranking de voces femeninas en español (nombres comunes por SO/navegador).
-   * Prioriza: Google español (US/ES), Sabina, Paulina, Mónica, Lucía, María, etc.
-   */
   private seleccionarVozFemenina(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null {
     const es = voices.filter(v => v.lang && v.lang.toLowerCase().startsWith('es'));
     if (!es.length) return null;
@@ -102,23 +109,21 @@ export class ZoeAiService {
       if (found) return found;
     }
 
-    // Cualquier voz es-* que no suene masculina
     const noMale = es.find(v => !masculinas.test(v.name));
     if (noMale) return noMale;
 
-    // Preferir es-ES o es-MX / es-US si hay varias
     const porLang = es.find(v => /es-(ES|MX|US|AR|CO|CL|PE)/i.test(v.lang)) || es[0];
     return porLang;
   }
 
   inicializarChat(nombreUsuario: string, rol: string) {
-    if (this.chatMensajes.length === 0) {
-      const textoBienvenida = `¡Hola! Soy **Zoe**, tu asistente en **Dilo**.\n\nPuedo ayudarte con:\n- Stock y bodegas (qué hay, qué falta, stock mínimo)\n- Productos, clientes, proveedores, facturas\n- Cómo usar cada módulo\n- Llevarte directo a cualquier pantalla\n\nDime por texto o por voz. Ejemplos: *"¿Qué productos faltan en bodega?"*, *"Llévame a Inventario"*, *"¿Por dónde empiezo?"*.\n\n¿En qué te ayudo, ${nombreUsuario}?`;
-      this.chatMensajes.push({
+    if (this.chatMensajesSubject.value.length === 0) {
+      const textoBienvenida = `¡Hola! Soy **Zoe**, tu asistente en **Dilo**.\n\nPuedo ayudarte con:\n- Stock y bodegas (qué hay, qué falta, stock mínimo)\n- Productos, clientes, proveedores, facturas\n- Cómo usar cada módulo\n- Llevarte directo a cualquier pantalla\n\nDime por texto o por voz. Ejemplos: *"¿Qué productos faltan en bodega?"*, *"Llévame a Inventario"*, *"¿Por dónde empiezo?"*.\n\nCuéntame, ${nombreUsuario}, ¿en qué te ayudo hoy?`;
+      this.chatMensajesSubject.next([{
         role: 'assistant',
         text: textoBienvenida,
         safeHtml: this.formatearMensaje(textoBienvenida)
-      });
+      }]);
     }
   }
 
@@ -200,12 +205,17 @@ Nombres de módulos: ${listaNombresModulos || 'ninguno'}.
 No inventes rutas.
 
 ══════════════════════════════════════
+PERSONALIDAD DE ZOE
+══════════════════════════════════════
+No hables como un bot que recita reportes: eres cercana, cálida, segura de ti misma y con chispa — la clase de persona con la que da gusto trabajar. Usa contracciones y expresiones naturales de Ecuador ("fíjate que...", "mira,...", "ojo con esto..."), varía cómo arrancas cada respuesta (nada de empezar siempre con "Claro" o "¡Hola!"), y deja que se note un poco de personalidad y buen humor cuando el contexto lo permita. Tu encanto está en la calidez y la atención genuina hacia la persona, no en insinuaciones: este es un entorno de trabajo, así que si aparece algo de picardía, es sutil, ingeniosa y siempre respetuosa — nunca explícita ni fuera de lugar.
+
+══════════════════════════════════════
 ESTILO Y REGLAS DE RESPUESTA
 ══════════════════════════════════════
 1. 🚨 REGLA DE ORO: DEBES RESPONDER ÚNICA Y EXCLUSIVAMENTE EN ESPAÑOL. ESTÁ TOTALMENTE PROHIBIDO USAR INGLÉS. 🚨
-2. Tu tono debe ser en español claro, natural y profesional de Ecuador. Tutea de forma cercana.
+2. Habla como se habla en Ecuador: natural, cercana, con calidez humana real. Tutea siempre. Evita sonar acartonada o repetitiva — nada de fórmulas fijas en cada mensaje.
 3. Sé útil y concreta. Prefiere listas cortas con **negrita** en datos clave (cantidades, nombres, bodegas).
-4. Máximo 2-3 párrafos o una lista clara. Si es por voz, sé aún más breve y natural (sin markdown exagerado).
+4. Máximo 2-3 párrafos o una lista clara. Si es por voz, sé aún más breve, natural y con ritmo de conversación real (sin markdown exagerado).
 5. NUNCA inventes datos de stock, productos, precios o bodegas. Solo usa lo que está en DATOS REALES.
 6. Cuando pregunten por stock / faltantes / "qué hay" / "qué falta":
    - Usa la sección STOCK POR BODEGA y PRODUCTOS CON STOCK BAJO O CERO.
@@ -214,24 +224,27 @@ ESTILO Y REGLAS DE RESPUESTA
 7. Si preguntan "¿por dónde empiezo?" o "cómo funciona", explica según su rol los 2-3 módulos más útiles primero.
 8. Si piden algo de un módulo restringido, explica amablemente que su rol no tiene acceso.
 9. El IVA es 15%. No cambies ese valor.
-10. Si el contexto dice "Vacío" o no hay datos, dilo sin inventar.`;
+10. Si el contexto dice "Vacío" o no hay datos, dilo sin inventar.
+11. Nunca coquetees de forma explícita, comentes sobre la apariencia de la persona ni saques temas ajenos al negocio: tu calidez se nota en el trato, no en insinuaciones.`;
   }
 
   enviarMensaje(texto: string, responderConVoz: boolean = false) {
-    if (!texto.trim() || this.isChatLoading) return;
+    if (!texto.trim() || this.isChatLoadingSubject.value) return;
 
-    // FORZAMOS A ANGULAR A VER EL CAMBIO CREANDO UN NUEVO ARREGLO
-    this.zone.run(() => {
-      this.chatMensajes = [...this.chatMensajes, {
+    // Agregar mensaje del usuario + activar loading
+    const mensajesActuales = this.chatMensajesSubject.value;
+    this.chatMensajesSubject.next([
+      ...mensajesActuales,
+      {
         role: 'user',
         text: texto,
         safeHtml: this.formatearMensaje(texto)
-      }];
-      this.isChatLoading = true;
-    });
+      }
+    ]);
+    this.isChatLoadingSubject.next(true);
 
     if (this.recognition) {
-        try { this.recognition.stop(); } catch(e){}
+      try { this.recognition.stop(); } catch (e) {}
     }
 
     const headers = new HttpHeaders({
@@ -239,7 +252,7 @@ ESTILO Y REGLAS DE RESPUESTA
       'Content-Type': 'application/json'
     });
 
-    const historial = this.chatMensajes.slice(-6).map(msg => ({
+    const historial = this.chatMensajesSubject.value.slice(-6).map(msg => ({
       role: msg.role,
       content: msg.text
     }));
@@ -248,7 +261,7 @@ ESTILO Y REGLAS DE RESPUESTA
     const promptConUbicacion = `${this.promptSistemaBase}\n\nUBICACIÓN ACTUAL DEL USUARIO: ${rutaActual}\n(Usa esta info solo como contexto; no inventes pantallas).`;
 
     const payload = {
-      model: 'openai/gpt-oss-120b', // <-- O el modelo que te esté funcionando bien
+      model: 'openai/gpt-oss-120b',
       messages: [{ role: 'system', content: promptConUbicacion }, ...historial],
       temperature: 0.25,
       max_tokens: 450
@@ -258,18 +271,21 @@ ESTILO Y REGLAS DE RESPUESTA
       .subscribe({
         next: (res) => {
           this.zone.run(() => {
-            let respuestaCruda = res.choices[0].message.content || '';
+            let respuestaCruda = res.choices[0]?.message?.content || '';
             respuestaCruda = respuestaCruda.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
-            
+
             const { textoLimpio: respuestaBot, ruta: rutaSolicitada } = this.extraerComandoNavegacion(respuestaCruda);
 
-            // NUEVAMENTE FORZAMOS EL CAMBIO DE DETECCIÓN CON SPREAD OPERATOR
-            this.chatMensajes = [...this.chatMensajes, {
-              role: 'assistant',
-              text: respuestaBot,
-              safeHtml: this.formatearMensaje(respuestaBot)
-            }];
-            this.isChatLoading = false;
+            // Agregar respuesta de Zoe + desactivar loading
+            this.chatMensajesSubject.next([
+              ...this.chatMensajesSubject.value,
+              {
+                role: 'assistant',
+                text: respuestaBot,
+                safeHtml: this.formatearMensaje(respuestaBot)
+              }
+            ]);
+            this.isChatLoadingSubject.next(false);
 
             if (rutaSolicitada && this.modulosNavegables.some(m => m.ruta === rutaSolicitada)) {
               setTimeout(() => this.zone.run(() => this.router.navigate([rutaSolicitada])), 600);
@@ -277,53 +293,57 @@ ESTILO Y REGLAS DE RESPUESTA
 
             if (responderConVoz) {
               this.hablar(respuestaBot.replace(/\*\*/g, ''), () => {
-                  if (this.keepListeningActive) {
-                      this.iniciarEscucha();
-                  }
-              }); 
+                if (this.keepListeningActive) {
+                  this.iniciarEscucha();
+                }
+              });
             } else {
-               if (this.keepListeningActive) {
-                   this.iniciarEscucha();
-               }
+              if (this.keepListeningActive) {
+                this.iniciarEscucha();
+              }
             }
           });
         },
         error: (err) => {
           this.zone.run(() => {
-            console.error("❌ Error de comunicación con Groq:", err);
+            console.error('❌ Error de comunicación con Groq:', err);
             let msjError = 'Lo siento, hubo un fallo en mi conexión. Revisa tu internet.';
             let detenerMicrofonoPorError = false;
 
             if (err.status === 404) {
-               msjError = 'Error 404: Groq rechazó la conexión o el modelo no existe.';
+              msjError = 'Error 404: Groq rechazó la conexión o el modelo no existe.';
             } else if (err.status === 429) {
-                msjError = 'Uy, me hiciste pensar demasiado rápido y me quedé sin aire. Espera unos segundos.';
-                detenerMicrofonoPorError = true; 
-                this.keepListeningActive = false; 
+              msjError = 'Uy, me hiciste pensar demasiado rápido y me quedé sin aire. Espera unos segundos.';
+              detenerMicrofonoPorError = true;
+              this.keepListeningActive = false;
             }
 
-            this.chatMensajes = [...this.chatMensajes, { 
-              role: 'assistant', 
-              text: msjError, 
-              safeHtml: this.formatearMensaje(msjError) 
-            }];
-            this.isChatLoading = false;
+            this.chatMensajesSubject.next([
+              ...this.chatMensajesSubject.value,
+              {
+                role: 'assistant',
+                text: msjError,
+                safeHtml: this.formatearMensaje(msjError)
+              }
+            ]);
+            this.isChatLoadingSubject.next(false);
 
             if (responderConVoz) {
-                this.hablar(msjError, () => {
-                    if (this.keepListeningActive && !detenerMicrofonoPorError) {
-                        this.iniciarEscucha();
-                    }
-                });
-            } else {
+              this.hablar(msjError, () => {
                 if (this.keepListeningActive && !detenerMicrofonoPorError) {
-                    this.iniciarEscucha();
+                  this.iniciarEscucha();
                 }
+              });
+            } else {
+              if (this.keepListeningActive && !detenerMicrofonoPorError) {
+                this.iniciarEscucha();
+              }
             }
           });
         }
       });
   }
+
   private initSpeechRecognition() {
     const { webkitSpeechRecognition } = window as any;
     if (!webkitSpeechRecognition) return;
@@ -343,26 +363,29 @@ ESTILO Y REGLAS DE RESPUESTA
         this.transcriptAcumulado += final;
         this.zone.run(() => {
           clearTimeout(this.silenceTimer);
-          
+
           this.silenceTimer = setTimeout(() => {
             if (this.transcriptAcumulado.trim()) {
               this.enviarMensaje(this.transcriptAcumulado.trim(), true);
               this.transcriptAcumulado = '';
             }
-          }, 2200); 
+          }, 2200);
         });
       }
     };
 
     this.recognition.onend = () => {
-        this.zone.run(() => {
-            this.isListening = false;
-            if (this.keepListeningActive && !this.isChatLoading) {
-                try { this.recognition.start(); this.isListening = true; } catch (e) {}
-            }
-        });
+      this.zone.run(() => {
+        this.isListening = false;
+        if (this.keepListeningActive && !this.isChatLoadingSubject.value) {
+          try {
+            this.recognition.start();
+            this.isListening = true;
+          } catch (e) {}
+        }
+      });
     };
-    
+
     this.recognition.onerror = () => this.zone.run(() => this.isListening = false);
   }
 
@@ -378,7 +401,7 @@ ESTILO Y REGLAS DE RESPUESTA
   private iniciarEscucha() {
     if (!this.recognition) return;
     this.transcriptAcumulado = '';
-    window.speechSynthesis.cancel(); 
+    window.speechSynthesis.cancel();
     try {
       this.recognition.start();
       this.isListening = true;
@@ -386,16 +409,15 @@ ESTILO Y REGLAS DE RESPUESTA
   }
 
   private detenerEscuchaManejoUsuario() {
-    this.keepListeningActive = false; 
+    this.keepListeningActive = false;
     if (this.recognition) {
-        try { this.recognition.stop(); } catch(e) {}
+      try { this.recognition.stop(); } catch (e) {}
     }
     this.isListening = false;
   }
 
- private hablar(texto: string, onFinish?: () => void) {
+  private hablar(texto: string, onFinish?: () => void) {
     window.speechSynthesis.cancel();
-    // Diccionario de limpieza para que lea natural y no como robot
     const limpio = (texto || '')
       .replace(/\*\*/g, '')
       .replace(/\*/g, '')
@@ -404,7 +426,6 @@ ESTILO Y REGLAS DE RESPUESTA
       .replace(/•/g, ',')
       .replace(/⚠/g, 'Atención:')
       .replace(/✖/g, 'Sin stock:')
-      // --- TRADUCCIÓN DE ABREVIATURAS ---
       .replace(/\buds\.?/gi, ' unidades')
       .replace(/\bud\.?/gi, ' unidad')
       .replace(/\bmín\.?/gi, ' mínimo')
@@ -430,16 +451,12 @@ ESTILO Y REGLAS DE RESPUESTA
       } else {
         utterance.lang = 'es-ES';
       }
-      utterance.rate = 1.05;
-      utterance.pitch = 1.1;
+      utterance.rate = 0.97;
+      utterance.pitch = 1.0;
       utterance.volume = 1;
 
-      utterance.onend = () => {
-          if (onFinish) onFinish();
-      };
-      utterance.onerror = () => {
-          if (onFinish) onFinish();
-      };
+      utterance.onend = () => { if (onFinish) onFinish(); };
+      utterance.onerror = () => { if (onFinish) onFinish(); };
 
       window.speechSynthesis.speak(utterance);
     }, 80);

@@ -95,6 +95,24 @@ export class DashboardDefault implements OnInit, OnDestroy, AfterViewChecked {
 
     this.zoeService.inicializarChat(this.usuarioLogueado?.primerNombre || 'Usuario', this.rolUsuario);
 
+    // ── FIX: Zoe actualiza sus BehaviorSubject (chatMensajes$ / isChatLoading$)
+    // fuera del ciclo de detección de cambios que esta vista capta automáticamente
+    // (el mismo motivo por el que cargarDatosNegocio() y cargarAlertasCaducidad()
+    // ya usan cdr.detectChanges() manualmente más abajo). Sin esto, el mensaje
+    // nuevo queda guardado en el servicio pero no se pinta hasta el próximo ciclo
+    // de CD que se dispare por otra vía (por eso "aparecía" recién al salir y volver).
+    this.zoeService.chatMensajes$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.cdr.detectChanges();
+      });
+
+    this.zoeService.isChatLoading$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.cdr.detectChanges();
+      });
+
     // Preferencias del chat flotante (no estorbar)
     this.chatMinimizado = localStorage.getItem('dilo_chat_minimizado') === '1';
     // Burbuja de VOZ: se mantiene visible para hablar con la IA (solo se oculta si el usuario pulsa ×)
