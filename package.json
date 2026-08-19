@@ -16,7 +16,7 @@
     "@angular/compiler": "^21.2.0",
     "@angular/core": "^21.2.0",
     "@angular/forms": "^21.2.0",
-    "@angular/platform-browser": "^21.2.0",
+    "@angular/platform-browser": "^22.1.2",
     "@angular/router": "^21.2.0",
     "@ng-select/ng-select": "^21.8.2",
     "jspdf": "^4.2.1",
