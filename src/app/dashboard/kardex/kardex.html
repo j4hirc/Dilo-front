@@ -212,10 +212,10 @@
                         <ng-select [items]="productos" bindLabel="nombre" bindValue="id"
                             [(ngModel)]="transaccionForm.productoId" (change)="onProductoChange()"
                             placeholder="Buscar por código o nombre..." notFoundText="Producto no encontrado"
-                            [editableSearchTerm]="true" class="custom-ng-select">
+                            [editableSearchTerm]="true" [searchFn]="customProductSearch" class="custom-ng-select">
 
                             <ng-template ng-label-tmp let-item="item">
-                                {{ item.codigoPrincipal }} - {{ item.nombre }}
+                                {{ item.codigoPrincipal ? item.codigoPrincipal + ' - ' : '' }}{{ item.nombre }}
                             </ng-template>
 
                             <ng-template ng-option-tmp let-item="item" let-search="searchTerm">

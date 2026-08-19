@@ -245,6 +245,14 @@ export class Kardex implements OnInit {
     }
   }
 
+  customProductSearch(term: string, item: any) {
+    term = term.toLowerCase();
+    const nombre = item.nombre ? item.nombre.toLowerCase() : '';
+    const codigo = item.codigoPrincipal ? String(item.codigoPrincipal).toLowerCase() : '';
+
+    return nombre.includes(term) || codigo.includes(term);
+  }
+
   validarCantidad() {
   }
 
