@@ -223,13 +223,13 @@
 
                     <div class="form-row mt-3">
                         <div class="form-group w-50">
-                            <label>Método de Pago *</label>
-                            <select [(ngModel)]="nuevaFactura.metodoPago" class="custom-select modern-input"
-                                style="transition: all 0.3s ease;">
-                                <option value="EFECTIVO">Efectivo</option>
-                                <option value="TRANSFERENCIA">Transferencia</option>
-                                <option value="TARJETA_CREDITO">Tarjeta de Crédito</option>
-                            </select>
+                            <label>Método de Pago</label>
+                            <ng-select [(ngModel)]="nuevaFactura.metodoPago" (change)="onMetodoPagoChange()"
+                                [clearable]="false" [searchable]="false" class="custom-ng-select">
+                                <ng-option value="EFECTIVO">💵 Efectivo</ng-option>
+                                <ng-option value="TRANSFERENCIA">🏦 Transferencia</ng-option>
+                                <ng-option value="TARJETA_CREDITO">💳 Tarjeta de Crédito</ng-option>
+                            </ng-select>
                         </div>
 
                         <div class="form-group w-50" *ngIf="nuevaFactura.metodoPago === 'TARJETA_CREDITO'">
@@ -267,12 +267,12 @@
                     <div class="add-product-box mt-2 shadow-sm">
                         <div class="form-row">
                             <div class="form-group" style="width: 40%">
-                                <label>Bodega *</label>
-                                <select [(ngModel)]="itemTemp.bodegaId" class="custom-select modern-input"
-                                    style="transition: all 0.3s ease;">
-                                    <option [ngValue]="null" disabled>Seleccionar bodega</option>
-                                    <option *ngFor="let bod of bodegasList" [ngValue]="bod.id">{{ bod.nombre }}</option>
-                                </select>
+                                <label>Bodega</label>
+                                <ng-select [items]="bodegasList" bindLabel="nombre" bindValue="id"
+                                    [(ngModel)]="itemTemp.bodegaId" placeholder="Seleccionar bodega..."
+                                    notFoundText="Bodega no encontrada" [editableSearchTerm]="true"
+                                    class="custom-ng-select">
+                                </ng-select>
                             </div>
                             <div class="form-group" style="width: 30%">
                                 <label>Cantidad *</label>
@@ -295,14 +295,41 @@
                         <div class="form-group" style="margin-top: 24px;">
                             <label>Producto *</label>
                             <div class="input-with-button">
-                                <select [(ngModel)]="itemTemp.productoId" class="custom-select modern-input"
-                                    style="flex: 1; transition: all 0.3s ease;">
-                                    <option [ngValue]="null" disabled>Seleccionar...</option>
-                                    <option *ngFor="let prod of productosList" [ngValue]="prod.id">{{ prod.nombre }} -
-                                        ${{ (prod.precioFactura ?? prod.costoPromedioActual ?? prod.precioUnitario) | number:'1.2-2' }}</option>
-                                </select>
+
+                                <ng-select [items]="productosList" bindLabel="nombre" bindValue="id"
+                                    [(ngModel)]="itemTemp.productoId" placeholder="Buscar por código o nombre..."
+                                    notFoundText="Producto no encontrado" [editableSearchTerm]="true"
+                                    style="flex: 1; min-width: 0;" class="custom-ng-select">
+
+                                    <!-- Vista de la opción ya seleccionada (Cerrada) -->
+                                    <ng-template ng-label-tmp let-item="item">
+                                        {{ item.codigoPrincipal ? item.codigoPrincipal + ' - ' : '' }}{{ item.nombre }}
+                                        <span style="color: #16a34a; font-weight: 700; margin-left: 5px;">
+                                            ${{ (item.precioFactura ?? item.costoPromedioActual ?? item.precioUnitario)
+                                            | number:'1.2-2' }}
+                                        </span>
+                                    </ng-template>
+
+                                    <!-- Vista de las opciones al abrir el menú -->
+                                    <ng-template ng-option-tmp let-item="item" let-search="searchTerm">
+                                        <div
+                                            style="display: flex; justify-content: space-between; align-items: center;">
+                                            <div>
+                                                <div style="font-weight: 600; color: #0f172a;">{{ item.codigoPrincipal
+                                                    }}</div>
+                                                <div style="font-size: 0.85rem; color: #64748b;">{{ item.nombre }}</div>
+                                            </div>
+                                            <div style="font-weight: 800; color: #16a34a;">
+                                                ${{ (item.precioFactura ?? item.costoPromedioActual ??
+                                                item.precioUnitario) | number:'1.2-2' }}
+                                            </div>
+                                        </div>
+                                    </ng-template>
+
+                                </ng-select>
+
                                 <button class="btn-primary"
-                                    style="padding: 0 20px; height: 44px; margin-top: 0; border-radius: 8px;"
+                                    style="padding: 0 20px; height: 42px; margin-top: 0; border-radius: 8px;"
                                     (click)="agregarAlCarrito()">Agregar</button>
                             </div>
                         </div>
