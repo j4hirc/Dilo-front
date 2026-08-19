@@ -5,11 +5,12 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { environment } from '../../../environments/environment';
 import Swal from 'sweetalert2';
+import { NgSelectModule } from '@ng-select/ng-select';
 
 @Component({
   selector: 'app-kardex',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, NgSelectModule],
   templateUrl: './kardex.html',
   styleUrls: ['./kardex.css'],
 })
@@ -245,13 +246,15 @@ export class Kardex implements OnInit {
   }
 
   validarCantidad() {
-    if (this.maxCantidad !== null && this.transaccionForm.cantidad > this.maxCantidad) {
-      this.transaccionForm.cantidad = this.maxCantidad;
-    }
   }
 
   registrarTransaccion() {
     if (!this.negocioId) return;
+
+    if (this.maxCantidad !== null && this.transaccionForm.cantidad > this.maxCantidad) {
+      Swal.fire('Stock Insuficiente', `No puedes mover ${this.transaccionForm.cantidad} unidades. El stock máximo disponible en la bodega de origen es ${this.maxCantidad}.`, 'error');
+      return;
+    }
 
     if (!this.transaccionForm.productoId || !this.transaccionForm.cantidad || !this.transaccionForm.motivo) {
       Swal.fire('Error', 'Completa los campos obligatorios (*).', 'error');
