@@ -875,11 +875,7 @@ export class Facturas implements OnInit, OnDestroy {
       });
   }
 
-  /**
-   * Rechaza datos que la IA inventó y el usuario NO dijo (pago, productos, etc.).
-   */
 
-  /** Extrae cuotas de la frase: "3 cuotas", "6 meses", "en 12". */
   private extraerCuotasDeFrase(frase: string): number | null {
     const f = this.limpiarTexto(frase || '');
     const patterns = [
@@ -901,7 +897,6 @@ export class Facturas implements OnInit, OnDestroy {
     const f = this.limpiarTexto(frase || this.ultimaFraseUsuario);
     const out: any = { ...(datos || {}) };
 
-    // --- Método de pago: solo si la frase lo respalda ---
     const diceTarjeta = /\b(tarjeta|credito|visa|mastercard|american\s*express)\b/.test(f);
     const diceTransfer = /\b(transferencia|transferir|deposito|deposito|banco)\b/.test(f);
     const diceEfectivo = /\b(efectivo|cash|contado)\b/.test(f);
@@ -916,14 +911,12 @@ export class Facturas implements OnInit, OnDestroy {
     } else {
       out.metodoPago = null;
     }
-    // Si la frase sí menciona pago pero la IA puso null, forzar
     if (!out.metodoPago) {
       if (diceTarjeta) out.metodoPago = 'TARJETA_CREDITO';
       else if (diceTransfer) out.metodoPago = 'TRANSFERENCIA';
       else if (diceEfectivo) out.metodoPago = 'EFECTIVO';
     }
 
-    // Consumidor final (ya activo o en la frase) → NUNCA tarjeta
     const seraConsumidorFinal = this.esConsumidorFinal
       || /\b(consumidor\s*final|sin\s*datos)\b/.test(f)
       || String(out.cliente || '').toUpperCase().includes('CONSUMIDOR');
@@ -939,7 +932,6 @@ export class Facturas implements OnInit, OnDestroy {
       out.cuotas = null;
     }
 
-    // --- Descuentos globales: solo si mencionó descuento ---
     const diceDesc = /\b(descuento|rebaja|por\s*ciento|porcentaje)\b/.test(f);
     if (!diceDesc) {
       out.descuentoGlobal = null;
@@ -1428,7 +1420,6 @@ export class Facturas implements OnInit, OnDestroy {
     );
     if (exactos.length > 1) return exactos;
 
-    // Raíz: palabra más larga del nombre (≥4) o la primera significativa
     const palabras = nom.split(/\s+/).filter(p => p.length >= 3);
     const raiz = [...palabras].sort((a, b) => b.length - a.length)[0];
     if (!raiz || raiz.length < 4) return [producto];
@@ -1436,7 +1427,6 @@ export class Facturas implements OnInit, OnDestroy {
     const hermanos = this.dedupProductos(
       this.productosList.filter(p => this.limpiarTexto(p.nombre).includes(raiz))
     );
-    // Si hay muchos hermanos genéricos, priorizar los que comparten ≥2 palabras
     if (hermanos.length > 12 && palabras.length >= 2) {
       const estrechos = hermanos.filter(p => {
         const n = this.limpiarTexto(p.nombre);
@@ -1447,48 +1437,35 @@ export class Facturas implements OnInit, OnDestroy {
     return hermanos.length > 1 ? hermanos : [producto];
   }
 
-  /**
-   * Busca productos. Regla estricta:
-   * - Solo auto-elige si hay 1 coincidencia EXACTA (nombre o código).
-   * - Si hay 2 o más candidatos (nombres parecidos / repetidos), DEVUELVE TODOS
-   *   para forzar la pantalla de opciones. Nunca elige "al azar".
-   */
+
   private buscarProductos(textoBuscado: string): any[] {
     const txt = this.limpiarTexto(textoBuscado);
     if (!txt) return [];
 
-    // 1) Nombre exacto
     const exact = this.productosList.filter(p => this.limpiarTexto(p.nombre) === txt);
     if (exact.length === 1) return exact;
     if (exact.length > 1) return exact; // mismos nombres → desambiguar
 
-    // 2) Código exacto
     const porCodigo = this.productosList.filter(p =>
       p.codigoPrincipal && this.limpiarTexto(String(p.codigoPrincipal)) === txt
     );
     if (porCodigo.length === 1) return porCodigo;
     if (porCodigo.length > 1) return porCodigo;
 
-    // 3) El nombre del producto CONTIENE lo dicho (o al revés)
     const partial = this.productosList.filter(p => {
       const nom = this.limpiarTexto(p.nombre);
       return nom.includes(txt) || (txt.length >= 4 && txt.includes(nom));
     });
-    // Deduplicar por id
     const uniqPartial = this.dedupProductos(partial);
     if (uniqPartial.length === 1) return uniqPartial;
     if (uniqPartial.length > 1) {
-      // Preferir los que empiezan igual, pero SI HAY MÁS DE UNO → todos a opciones
       const starts = uniqPartial.filter(p => this.limpiarTexto(p.nombre).startsWith(txt));
       if (starts.length === 1 && uniqPartial.length <= 3) {
-        // Un solo que empieza igual y pocos candidatos: aún así, si hay varios similares, mostrar opciones
-        // Usuario pidió: siempre que se repita → opciones. Si starts=1 y hay otros, mostrar todos.
         return uniqPartial;
       }
       return starts.length > 1 ? starts : uniqPartial;
     }
 
-    // 4) Todas las palabras significativas deben aparecer en el nombre
     const palabras = txt.split(/\s+/).filter(p => p.length > 2);
     if (palabras.length > 0) {
       const porPalabras = this.productosList.filter(p => {
@@ -1499,7 +1476,6 @@ export class Facturas implements OnInit, OnDestroy {
       if (uniq.length >= 1) return uniq;
     }
 
-    // 5) Fallback suave: al menos una palabra larga (mín 4 chars) — siempre lista para desambiguar
     const largas = txt.split(/\s+/).filter(p => p.length >= 4);
     if (largas.length > 0) {
       const suaves = this.productosList.filter(p => {
@@ -1521,7 +1497,6 @@ export class Facturas implements OnInit, OnDestroy {
         out.push(p);
       }
     }
-    // Orden: nombres más cortos primero (más específicos)
     return out.sort((a, b) => this.limpiarTexto(a.nombre).length - this.limpiarTexto(b.nombre).length);
   }
 
@@ -1532,7 +1507,6 @@ export class Facturas implements OnInit, OnDestroy {
     this.voiceState = VoiceStep.ELEGIR_OPCION;
     this.seleccionEnCurso = false;
     this.cdr.detectChanges();
-    // Hablar y luego escuchar solo el número (sin eco de la propia voz)
     this.hablar(mensaje, () => {
       this.bloqueoEscucha = false;
       this.isThinking = false;
@@ -1544,11 +1518,9 @@ export class Facturas implements OnInit, OnDestroy {
     if (this.voiceState !== VoiceStep.ELEGIR_OPCION || this.seleccionEnCurso) return;
     if (index < 0 || index >= this.opcionesVoz.length) return;
 
-    // Clic: cortar mic + voz YA para que no se confunda
     this.seleccionEnCurso = true;
     this.pausarMicYVoz();
     const seleccionado = this.opcionesVoz[index];
-    // Pequeño delay para que abort del mic termine
     setTimeout(() => {
       this.procesarSeleccionDesambiguacion(seleccionado);
     }, 120);
@@ -1558,7 +1530,6 @@ export class Facturas implements OnInit, OnDestroy {
     if (this.seleccionEnCurso) return;
 
     const t = (transcript || '').trim();
-    // Frases largas = ruido / eco de Zoe, no una opción
     if (t.length > 45) {
       this.hablar("Di solo el número de la opción, por ejemplo: uno, dos o tres.", () => {
         this.bloqueoEscucha = false;
@@ -1577,7 +1548,6 @@ export class Facturas implements OnInit, OnDestroy {
       return;
     }
 
-    // Match por nombre solo si es corto y específico (no frases sueltas)
     if (this.tipoOpciones === 'PRODUCTO' && t.length >= 3) {
       const porNombre = this.opcionesVoz.filter(p => {
         const nom = this.limpiarTexto(p.nombre);
@@ -1705,9 +1675,7 @@ export class Facturas implements OnInit, OnDestroy {
     return -1;
   }
 
-  // =======================================================
-  // 🔥 CARRITO Y PDF
-  // =======================================================
+
   agregarAlCarrito() {
     if (!this.itemTemp.productoId || !this.itemTemp.bodegaId || this.itemTemp.cantidad <= 0) {
       Swal.fire('Atención', 'Selecciona producto, bodega y una cantidad válida.', 'warning');
@@ -1743,10 +1711,7 @@ export class Facturas implements OnInit, OnDestroy {
     };
   }
 
-  /**
-   * Usa costo promedio (fallback PVP). Fusiona si mismo producto+bodega ya está.
-   * Respeta grabaIva. Alineado con FacturaServiceImpl del backend.
-   */
+
   private agregarProductoDirecto(
     producto: any,
     cantidad: number,
@@ -1756,7 +1721,6 @@ export class Facturas implements OnInit, OnDestroy {
   ) {
     if (!producto || !bodegaId || cantidad <= 0) return;
 
-    // 🔥 Costo promedio → precio de la factura (igual que el backend)
     const precio = this.precioParaFactura(producto);
     if (precio <= 0) {
       Swal.fire('Error', `El producto "${producto.nombre}" no tiene costo promedio ni precio configurado.`, 'error');
@@ -1809,7 +1773,7 @@ export class Facturas implements OnInit, OnDestroy {
       bodegaNombre: bodegaNombre,
       cantidad: cantidad,
       productoNombre: producto.nombre,
-      precioUnitario: precio, // costo promedio (o PVP si no hay costo)
+      precioUnitario: precio,
       costoPromedioActual: costoProm,
       descuento: descuento,
       descuentoPorcentaje: descuentoPorcentaje || 0,
@@ -1819,16 +1783,13 @@ export class Facturas implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
-  /** Busca línea del carrito por nombre parcial (sin acentos). */
   private buscarIndiceEnCarrito(nombreBuscado: string): number {
     const t = this.limpiarTexto(nombreBuscado);
     if (!t) return -1;
-    // Exacto / incluye
     let idx = this.nuevaFactura.detalles.findIndex((d: any) =>
       this.limpiarTexto(d.productoNombre).includes(t) || t.includes(this.limpiarTexto(d.productoNombre))
     );
     if (idx !== -1) return idx;
-    // Por palabras
     const pals = t.split(/\s+/).filter(p => p.length > 2);
     if (pals.length === 0) return -1;
     return this.nuevaFactura.detalles.findIndex((d: any) => {
@@ -1837,10 +1798,7 @@ export class Facturas implements OnInit, OnDestroy {
     });
   }
 
-  /**
-   * Cambia la cantidad de un producto ya en el ticket.
-   * cantidad 0 → lo quita.
-   */
+
   private modificarCantidadEnCarrito(nombreProducto: string, nuevaCantidad: number): boolean {
     const idx = this.buscarIndiceEnCarrito(nombreProducto);
     if (idx === -1) return false;
@@ -1852,7 +1810,6 @@ export class Facturas implements OnInit, OnDestroy {
       return true;
     }
 
-    // Validar stock
     const stock = this.obtenerStock(line.productoId, line.bodegaId);
     let cant = Math.floor(nuevaCantidad);
     if (stock !== null && cant > stock) {
@@ -1880,7 +1837,6 @@ export class Facturas implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
-  /** Confirmación obligatoria antes de emitir (botón manual y voz). */
   confirmarYGuardarFactura() {
     if ((!this.nuevaFactura.clienteId && !this.esConsumidorFinal) || this.nuevaFactura.detalles.length === 0) {
       Swal.fire('Error', 'Faltan datos para emitir la factura (cliente y al menos un producto).', 'error');
@@ -1924,7 +1880,6 @@ export class Facturas implements OnInit, OnDestroy {
     this.isSaving = true;
     Swal.fire({ title: 'Emitiendo Factura...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
-    // Sincronizar monto de descuento global desde % si aplica
     const descGlobal = this.descuentoGlobalMonto;
     this.nuevaFactura.descuentoGlobal = descGlobal;
 
@@ -1942,7 +1897,6 @@ export class Facturas implements OnInit, OnDestroy {
       }))
     };
 
-    // emailUsuario lo exige el backend para el emisor
     const userStr = localStorage.getItem('usuario');
     const usuarioLogueado = userStr ? JSON.parse(userStr) : null;
     const emailUsuario = encodeURIComponent(usuarioLogueado?.email || '');
@@ -1957,7 +1911,6 @@ export class Facturas implements OnInit, OnDestroy {
         this.showModal = false;
         if (this.negocioId) this.cargarTodasLasFacturas(this.negocioId);
 
-        // Snapshot del carrito en pantalla → el PDF debe coincidir con lo que vio el usuario
         const detallesCarrito = this.nuevaFactura.detalles.map((d: any) => ({ ...d }));
         const totalApi = Number(res.totalFactura ?? res.total ?? 0);
         const ivaApi = Number(res.totalIva ?? 0);
@@ -1968,7 +1921,6 @@ export class Facturas implements OnInit, OnDestroy {
           numero: res.numeroFactura || 'S/N',
           cliente: res.clienteNombre || (this.esConsumidorFinal ? 'Consumidor Final' : 'Cliente'),
           fecha: res.fechaEmision ? new Date(res.fechaEmision).toLocaleDateString() : new Date().toLocaleDateString(),
-          // Preferir carrito si el API no trajo IVA (campos nulos / 0 por mapper)
           monto: totalApi > 0 ? totalApi : this.totalCarrito,
           tipo: res.formaPago || this.nuevaFactura.metodoPago || 'Manual',
           descuentoGlobal: descGlobal,
@@ -1976,7 +1928,6 @@ export class Facturas implements OnInit, OnDestroy {
           subtotalIvaAplicado: subGravApi > 0 ? subGravApi : this.subtotalGravado,
           totalIva: ivaApi > 0 ? ivaApi : this.montoIva,
           porcentajeIva: Number(res.porcentajeIvaAplicado || (this.ivaActual * 100)),
-          // Detalles del carrito garantizan PVP y descuentos de línea iguales a la web
           detalles: (res.detallesFactura || res.detalles || []).length
             ? this.fusionarDetallesPdf(res.detallesFactura || res.detalles, detallesCarrito)
             : detallesCarrito
@@ -1997,9 +1948,6 @@ export class Facturas implements OnInit, OnDestroy {
     this.imprimirFacturaPDF(fac);
   }
 
-  /**
-   * Mezcla detalles del API con los del carrito para no perder PVP / descuento de línea.
-   */
   private fusionarDetallesPdf(apiDetalles: any[], carrito: any[]): any[] {
     return apiDetalles.map((api: any, i: number) => {
       const cart = carrito.find((c: any) => c.productoId === (api.productoId || api.producto?.id))
@@ -2020,9 +1968,7 @@ export class Facturas implements OnInit, OnDestroy {
     });
   }
 
-  /**
-   * Calcula subtotal / IVA / total desde líneas (mismo criterio que el carrito web).
-   */
+
   private calcularTotalesDesdeDetalles(detalles: any[], descuentoGlobal: number, tasaIva: number) {
     let gravado = 0;
     let exento = 0;
@@ -2059,13 +2005,11 @@ export class Facturas implements OnInit, OnDestroy {
     const tasa = (fac.porcentajeIva != null ? Number(fac.porcentajeIva) : (this.ivaActual * 100)) / 100;
     const porcentajeIvaMostrar = (tasa * 100).toFixed(0);
 
-    // 1) Totales explícitos si vienen bien del API / snapshot
     let iva = Number(fac.totalIva);
     let subtotal = Number(fac.subtotalIva0 || 0) + Number(fac.subtotalIvaAplicado || 0);
     let total = Number(fac.monto || 0);
     let descuentoGlobal = descuentoGlobalIn;
 
-    // 2) Si IVA falta o es 0 con productos gravados → recalcular como en la web
     const calc = this.calcularTotalesDesdeDetalles(detalles, descuentoGlobalIn, tasa || this.ivaActual);
     const hayGravados = detalles.some((d: any) => !!(d.grabaIva ?? d.producto?.grabaIva));
 
@@ -2075,7 +2019,6 @@ export class Facturas implements OnInit, OnDestroy {
       total = calc.total;
       descuentoGlobal = calc.descuentoGlobal;
     } else {
-      // Ajustar subtotal si solo vino el total
       if (!(subtotal > 0) && total > 0) {
         subtotal = Math.max(0, total - iva);
       }

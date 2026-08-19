@@ -34,7 +34,6 @@
     </div>
 </div>
 
-<!-- 🔥 BUSCADOR -->
 <div class="search-container fade-in">
     <div class="search-box">
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748b"
@@ -110,9 +109,6 @@
     </div>
 </div>
 
-<!-- =========================================
-   🔥 MODAL PUNTO DE VENTA (FONDO)
-   ========================================= -->
 <div class="modal-overlay" *ngIf="showModal">
     <div class="modal-layout-wrapper">
         <div class="modal-content">
@@ -128,7 +124,6 @@
             </div>
 
             <div class="modal-body modal-grid-layout">
-                <!-- COLUMNA IZQUIERDA: CONTROLES -->
                 <div class="modal-col">
                     <div class="section-badge">Cliente y Pago</div>
 
@@ -185,8 +180,7 @@
                                 </div>
                             </div>
 
-                            <!-- BOTÓN CONSUMIDOR FINAL -->
-                            <button *ngIf="!clienteSeleccionadoInfo" class="btn-outline-secondary"
+                            ¿ <button *ngIf="!clienteSeleccionadoInfo" class="btn-outline-secondary"
                                 (click)="setConsumidorFinal()"
                                 style="height: 48px; border-radius: 8px; white-space: nowrap; font-size: 0.85rem; padding: 0 15px;"
                                 title="Facturar rápido sin datos">
@@ -249,7 +243,6 @@
                         </div>
                     </div>
 
-                    <!-- 🔥 SIMULADOR DE TARJETA -->
                     <div class="form-row mt-2" *ngIf="nuevaFactura.metodoPago === 'TARJETA_CREDITO'">
                         <div class="form-group" style="width: 50%;">
                             <label>Nº Tarjeta (Opcional)</label>
@@ -312,7 +305,6 @@
                                     [searchFn]="customProductSearch" style="flex: 1; min-width: 0;"
                                     class="custom-ng-select">
 
-                                    <!-- Vista de la opción ya seleccionada (Cerrada) -->
                                     <ng-template ng-label-tmp let-item="item">
                                         {{ item.codigoPrincipal ? item.codigoPrincipal + ' - ' : '' }}{{ item.nombre }}
                                         <span style="color: #16a34a; font-weight: 700; margin-left: 5px;">
@@ -321,7 +313,6 @@
                                         </span>
                                     </ng-template>
 
-                                    <!-- Vista de las opciones al abrir el menú -->
                                     <ng-template ng-option-tmp let-item="item" let-search="searchTerm">
                                         <div
                                             style="display: flex; justify-content: space-between; align-items: center;">
@@ -439,7 +430,6 @@
             </div>
         </div>
 
-        <!-- ZOE SIDE PANEL -->
         <div class="zoe-side-panel fade-in" *ngIf="voiceState !== 'OFF'">
             <div class="zoe-widget">
 
