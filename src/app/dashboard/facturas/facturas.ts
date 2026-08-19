@@ -807,19 +807,21 @@ export class Facturas implements OnInit, OnDestroy {
          "cuotas": null,
          "descuentoGlobal": null,
          "descuentoGlobalPorcentaje": null,
-         "items": [],
+         "items": [{"producto":"nombre","cantidad":1,"descuento":0,"descuentoPorcentaje":0}],
          "eliminarProducto": null,
+         "modificarCantidad": null,
          "emitirFactura": false
       }
 
       REGLAS ESTRICTAS (no inventes NADA):
-      1. metodoPago: SOLO si dijo "efectivo", "transferencia/depósito" o "tarjeta/crédito". Si NO habló de pago → null. NUNCA pongas TARJETA_CREDITO por defecto.
-      2. detallesTarjeta / cuotas: SOLO si mencionó tarjeta Y datos de tarjeta o meses. Si no → null.
-      3. items: SOLO productos que el usuario nombró. Si solo habló de cliente/pago/descuento → items: []. No inventes productos de la lista.
-      4. descuentos: SOLO si los mencionó. Si no dijo descuento → null / 0.
-      5. emitirFactura: true SOLO si pide emitir/cobrar/guardar de forma clara.
-      6. eliminarProducto: SOLO si pide quitar/borrar un producto. Un descuento NO elimina.
+      1. metodoPago: SOLO si dijo "efectivo", "transferencia/depósito" o "tarjeta/crédito". Si NO habló de pago → null.
+      2. cuotas: número si dijo "N cuotas", "N meses", "cambia a N cuotas", "pon N cuotas". Puede ir SOLO (sin repetir tarjeta).
+      3. items: SOLO productos a AGREGAR que el usuario nombró. Si solo cambia cantidad o quita → items: [].
+      4. eliminarProducto: nombre del producto a quitar si dijo quita/borra/elimina/saca. Si no → null.
+      5. modificarCantidad: {"producto":"nombre","cantidad":N} si dijo "cambia cantidad", "pon N de X", "deja N X". Si no → null.
+      6. emitirFactura: true SOLO si pide emitir/cobrar/guardar de forma clara.
       7. cliente "CONSUMIDOR_FINAL" solo si dijo consumidor final / sin datos.
+      8. descuentos: SOLO si los mencionó.
     `;
 
     const payload = {
@@ -970,14 +972,62 @@ export class Facturas implements OnInit, OnDestroy {
       if (!diceQuitar) out.eliminarProducto = null;
     }
 
-    // Si dijo tarjeta, intentar leer cuotas de la frase aunque la IA no las mandó
-    if (out.metodoPago === 'TARJETA_CREDITO') {
+    // Cuotas: de la IA o de la frase ("5 cuotas", "cambia a 3 meses")
+    // También si YA está en tarjeta y solo dice "cambia a 5 cuotas"
+    {
       const desdeFrase = this.extraerCuotasDeFrase(f);
       const desdeIa = out.cuotas != null ? parseInt(String(out.cuotas), 10) : NaN;
       if (!isNaN(desdeIa) && desdeIa >= 1) {
         out.cuotas = desdeIa;
       } else if (desdeFrase) {
         out.cuotas = desdeFrase;
+      }
+      // Si menciona cuotas/meses sin método, y ya hay tarjeta → mantener tarjeta
+      if (out.cuotas && !out.metodoPago && this.nuevaFactura.metodoPago === 'TARJETA_CREDITO') {
+        // no tocar metodoPago; solo actualizamos cuotas más abajo
+      }
+    }
+
+    // eliminarProducto: reforzar desde frase
+    if (!out.eliminarProducto || out.eliminarProducto === 'null') {
+      const mQ = f.match(/\b(?:quita|quitar|borra|borrar|elimina|eliminar|saca|sacar)\s+(?:el|la|los|las)?\s*(.+)$/);
+      if (mQ) {
+        const nom = mQ[1].replace(/\b(del ticket|de la factura|por favor)\b/g, '').trim();
+        if (nom.length >= 2) out.eliminarProducto = nom;
+      }
+    }
+
+    // modificarCantidad desde frase: "cambia cantidad de mouse a 3", "pon 2 de teclado", "deja 5 mouse"
+    if (!out.modificarCantidad || out.modificarCantidad === 'null') {
+      const patronesCant = [
+        /(?:cambia|cambiar|pon|poner|deja|dejar|actualiza|actualizar)\s+(?:la\s+)?cantidad\s+(?:de\s+)?(.+?)\s+a\s+(\d+)/,
+        /(?:pon|poner|deja|dejar|cambia|cambiar)\s+(\d+)\s+(?:de\s+)?(.+)/,
+        /(?:cantidad|qty)\s+(?:de\s+)?(.+?)\s*(?:=|a|:)?\s*(\d+)/,
+      ];
+      for (const re of patronesCant) {
+        const m = f.match(re);
+        if (m) {
+          let prod: string;
+          let cant: number;
+          if (re.source.startsWith('(?:cambia') || re.source.includes('cantidad')) {
+            // group1 product, group2 qty OR qty then product
+            if (/^\d+$/.test(m[1])) {
+              cant = parseInt(m[1], 10);
+              prod = m[2];
+            } else {
+              prod = m[1];
+              cant = parseInt(m[2], 10);
+            }
+          } else {
+            cant = parseInt(m[1], 10);
+            prod = m[2];
+          }
+          prod = (prod || '').replace(/\b(del ticket|por favor|unidades?)\b/g, '').trim();
+          if (prod && cant >= 0) {
+            out.modificarCantidad = { producto: prod, cantidad: cant };
+            break;
+          }
+        }
       }
     }
 
@@ -1038,15 +1088,34 @@ export class Facturas implements OnInit, OnDestroy {
     let algoAgregado = false;
     let mensajesAlerta: string[] = [];
 
+    // ── QUITAR PRODUCTO ──
     if (datos.eliminarProducto && datos.eliminarProducto !== 'null') {
-      const index = this.nuevaFactura.detalles.findIndex((d: any) =>
-        d.productoNombre.toLowerCase().includes(datos.eliminarProducto.toLowerCase())
-      );
-      if (index !== -1) {
-        const nombreQuitado = this.nuevaFactura.detalles[index].productoNombre;
-        this.eliminarDelCarrito(index);
-        this.hablar(`Listo, acabo de quitar ${nombreQuitado} del ticket. ¿Qué más hacemos?`, () => this.escuchar());
+      const idx = this.buscarIndiceEnCarrito(String(datos.eliminarProducto));
+      if (idx !== -1) {
+        const nombreQuitado = this.nuevaFactura.detalles[idx].productoNombre;
+        this.eliminarDelCarrito(idx);
+        this.hablar(`Listo, quité ${nombreQuitado} del ticket. Total $${this.totalCarrito.toFixed(2)}. ¿Qué más?`, () => {
+          this.bloqueoEscucha = false;
+          this.isThinking = false;
+          this.escuchar();
+        });
         return;
+      }
+      mensajesAlerta.push(`no encontré "${datos.eliminarProducto}" en el ticket para quitarlo`);
+    }
+
+    // ── CAMBIAR CANTIDAD ──
+    if (datos.modificarCantidad && datos.modificarCantidad !== 'null') {
+      const mod = typeof datos.modificarCantidad === 'object'
+        ? datos.modificarCantidad
+        : null;
+      if (mod && mod.producto) {
+        const ok = this.modificarCantidadEnCarrito(String(mod.producto), Number(mod.cantidad));
+        if (ok) {
+          algoAgregado = true;
+        } else {
+          mensajesAlerta.push(`no pude cambiar la cantidad de "${mod.producto}"`);
+        }
       }
     }
 
@@ -1091,19 +1160,28 @@ export class Facturas implements OnInit, OnDestroy {
       false // ya resolvimos cliente arriba
     );
 
-    // Tarjeta / cuotas solo si quedó permitido
+    // Tarjeta / cuotas (cambiar cuotas aunque solo diga "5 cuotas")
     if (this.nuevaFactura.metodoPago === 'TARJETA_CREDITO' && this.permiteTarjetaCredito) {
       if (datos.detallesTarjeta && datos.detallesTarjeta !== 'null') {
         this.nuevaFactura.detallesTarjeta = datos.detallesTarjeta;
       }
       if (datos.cuotas !== undefined && datos.cuotas !== null) {
-        const numCuotas = parseInt(datos.cuotas, 10);
-        if (!isNaN(numCuotas) && numCuotas > 0) {
+        const numCuotas = parseInt(String(datos.cuotas), 10);
+        if (!isNaN(numCuotas) && numCuotas >= 1 && numCuotas <= 48) {
           this.nuevaFactura.numeroCuotas = numCuotas;
+          algoAgregado = true;
+          // feedback limpio en el mensaje final (no como alerta de error)
+          (datos as any)._cuotasActualizadas = numCuotas;
         }
       }
     } else if (this.nuevaFactura.metodoPago === 'TARJETA_CREDITO') {
       this.bloquearTarjetaSiConsumidorFinal(false);
+    } else if (datos.cuotas != null && this.nuevaFactura.metodoPago !== 'TARJETA_CREDITO') {
+      // Dijo cuotas pero aún no hay tarjeta → avisar
+      const n = parseInt(String(datos.cuotas), 10);
+      if (!isNaN(n) && n >= 1) {
+        mensajesAlerta.push('para usar cuotas elige primero tarjeta de crédito');
+      }
     }
 
     // Al emitir sin método explícito → efectivo por defecto
@@ -1219,9 +1297,16 @@ export class Facturas implements OnInit, OnDestroy {
         this.hablar(msj, () => this.escuchar());
       }
     } else if (algoAgregado) {
-      // Solo agregó productos/descuento: informar y seguir escuchando (sin bloquear en CONFIRMAR)
       this.voiceState = VoiceStep.ESCUCHA_LIBRE;
-      this.hablar(`${prefijoAviso}Listo. Total $${this.totalCarrito.toFixed(2)}. ¿Algo más o emitimos?`, () => this.escuchar());
+      const extraCuotas = (datos as any)._cuotasActualizadas
+        ? ` Quedó en ${(datos as any)._cuotasActualizadas} cuota(s).`
+        : (this.nuevaFactura.metodoPago === 'TARJETA_CREDITO' && this.cuotasTarjetaValidas
+          ? ` Tarjeta a ${this.nuevaFactura.numeroCuotas} cuota(s).`
+          : '');
+      this.hablar(
+        `${prefijoAviso}Listo.${extraCuotas} Total $${this.totalCarrito.toFixed(2)}. ¿Algo más o emitimos?`,
+        () => this.escuchar()
+      );
     } else {
       this.voiceState = VoiceStep.ESCUCHA_LIBRE;
       this.hablar(`${prefijoAviso}¿Algo más o emitimos?`, () => this.escuchar());
@@ -1734,8 +1819,65 @@ export class Facturas implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
+  /** Busca línea del carrito por nombre parcial (sin acentos). */
+  private buscarIndiceEnCarrito(nombreBuscado: string): number {
+    const t = this.limpiarTexto(nombreBuscado);
+    if (!t) return -1;
+    // Exacto / incluye
+    let idx = this.nuevaFactura.detalles.findIndex((d: any) =>
+      this.limpiarTexto(d.productoNombre).includes(t) || t.includes(this.limpiarTexto(d.productoNombre))
+    );
+    if (idx !== -1) return idx;
+    // Por palabras
+    const pals = t.split(/\s+/).filter(p => p.length > 2);
+    if (pals.length === 0) return -1;
+    return this.nuevaFactura.detalles.findIndex((d: any) => {
+      const nom = this.limpiarTexto(d.productoNombre);
+      return pals.every(p => nom.includes(p));
+    });
+  }
+
+  /**
+   * Cambia la cantidad de un producto ya en el ticket.
+   * cantidad 0 → lo quita.
+   */
+  private modificarCantidadEnCarrito(nombreProducto: string, nuevaCantidad: number): boolean {
+    const idx = this.buscarIndiceEnCarrito(nombreProducto);
+    if (idx === -1) return false;
+    const line = this.nuevaFactura.detalles[idx];
+    if (!Number.isFinite(nuevaCantidad) || nuevaCantidad < 0) return false;
+
+    if (nuevaCantidad === 0) {
+      this.eliminarDelCarrito(idx);
+      return true;
+    }
+
+    // Validar stock
+    const stock = this.obtenerStock(line.productoId, line.bodegaId);
+    let cant = Math.floor(nuevaCantidad);
+    if (stock !== null && cant > stock) {
+      cant = stock;
+    }
+
+    const precio = Number(line.precioUnitario) || 0;
+    let desc = Number(line.descuento || 0);
+    const pct = Number(line.descuentoPorcentaje || 0);
+    if (pct > 0) {
+      desc = (precio * cant * pct) / 100;
+    }
+    const sub = (precio * cant) - desc;
+    if (sub < 0) return false;
+
+    line.cantidad = cant;
+    line.descuento = desc;
+    line.subtotal = sub;
+    this.cdr.detectChanges();
+    return true;
+  }
+
   eliminarDelCarrito(index: number) {
     this.nuevaFactura.detalles.splice(index, 1);
+    this.cdr.detectChanges();
   }
 
   /** Confirmación obligatoria antes de emitir (botón manual y voz). */
