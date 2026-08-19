@@ -109,9 +109,7 @@
                 </div>
                 <div class="info-text">
                     <label>Fecha de Nacimiento</label>
-                    <p *ngIf="!isEditing">{{ usuario?.fechaNacimiento || 'No registrada' }}</p>
-                    <input *ngIf="isEditing" type="date" class="custom-input-small"
-                        [(ngModel)]="editData.fechaNacimiento">
+                    <p> {{ usuario?.fechaNacimiento}}</p>
                 </div>
             </div>
 
@@ -130,7 +128,7 @@
                 </div>
             </div>
 
-            <!-- 🔥 SECCIÓN DE PARROQUIA ACTUALIZADA -->
+
             <div class="info-group" style="grid-column: 1 / -1;">
                 <div class="info-icon">
                     <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
@@ -143,11 +141,9 @@
                 <div class="info-text" style="width: 100%;">
                     <label>Parroquia de Residencia</label>
 
-                    <!-- Vista Normal -->
                     <p *ngIf="!isEditing">{{ usuario?.nameParroquia || usuario?.parroquia?.nombre || 'No registrada' }}
                     </p>
 
-                    <!-- Vista de Edición (Dropdown) -->
                     <select *ngIf="isEditing" class="custom-input-small" [(ngModel)]="editData.id_parroquia"
                         style="width: 100%; margin-top: 5px; outline: none; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; background-color: #f8fafc; font-family: inherit; font-size: 0.9rem;">
                         <option [ngValue]="null" disabled>Selecciona tu parroquia</option>

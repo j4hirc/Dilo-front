@@ -91,7 +91,6 @@ export class Perfil implements OnInit {
         apellidoMaterno: this.usuario.apellidoMaterno,
         telefono: this.usuario.telefono,
         direccion: this.usuario.direccion,
-        fechaNacimiento: this.usuario.fechaNacimiento,
         id_parroquia: this.usuario.id_parroquia || this.usuario.parroquia?.id || null
       };
       this.selectedFile = null;
