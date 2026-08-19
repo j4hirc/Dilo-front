@@ -341,24 +341,40 @@ export class Facturas implements OnInit, OnDestroy {
     return !this.esConsumidorFinal && !!this.nuevaFactura.clienteId;
   }
 
-  /** Si es consumidor final y el método es tarjeta → fuerza efectivo */
+  /** Limpia campos de tarjeta y fuerza efectivo */
+  private forzarEfectivoPorTarjetaInvalida(avisar = false, motivo?: string): void {
+    this.nuevaFactura.metodoPago = 'EFECTIVO';
+    this.nuevaFactura.numeroCuotas = 0;
+    this.nuevaFactura.detallesTarjeta = '';
+    this.nuevaFactura.tarjetaNumero = '';
+    this.nuevaFactura.tarjetaVence = '';
+    this.nuevaFactura.tarjetaCvc = '';
+    this.metodoPagoConfirmado = true;
+    if (avisar) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Tarjeta no permitida',
+        text: motivo || 'Selecciona un cliente registrado para pagar con tarjeta. Consumidor Final solo admite efectivo o transferencia.',
+        confirmButtonColor: '#ed8936'
+      });
+    }
+  }
+
+  /** Consumidor final NUNCA tarjeta; sin cliente tampoco */
   private bloquearTarjetaSiConsumidorFinal(avisar = false): boolean {
-    if (this.esConsumidorFinal && this.nuevaFactura.metodoPago === 'TARJETA_CREDITO') {
-      this.nuevaFactura.metodoPago = 'EFECTIVO';
-      this.nuevaFactura.numeroCuotas = 0;
-      this.nuevaFactura.detallesTarjeta = '';
-      this.nuevaFactura.tarjetaNumero = '';
-      this.nuevaFactura.tarjetaVence = '';
-      this.nuevaFactura.tarjetaCvc = '';
-      this.metodoPagoConfirmado = true;
-      if (avisar) {
-        Swal.fire({
-          icon: 'info',
-          title: 'Tarjeta no permitida',
-          text: 'Con Consumidor Final solo se puede pagar en efectivo o transferencia. Elige un cliente registrado para usar tarjeta de crédito.',
-          confirmButtonColor: '#ed8936'
-        });
-      }
+    if (this.nuevaFactura.metodoPago !== 'TARJETA_CREDITO') return false;
+    if (this.esConsumidorFinal) {
+      this.forzarEfectivoPorTarjetaInvalida(
+        avisar,
+        'Con Consumidor Final solo se puede pagar en efectivo o transferencia. Elige un cliente registrado para usar tarjeta de crédito.'
+      );
+      return true;
+    }
+    if (!this.nuevaFactura.clienteId) {
+      this.forzarEfectivoPorTarjetaInvalida(
+        avisar,
+        'Selecciona primero un cliente registrado para pagar con tarjeta de crédito.'
+      );
       return true;
     }
     return false;
@@ -367,19 +383,56 @@ export class Facturas implements OnInit, OnDestroy {
   /** Cambio manual del select de método de pago */
   onMetodoPagoChange() {
     if (this.nuevaFactura.metodoPago === 'TARJETA_CREDITO' && !this.permiteTarjetaCredito) {
-      this.nuevaFactura.metodoPago = 'EFECTIVO';
-      this.nuevaFactura.numeroCuotas = 0;
-      Swal.fire({
-        icon: 'warning',
-        title: 'Tarjeta no permitida',
-        text: this.esConsumidorFinal
-          ? 'Consumidor Final no puede pagar con tarjeta de crédito. Usa efectivo o transferencia, o selecciona un cliente registrado.'
-          : 'Selecciona primero un cliente registrado para pagar con tarjeta.',
-        confirmButtonColor: '#ed8936'
-      });
+      const motivo = this.esConsumidorFinal
+        ? 'Consumidor Final no puede pagar con tarjeta de crédito. Usa efectivo o transferencia, o selecciona un cliente registrado.'
+        : 'Selecciona primero un cliente registrado para pagar con tarjeta.';
+      this.forzarEfectivoPorTarjetaInvalida(true, motivo);
+    } else {
+      this.metodoPagoConfirmado = true;
     }
-    this.metodoPagoConfirmado = true;
     this.cdr.detectChanges();
+  }
+
+  /**
+   * Aplica método de pago con reglas de negocio.
+   * - TARJETA solo si hay cliente registrado (no CF)
+   * - Si aún no hay cliente pero vendrá en el mismo comando, devolver 'pendiente'
+   */
+  private aplicarMetodoPagoSeguro(metodo: string | null | undefined, mensajesAlerta: string[], esperarCliente = false): 'ok' | 'bloqueado' | 'pendiente' {
+    if (!metodo || metodo === 'null' || metodo === 'NULL') return 'ok';
+    const m = String(metodo).toUpperCase();
+    if (m === 'TARJETA_CREDITO' || m.includes('TARJETA')) {
+      if (this.esConsumidorFinal) {
+        this.nuevaFactura.metodoPago = 'EFECTIVO';
+        this.metodoPagoConfirmado = true;
+        mensajesAlerta.push('tarjeta no permitida con Consumidor Final; usé efectivo');
+        return 'bloqueado';
+      }
+      if (!this.nuevaFactura.clienteId) {
+        if (esperarCliente) {
+          // El cliente se resuelve más abajo en el mismo comando
+          return 'pendiente';
+        }
+        this.nuevaFactura.metodoPago = 'EFECTIVO';
+        this.metodoPagoConfirmado = true;
+        mensajesAlerta.push('tarjeta requiere cliente registrado; usé efectivo');
+        return 'bloqueado';
+      }
+      this.nuevaFactura.metodoPago = 'TARJETA_CREDITO';
+      this.metodoPagoConfirmado = true;
+      return 'ok';
+    }
+    if (m === 'TRANSFERENCIA' || m.includes('TRANSFER')) {
+      this.nuevaFactura.metodoPago = 'TRANSFERENCIA';
+      this.metodoPagoConfirmado = true;
+      return 'ok';
+    }
+    if (m === 'EFECTIVO' || m.includes('EFECTIVO') || m.includes('CASH')) {
+      this.nuevaFactura.metodoPago = 'EFECTIVO';
+      this.metodoPagoConfirmado = true;
+      return 'ok';
+    }
+    return 'ok';
   }
 
   private limpiarTexto(texto: any): string {
@@ -425,6 +478,7 @@ export class Facturas implements OnInit, OnDestroy {
     this.clienteSeleccionadoInfo = cliente;
     this.terminoBusquedaCliente = cliente.nombreCompleto || `${cliente.primerNombre || ''} ${cliente.apellidoPaterno || ''}`.trim();
     this.mostrarDropdownClientes = false;
+    // Al elegir cliente real, tarjeta vuelve a estar permitida (si el usuario la eligió)
     this.cdr.detectChanges();
   }
 
@@ -434,6 +488,11 @@ export class Facturas implements OnInit, OnDestroy {
     this.clienteSeleccionadoInfo = null;
     this.terminoBusquedaCliente = '';
     this.clientesFiltrados = [...this.clientesList];
+    // Sin cliente → no se puede mantener tarjeta
+    if (this.nuevaFactura.metodoPago === 'TARJETA_CREDITO') {
+      this.forzarEfectivoPorTarjetaInvalida(false);
+    }
+    this.cdr.detectChanges();
   }
 
   initSpeechRecognition() {
@@ -936,64 +995,7 @@ export class Facturas implements OnInit, OnDestroy {
       }
     }
 
-    // metodoPago ya viene saneado: solo aplicar si no es null
-    if (datos.metodoPago && datos.metodoPago !== 'null' && datos.metodoPago !== 'NULL') {
-      // Doble chequeo: consumidor final nunca tarjeta
-      if (datos.metodoPago === 'TARJETA_CREDITO' && (this.esConsumidorFinal || !this.nuevaFactura.clienteId)) {
-        this.nuevaFactura.metodoPago = 'EFECTIVO';
-        this.metodoPagoConfirmado = true;
-        mensajesAlerta.push('tarjeta no permitida con Consumidor Final; usé efectivo');
-      } else {
-        this.nuevaFactura.metodoPago = datos.metodoPago;
-        this.metodoPagoConfirmado = true;
-      }
-    }
-
-    if (datos._tarjetaBloqueadaConsumidor) {
-      mensajesAlerta.push('tarjeta no permitida con Consumidor Final');
-    }
-
-    // Tarjeta / cuotas: solo si el método quedó en TARJETA y hay cliente real
-    if (this.nuevaFactura.metodoPago === 'TARJETA_CREDITO' && this.permiteTarjetaCredito) {
-      if (datos.detallesTarjeta && datos.detallesTarjeta !== 'null') {
-        this.nuevaFactura.detallesTarjeta = datos.detallesTarjeta;
-      }
-      if (datos.cuotas !== undefined && datos.cuotas !== null) {
-        const numCuotas = parseInt(datos.cuotas, 10);
-        if (!isNaN(numCuotas) && numCuotas > 0) {
-          this.nuevaFactura.numeroCuotas = numCuotas;
-        }
-      }
-    } else if (this.nuevaFactura.metodoPago === 'TARJETA_CREDITO') {
-      this.bloquearTarjetaSiConsumidorFinal(false);
-    }
-
-    // Al emitir sin método explícito → efectivo por defecto (no tarjeta)
-    if (quiereEmitir && !this.metodoPagoConfirmado) {
-      this.nuevaFactura.metodoPago = 'EFECTIVO';
-      this.metodoPagoConfirmado = true;
-    }
-
-    // Seguridad final antes de seguir
-    this.bloquearTarjetaSiConsumidorFinal(false);
-
-    if (datos.descuentoGlobalPorcentaje !== undefined && datos.descuentoGlobalPorcentaje !== null) {
-      const pct = parseFloat(datos.descuentoGlobalPorcentaje);
-      if (!isNaN(pct) && pct > 0) {
-        this.nuevaFactura.descuentoGlobalPorcentaje = Math.min(pct, 100);
-        this.nuevaFactura.descuentoGlobal = 0;
-        algoAgregado = true;
-      }
-    } else if (datos.descuentoGlobal !== undefined && datos.descuentoGlobal !== null) {
-      const descGlobal = parseFloat(datos.descuentoGlobal);
-      if (!isNaN(descGlobal) && descGlobal > 0) {
-        this.nuevaFactura.descuentoGlobal = descGlobal;
-        this.nuevaFactura.descuentoGlobalPorcentaje = 0;
-        algoAgregado = true;
-      }
-    }
-
-    // 🔥 EVALUAR CLIENTES Y MOSTRAR OPCIONES VISUALES
+    // ── 1) CLIENTE PRIMERO (para que tarjeta no se invalide por orden) ──
     let requiereDesambiguacionCli = null;
     if (datos.cliente && datos.cliente !== 'null' && !this.nuevaFactura.clienteId && !this.esConsumidorFinal) {
       if (datos.cliente === 'CONSUMIDOR_FINAL' || String(datos.cliente).toLowerCase().includes('consumidor')) {
@@ -1010,10 +1012,68 @@ export class Facturas implements OnInit, OnDestroy {
       }
     }
 
+    // Si hay varios clientes, guardar TODO (incluye tarjeta) y resolver después
     if (requiereDesambiguacionCli) {
       this.quiereEmitirPendiente = quiereEmitir;
+      this.datosVozPendientes = {
+        ...datos,
+        cliente: null,
+        items: Array.isArray(datos.items) ? datos.items : []
+      };
+      this.itemsVozPendientes = Array.isArray(datos.items) ? [...datos.items] : [];
       this.iniciarDesambiguacion('CLIENTE', requiereDesambiguacionCli, "Encontré varios clientes parecidos. Di el número o haz clic en la pantalla.");
       return;
+    }
+
+    // ── 2) MÉTODO DE PAGO (después del cliente) ──
+    if (datos._tarjetaBloqueadaConsumidor) {
+      mensajesAlerta.push('tarjeta no permitida con Consumidor Final');
+    }
+
+    const estadoPago = this.aplicarMetodoPagoSeguro(
+      datos.metodoPago,
+      mensajesAlerta,
+      false // ya resolvimos cliente arriba
+    );
+
+    // Tarjeta / cuotas solo si quedó permitido
+    if (this.nuevaFactura.metodoPago === 'TARJETA_CREDITO' && this.permiteTarjetaCredito) {
+      if (datos.detallesTarjeta && datos.detallesTarjeta !== 'null') {
+        this.nuevaFactura.detallesTarjeta = datos.detallesTarjeta;
+      }
+      if (datos.cuotas !== undefined && datos.cuotas !== null) {
+        const numCuotas = parseInt(datos.cuotas, 10);
+        if (!isNaN(numCuotas) && numCuotas > 0) {
+          this.nuevaFactura.numeroCuotas = numCuotas;
+        }
+      }
+    } else if (this.nuevaFactura.metodoPago === 'TARJETA_CREDITO') {
+      this.bloquearTarjetaSiConsumidorFinal(false);
+    }
+
+    // Al emitir sin método explícito → efectivo por defecto
+    if (quiereEmitir && !this.metodoPagoConfirmado) {
+      this.nuevaFactura.metodoPago = 'EFECTIVO';
+      this.metodoPagoConfirmado = true;
+    }
+
+    this.bloquearTarjetaSiConsumidorFinal(false);
+
+    // ── 3) DESCUENTO GLOBAL ──
+    if (datos.descuentoGlobalPorcentaje !== undefined && datos.descuentoGlobalPorcentaje !== null) {
+      const pct = parseFloat(datos.descuentoGlobalPorcentaje);
+      if (!isNaN(pct) && pct > 0) {
+        this.nuevaFactura.descuentoGlobalPorcentaje = Math.min(pct, 100);
+        this.nuevaFactura.descuentoGlobal = 0;
+        algoAgregado = true;
+      }
+    } else if (datos.descuentoGlobal !== undefined && datos.descuentoGlobal !== null) {
+      const descGlobal = parseFloat(datos.descuentoGlobal);
+      if (!isNaN(descGlobal) && descGlobal > 0) {
+        this.nuevaFactura.descuentoGlobal = descGlobal;
+        this.nuevaFactura.descuentoGlobalPorcentaje = 0;
+        algoAgregado = true;
+      }
     }
 
     const items = Array.isArray(datos.items) ? datos.items.filter((it: any) => it && it.producto && it.producto !== 'null') : [];
@@ -1409,8 +1469,16 @@ export class Facturas implements OnInit, OnDestroy {
 
     if (tipo === 'CLIENTE') {
       this.seleccionarCliente(seleccionado);
+      const emitir = this.quiereEmitirPendiente;
+      const pendientes = this.datosVozPendientes
+        ? { ...this.datosVozPendientes, cliente: null }
+        : {};
+      this.datosVozPendientes = null;
+      this.itemsVozPendientes = [];
+      this.quiereEmitirPendiente = false;
       this.seleccionEnCurso = false;
-      this.aplicarDatosExtraidos({}, this.quiereEmitirPendiente);
+      // Reaplica productos + método de pago (tarjeta) que ya se dijeron
+      this.aplicarDatosExtraidos(pendientes, emitir);
       return;
     }
 
