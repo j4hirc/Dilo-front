@@ -299,7 +299,8 @@
                                 <ng-select [items]="productosList" bindLabel="nombre" bindValue="id"
                                     [(ngModel)]="itemTemp.productoId" placeholder="Buscar por código o nombre..."
                                     notFoundText="Producto no encontrado" [editableSearchTerm]="true"
-                                    style="flex: 1; min-width: 0;" class="custom-ng-select">
+                                    [searchFn]="customProductSearch" style="flex: 1; min-width: 0;"
+                                    class="custom-ng-select">
 
                                     <!-- Vista de la opción ya seleccionada (Cerrada) -->
                                     <ng-template ng-label-tmp let-item="item">

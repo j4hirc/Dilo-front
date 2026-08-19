@@ -83,24 +83,12 @@ export class Facturas implements OnInit, OnDestroy {
   tipoOpciones: 'CLIENTE' | 'BODEGA' | 'PRODUCTO' | null = null;
   metodoPagoConfirmado: boolean = false;
   quiereEmitirPendiente: boolean = false;
-  /** Ítems de voz pendientes cuando hay que desambiguar un producto primero */
   private itemsVozPendientes: any[] = [];
   private datosVozPendientes: any = null;
-  /** Última frase del usuario: evita que la IA elija un producto al azar entre muchos similares */
   private ultimaFraseUsuario: string = '';
-  /** Bloquea micrófono/TTS mientras se procesa un clic o selección (evita que se escuche sola) */
   private bloqueoEscucha = false;
   private seleccionEnCurso = false;
 
-  // 🔥 CÁLCULOS alineados con el backend:
-  // - precio de línea = costoPromedioActual (fallback: precioUnitario)
-  // - IVA se suma solo sobre productos con grabaIva
-  // - total = bases (tras descuento global) + IVA
-
-  /**
-   * Precio de la factura = costo promedio del producto.
-   * Si no hay costo (>0), usa PVP. Igual que FacturaServiceImpl.
-   */
   private precioParaFactura(producto: any): number {
     const costo = Number(producto?.costoPromedioActual ?? producto?.costoPromedio ?? 0);
     if (costo > 0) return costo;
@@ -119,7 +107,6 @@ export class Facturas implements OnInit, OnDestroy {
     return Math.min(Number(this.nuevaFactura.descuentoGlobal || 0), this.subtotalCarrito);
   }
 
-  /** Suma de líneas con IVA (antes del descuento global) */
   get subtotalGravado(): number {
     return this.nuevaFactura.detalles
       .filter((d: any) => d.grabaIva)
@@ -132,7 +119,6 @@ export class Facturas implements OnInit, OnDestroy {
       .reduce((s: number, d: any) => s + (Number(d.subtotal) || 0), 0);
   }
 
-  /** Base imponible tras prorratear el descuento global */
   get baseImponible(): number {
     const desc = this.descuentoGlobalMonto;
     const totalBruto = this.subtotalCarrito;
@@ -159,7 +145,6 @@ export class Facturas implements OnInit, OnDestroy {
     return this.baseImponible + this.baseExenta;
   }
 
-  /** Total a cobrar = bases netas + IVA */
   get totalCarrito(): number {
     const total = this.subtotalSinIva + this.montoIva;
     return total > 0 ? total : 0;
@@ -249,7 +234,6 @@ export class Facturas implements OnInit, OnDestroy {
     });
   }
 
-  // 🔥 NUEVO: Función para buscar facturas en tiempo real
   buscarFacturas() {
     if (!this.terminoBusqueda.trim()) {
       this.facturas = [...this.facturasBase];
@@ -296,6 +280,14 @@ export class Facturas implements OnInit, OnDestroy {
   cerrarModal() {
     this.showModal = false;
     this.cancelarAsistenteVoz();
+  }
+
+  customProductSearch(term: string, item: any) {
+    term = term.toLowerCase();
+    const nombre = item.nombre ? item.nombre.toLowerCase() : '';
+    const codigo = item.codigoPrincipal ? String(item.codigoPrincipal).toLowerCase() : '';
+
+    return nombre.includes(term) || codigo.includes(term);
   }
 
   cargarCatalogos() {
