@@ -5,7 +5,8 @@
     </div>
 </div>
 
-<div *ngIf="isLoading" class="loading-container" style="background: white; border-radius: 16px; margin-top: 20px; padding: 60px 0;">
+<div *ngIf="isLoading" class="loading-container"
+    style="background: white; border-radius: 16px; margin-top: 20px; padding: 60px 0;">
     <div class="spinner"></div>
     <p>Cargando tu información...</p>
 </div>
@@ -15,28 +16,35 @@
         <div class="profile-cover">
             <div class="cover-glow"></div>
         </div>
-        
+
         <div class="profile-avatar-container">
-            <div class="profile-avatar" 
-                 [class.editable]="isEditing"
-                 (click)="isEditing ? fileInput.click() : null"
-                 [style.background-image]="previewUrl ? 'url(' + previewUrl + ')' : (usuario?.fotoPerfil ? 'url(' + usuario.fotoPerfil + ')' : 'none')">
-                
+            <div class="profile-avatar" [class.editable]="isEditing" (click)="isEditing ? fileInput.click() : null"
+                [style.background-image]="previewUrl ? 'url(' + previewUrl + ')' : (usuario?.fotoPerfil ? 'url(' + usuario.fotoPerfil + ')' : 'none')">
+
                 <span *ngIf="!usuario?.fotoPerfil && !previewUrl">👤</span>
-                
+
                 <div class="avatar-overlay" *ngIf="isEditing">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2">
+                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z">
+                        </path>
+                        <circle cx="12" cy="13" r="4"></circle>
+                    </svg>
                     <span>Cambiar</span>
                 </div>
             </div>
             <input type="file" #fileInput hidden accept="image/*" (change)="onFileSelected($event)">
         </div>
     </div>
-    
+
     <div class="profile-body">
-        
+
         <button class="btn-editar-perfil" *ngIf="!isEditing" (click)="toggleEdit()">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+            </svg>
             Editar Perfil
         </button>
 
@@ -52,24 +60,35 @@
         <div *ngIf="isEditing" class="edit-names-container">
             <input type="text" class="custom-input" [(ngModel)]="editData.primerNombre" placeholder="Primer Nombre">
             <input type="text" class="custom-input" [(ngModel)]="editData.segundoNombre" placeholder="Segundo Nombre">
-            <input type="text" class="custom-input" [(ngModel)]="editData.apellidoPaterno" placeholder="Apellido Paterno">
-            <input type="text" class="custom-input" [(ngModel)]="editData.apellidoMaterno" placeholder="Apellido Materno">
+            <input type="text" class="custom-input" [(ngModel)]="editData.apellidoPaterno"
+                placeholder="Apellido Paterno">
+            <input type="text" class="custom-input" [(ngModel)]="editData.apellidoMaterno"
+                placeholder="Apellido Materno">
         </div>
 
         <div class="profile-info-grid">
             <div class="info-group">
                 <div class="info-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2">
+                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                        <polyline points="22,6 12,13 2,6"></polyline>
+                    </svg>
                 </div>
                 <div class="info-text">
                     <label>Correo Electrónico</label>
                     <p>{{ usuario?.email }}</p>
                 </div>
             </div>
-            
+
             <div class="info-group">
                 <div class="info-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2">
+                        <path
+                            d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z">
+                        </path>
+                    </svg>
                 </div>
                 <div class="info-text">
                     <label>Teléfono</label>
@@ -77,21 +96,32 @@
                     <input *ngIf="isEditing" type="text" class="custom-input-small" [(ngModel)]="editData.telefono">
                 </div>
             </div>
-            
+
             <div class="info-group">
                 <div class="info-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                    </svg>
                 </div>
                 <div class="info-text">
                     <label>Fecha de Nacimiento</label>
                     <p *ngIf="!isEditing">{{ usuario?.fechaNacimiento || 'No registrada' }}</p>
-                    <input *ngIf="isEditing" type="date" class="custom-input-small" [(ngModel)]="editData.fechaNacimiento">
+                    <input *ngIf="isEditing" type="date" class="custom-input-small"
+                        [(ngModel)]="editData.fechaNacimiento">
                 </div>
             </div>
-            
+
             <div class="info-group">
                 <div class="info-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2">
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                        <circle cx="12" cy="10" r="3"></circle>
+                    </svg>
                 </div>
                 <div class="info-text">
                     <label>Dirección</label>
@@ -100,63 +130,111 @@
                 </div>
             </div>
 
+            <!-- 🔥 SECCIÓN DE PARROQUIA ACTUALIZADA -->
             <div class="info-group" style="grid-column: 1 / -1;">
                 <div class="info-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2">
+                        <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon>
+                        <line x1="8" y1="2" x2="8" y2="18"></line>
+                        <line x1="16" y1="6" x2="16" y2="22"></line>
+                    </svg>
                 </div>
-                <div class="info-text">
+                <div class="info-text" style="width: 100%;">
                     <label>Parroquia de Residencia</label>
-                    <p>{{ usuario?.nameParroquia || 'No registrada' }}</p>
+
+                    <!-- Vista Normal -->
+                    <p *ngIf="!isEditing">{{ usuario?.nameParroquia || usuario?.parroquia?.nombre || 'No registrada' }}
+                    </p>
+
+                    <!-- Vista de Edición (Dropdown) -->
+                    <select *ngIf="isEditing" class="custom-input-small" [(ngModel)]="editData.id_parroquia"
+                        style="width: 100%; margin-top: 5px; outline: none; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; background-color: #f8fafc; font-family: inherit; font-size: 0.9rem;">
+                        <option [ngValue]="null" disabled>Selecciona tu parroquia</option>
+                        <option *ngFor="let p of parroquiasList" [value]="p.id">{{ p.nombre }}</option>
+                    </select>
                 </div>
             </div>
         </div>
 
-     <div class="edit-actions-footer" *ngIf="isEditing">
+        <div class="edit-actions-footer" *ngIf="isEditing">
             <button class="btn-cancelar" (click)="toggleEdit()">Cancelar</button>
             <button class="btn-guardar" (click)="guardarCambios()">Guardar Cambios</button>
         </div>
 
         <div class="password-section" *ngIf="!isEditing">
             <hr class="divider">
-            
+
             <button class="btn-outline" *ngIf="!isChangingPassword" (click)="toggleChangePassword()">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
                 Cambiar Contraseña
             </button>
 
             <div class="password-form" *ngIf="isChangingPassword">
                 <div class="password-header">
                     <div class="password-icon">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                        </svg>
                     </div>
                     <div>
                         <h4>Actualizar Contraseña</h4>
                         <p class="text-muted">Crea una nueva contraseña segura para tu cuenta.</p>
                     </div>
                 </div>
-                
+
                 <div class="password-inputs">
                     <div class="password-input-wrapper">
-                        <input [type]="showNewPassword ? 'text' : 'password'" class="custom-input custom-input-icon" 
-                               [(ngModel)]="passwordData.newPassword" placeholder="Nueva Contraseña">
-                        <button type="button" class="btn-eye" (click)="togglePasswordVisibility('new')" 
-                                [attr.aria-label]="showNewPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'">
-                            <svg *ngIf="!showNewPassword" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                            <svg *ngIf="showNewPassword" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                        <input [type]="showNewPassword ? 'text' : 'password'" class="custom-input custom-input-icon"
+                            [(ngModel)]="passwordData.newPassword" placeholder="Nueva Contraseña">
+                        <button type="button" class="btn-eye" (click)="togglePasswordVisibility('new')"
+                            [attr.aria-label]="showNewPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'">
+                            <svg *ngIf="!showNewPassword" xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                            <svg *ngIf="showNewPassword" xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <path
+                                    d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24">
+                                </path>
+                                <line x1="1" y1="1" x2="23" y2="23"></line>
+                            </svg>
                         </button>
                     </div>
 
                     <div class="password-input-wrapper">
-                        <input [type]="showConfirmPassword ? 'text' : 'password'" class="custom-input custom-input-icon" 
-                               [(ngModel)]="passwordData.confirmPassword" placeholder="Confirmar Nueva Contraseña">
+                        <input [type]="showConfirmPassword ? 'text' : 'password'" class="custom-input custom-input-icon"
+                            [(ngModel)]="passwordData.confirmPassword" placeholder="Confirmar Nueva Contraseña">
                         <button type="button" class="btn-eye" (click)="togglePasswordVisibility('confirm')"
-                                [attr.aria-label]="showConfirmPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'">
-                            <svg *ngIf="!showConfirmPassword" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                            <svg *ngIf="showConfirmPassword" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                            [attr.aria-label]="showConfirmPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'">
+                            <svg *ngIf="!showConfirmPassword" xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                            <svg *ngIf="showConfirmPassword" xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <path
+                                    d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24">
+                                </path>
+                                <line x1="1" y1="1" x2="23" y2="23"></line>
+                            </svg>
                         </button>
                     </div>
                 </div>
-                
+
                 <div class="edit-actions-footer">
                     <button class="btn-cancelar" (click)="toggleChangePassword()">Cancelar</button>
                     <button class="btn-guardar" (click)="guardarPassword()">Guardar Contraseña</button>

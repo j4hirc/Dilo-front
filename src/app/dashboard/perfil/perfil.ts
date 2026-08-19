@@ -1,13 +1,13 @@
 import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { FormsModule } from '@angular/forms'; 
+import { FormsModule } from '@angular/forms';
 import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-perfil',
   standalone: true,
-  imports: [CommonModule, FormsModule], 
+  imports: [CommonModule, FormsModule],
   templateUrl: './perfil.html',
   styleUrls: ['./perfil.css'],
 })
@@ -33,14 +33,33 @@ export class Perfil implements OnInit {
   showNewPassword = false;
   showConfirmPassword = false;
 
+  // 🔥 NUEVA LISTA PARA LAS PARROQUIAS
+  parroquiasList: any[] = [];
+
   ngOnInit(): void {
     this.cargarMiPerfil();
+    this.cargarParroquias(); // Cargar la lista al iniciar
+  }
+
+  // 🔥 Función para traer el catálogo de parroquias desde tu backend
+  cargarParroquias() {
+    const rawToken = localStorage.getItem('dilo_token') || '';
+    const cleanToken = rawToken.replace(/['"]+/g, '');
+    const headers = new HttpHeaders().set('Authorization', `Bearer ${cleanToken}`);
+
+    this.http.get<any[]>(`${this.apiUrl}/parroquias`, { headers }).subscribe({
+      next: (data) => {
+        this.parroquiasList = data || [];
+        this.cdr.detectChanges();
+      },
+      error: (err) => console.warn('No se pudo cargar la lista de parroquias', err)
+    });
   }
 
   cargarMiPerfil() {
     this.isLoading = true;
     const rawToken = localStorage.getItem('dilo_token') || '';
-    const cleanToken = rawToken.replace(/['"]+/g, ''); 
+    const cleanToken = rawToken.replace(/['"]+/g, '');
     const headers = new HttpHeaders().set('Authorization', `Bearer ${cleanToken}`);
 
     this.http.get<any>(`${this.apiUrl}/usuarios/me`, { headers }).subscribe({
@@ -48,9 +67,9 @@ export class Perfil implements OnInit {
         this.usuario = data;
         const userLocalStr = localStorage.getItem('usuario');
         if (userLocalStr) {
-            const userLocal = JSON.parse(userLocalStr);
-            const updatedUser = { ...userLocal, ...data };
-            localStorage.setItem('usuario', JSON.stringify(updatedUser));
+          const userLocal = JSON.parse(userLocalStr);
+          const updatedUser = { ...userLocal, ...data };
+          localStorage.setItem('usuario', JSON.stringify(updatedUser));
         }
         this.isLoading = false;
         this.cdr.detectChanges();
@@ -74,7 +93,9 @@ export class Perfil implements OnInit {
         apellidoMaterno: this.usuario.apellidoMaterno,
         telefono: this.usuario.telefono,
         direccion: this.usuario.direccion,
-        fechaNacimiento: this.usuario.fechaNacimiento
+        fechaNacimiento: this.usuario.fechaNacimiento,
+        // 🔥 Asignamos el ID de la parroquia actual para que salga seleccionada
+        id_parroquia: this.usuario.id_parroquia || this.usuario.parroquia?.id || null
       };
       this.selectedFile = null;
       this.previewUrl = null;
@@ -109,7 +130,6 @@ export class Perfil implements OnInit {
   }
 
   guardarPassword() {
-    // 1. Validar que no estén vacíos
     if (!this.passwordData.newPassword || !this.passwordData.confirmPassword) {
       Swal.fire('Atención', 'Ambos campos son obligatorios.', 'warning');
       return;
@@ -127,7 +147,7 @@ export class Perfil implements OnInit {
 
     this.isLoading = true;
     const rawToken = localStorage.getItem('dilo_token') || '';
-    const cleanToken = rawToken.replace(/['"]+/g, ''); 
+    const cleanToken = rawToken.replace(/['"]+/g, '');
     const headers = new HttpHeaders().set('Authorization', `Bearer ${cleanToken}`);
 
     this.http.put<any>(`${this.apiUrl}/usuarios/me/password`, this.passwordData, { headers }).subscribe({
@@ -150,7 +170,7 @@ export class Perfil implements OnInit {
   guardarCambios() {
     this.isLoading = true;
     const rawToken = localStorage.getItem('dilo_token') || '';
-    const cleanToken = rawToken.replace(/['"]+/g, ''); 
+    const cleanToken = rawToken.replace(/['"]+/g, '');
     const headers = new HttpHeaders().set('Authorization', `Bearer ${cleanToken}`);
 
     const formData = new FormData();
@@ -166,9 +186,9 @@ export class Perfil implements OnInit {
         this.usuario = data;
         const userLocalStr = localStorage.getItem('usuario');
         if (userLocalStr) {
-            const userLocal = JSON.parse(userLocalStr);
-            const updatedUser = { ...userLocal, ...data };
-            localStorage.setItem('usuario', JSON.stringify(updatedUser));
+          const userLocal = JSON.parse(userLocalStr);
+          const updatedUser = { ...userLocal, ...data };
+          localStorage.setItem('usuario', JSON.stringify(updatedUser));
         }
         this.isEditing = false;
         this.isLoading = false;
