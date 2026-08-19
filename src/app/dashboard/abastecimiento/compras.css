@@ -3,7 +3,8 @@
 /* Modal LG para el Maestro-Detalle */
 .modal-lg {
     max-width: 950px !important;
-    width: 95%; /* Asegura márgenes en móviles */
+    width: 95%;
+    /* Asegura márgenes en móviles */
 }
 
 .card-section {
@@ -11,7 +12,8 @@
     padding: 24px;
     border-radius: 12px;
     border: 1px solid #e2e8f0;
-    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); /* Sombra moderna */
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    /* Sombra moderna */
 }
 
 .section-title {
@@ -34,7 +36,8 @@
 /* Barra de agregado al carrito - RESPONSIVA */
 .add-product-bar {
     display: flex;
-    flex-wrap: wrap; /* 🔥 Permite que los campos bajen si no caben */
+    flex-wrap: wrap;
+    /* 🔥 Permite que los campos bajen si no caben */
     gap: 12px;
     align-items: flex-end;
     background: #f8fafc;
@@ -45,16 +48,23 @@
 
 .add-product-bar .form-group {
     margin-bottom: 0;
-    min-width: 120px; /* Evita que los inputs desaparezcan */
+    min-width: 120px;
+    /* Evita que los inputs desaparezcan */
 }
 
-.flex-2 { flex: 2 1 250px; }
-.flex-1 { flex: 1 1 120px; }
+.flex-2 {
+    flex: 2 1 250px;
+}
+
+.flex-1 {
+    flex: 1 1 120px;
+}
 
 /* Botón responsivo en la barra de productos */
-.button-group { 
-    flex: 1 1 100%; /* En móviles, el botón baja a su propia línea */
-    display: flex; 
+.button-group {
+    flex: 1 1 100%;
+    /* En móviles, el botón baja a su propia línea */
+    display: flex;
 }
 
 .btn-add {
@@ -66,7 +76,8 @@
     font-weight: 600;
     cursor: pointer;
     height: 42px;
-    width: 100%; /* Ancho completo por defecto en móvil */
+    width: 100%;
+    /* Ancho completo por defecto en móvil */
     transition: all 0.2s ease;
     display: flex;
     align-items: center;
@@ -74,10 +85,10 @@
     gap: 8px;
 }
 
-.btn-add:hover { 
-    background: #1e293b; 
+.btn-add:hover {
+    background: #1e293b;
     transform: translateY(-2px);
-    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
 .required-field {
@@ -89,14 +100,16 @@
 .detail-table-container {
     border: 1px solid #e2e8f0;
     border-radius: 8px;
-    overflow-x: auto; /* 🔥 Magia para no dañar móviles */
+    overflow-x: auto;
+    /* 🔥 Magia para no dañar móviles */
     background: white;
 }
 
 .detail-table {
     width: 100%;
     border-collapse: collapse;
-    min-width: 650px; /* Fuerza el scroll horizontal en celus */
+    min-width: 650px;
+    /* Fuerza el scroll horizontal en celus */
 }
 
 .detail-table th {
@@ -125,7 +138,8 @@
     background: #fffbeb;
     color: #92400e;
     padding: 4px 10px;
-    border-radius: 20px; /* Estilo píldora */
+    border-radius: 20px;
+    /* Estilo píldora */
     font-size: 0.75rem;
     font-weight: 700;
     border: 1px solid #fde68a;
@@ -159,9 +173,47 @@
 /* Media Query para Laptops / Desktop */
 @media (min-width: 768px) {
     .button-group {
-        flex: 0 0 auto; /* El botón ocupa solo su espacio */
+        flex: 0 0 auto;
+        /* El botón ocupa solo su espacio */
     }
+
     .btn-add {
         width: auto;
     }
+}
+
+
+::ng-deep .custom-ng-select .ng-select-container {
+    border-radius: 8px !important;
+    border: 1px solid #cbd5e1 !important;
+    min-height: 42px !important;
+    font-family: inherit;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+::ng-deep .custom-ng-select .ng-select-container:hover {
+    border-color: #94a3b8 !important;
+}
+
+::ng-deep .custom-ng-select.ng-select-focused .ng-select-container {
+    border-color: #3b82f6 !important;
+    /* Azul primario al enfocar */
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+}
+
+::ng-deep .custom-ng-select .ng-dropdown-panel {
+    border-radius: 8px !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
+    overflow: hidden;
+}
+
+::ng-deep .custom-ng-select .ng-dropdown-panel .ng-option {
+    padding: 10px 12px !important;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+::ng-deep .custom-ng-select .ng-dropdown-panel .ng-option:hover,
+::ng-deep .custom-ng-select .ng-dropdown-panel .ng-option.ng-option-marked {
+    background-color: #f8fafc !important;
 }

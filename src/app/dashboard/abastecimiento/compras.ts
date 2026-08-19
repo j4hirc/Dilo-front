@@ -3,11 +3,12 @@ import { CommonModule } from '@angular/common';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import Swal from 'sweetalert2';
+import { NgSelectModule } from '@ng-select/ng-select';
 
 @Component({
   selector: 'app-compras',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, NgSelectModule],
   templateUrl: './compras.html',
   styleUrls: ['./compras.css'],
 })
@@ -17,7 +18,7 @@ export class Compras implements OnInit {
 
   compras: any[] = [];
   comprasFiltradas: any[] = [];
-  
+
   proveedores: any[] = [];
   bodegas: any[] = [];
   productos: any[] = [];
@@ -27,10 +28,10 @@ export class Compras implements OnInit {
   private apiUrl = 'https://dilo-backend-mxlu.onrender.com/api/v1';
 
   searchTerm: string = '';
-  
+
   showModal = false;
-  showModalDetalles = false; 
-  compraSeleccionada: any = null; 
+  showModalDetalles = false;
+  compraSeleccionada: any = null;
 
   compraForm = {
     proveedorId: null as number | null,
@@ -64,7 +65,7 @@ export class Compras implements OnInit {
   cargarCompras(id: number) {
     this.isLoading = true;
     const headers = this.getHeaders();
-    
+
     this.http.get<any[]>(`${this.apiUrl}/negocios/${id}/compras`, { headers }).subscribe({
       next: (data) => {
         this.compras = data || [];
@@ -77,9 +78,9 @@ export class Compras implements OnInit {
       error: (err) => {
         this.compras = [];
         this.aplicarFiltros();
-        setTimeout(() => { 
-          this.isLoading = false; 
-          this.cdr.detectChanges(); 
+        setTimeout(() => {
+          this.isLoading = false;
+          this.cdr.detectChanges();
         });
       }
     });
@@ -87,7 +88,7 @@ export class Compras implements OnInit {
 
   cargarCatalogos(id: number) {
     const headers = this.getHeaders();
-    this.http.get<any[]>(`${this.apiUrl}/negocios/${id}/proveedores`, { headers }).subscribe(res => this.proveedores = res.filter((p:any) => p.estado));
+    this.http.get<any[]>(`${this.apiUrl}/negocios/${id}/proveedores`, { headers }).subscribe(res => this.proveedores = res.filter((p: any) => p.estado));
     this.http.get<any[]>(`${this.apiUrl}/negocios/${id}/bodegas`, { headers }).subscribe(res => this.bodegas = res);
     this.http.get<any[]>(`${this.apiUrl}/negocios/${id}/productos`, { headers }).subscribe(res => this.productos = res);
   }
@@ -95,7 +96,7 @@ export class Compras implements OnInit {
   aplicarFiltros() {
     if (this.searchTerm.trim()) {
       const term = this.searchTerm.toLowerCase();
-      this.comprasFiltradas = this.compras.filter(c => 
+      this.comprasFiltradas = this.compras.filter(c =>
         (c.numeroComprobante && c.numeroComprobante.toLowerCase().includes(term)) ||
         (c.proveedorNombre && c.proveedorNombre.toLowerCase().includes(term))
       );
@@ -133,56 +134,56 @@ export class Compras implements OnInit {
 
   onProductoChange() {
     if (!this.detalleTemp.productoId) return;
-    
+
     const prod = this.productos.find(p => p.id === this.detalleTemp.productoId);
     if (prod) {
-        this.detalleTemp.costoUnitario = 0; 
-        
-        this.productoRequiereCaducidad = prod.tieneCaducidad;
-        if (!this.productoRequiereCaducidad) {
-            this.detalleTemp.fechaCaducidad = null;
-        }
+      this.detalleTemp.costoUnitario = 0;
+
+      this.productoRequiereCaducidad = prod.tieneCaducidad;
+      if (!this.productoRequiereCaducidad) {
+        this.detalleTemp.fechaCaducidad = null;
+      }
     }
   }
 
   agregarDetalle() {
     if (!this.detalleTemp.productoId || this.detalleTemp.cantidad <= 0 || this.detalleTemp.costoUnitario < 0) {
-        Swal.fire('Atención', 'Selecciona un producto y verifica la cantidad/costo.', 'warning');
-        return;
+      Swal.fire('Atención', 'Selecciona un producto y verifica la cantidad/costo.', 'warning');
+      return;
     }
 
     if (this.productoRequiereCaducidad && !this.detalleTemp.fechaCaducidad) {
-        Swal.fire('Caducidad Obligatoria', 'Este producto está marcado como perecedero. Debes ingresar su fecha de caducidad.', 'error');
-        return;
+      Swal.fire('Caducidad Obligatoria', 'Este producto está marcado como perecedero. Debes ingresar su fecha de caducidad.', 'error');
+      return;
     }
 
     const indexExistente = this.compraForm.detalles.findIndex(d => d.productoId === this.detalleTemp.productoId && d.costoUnitario === this.detalleTemp.costoUnitario);
-    
+
     if (indexExistente !== -1) {
-        this.compraForm.detalles[indexExistente].cantidad += this.detalleTemp.cantidad;
+      this.compraForm.detalles[indexExistente].cantidad += this.detalleTemp.cantidad;
     } else {
-        this.compraForm.detalles.push({ ...this.detalleTemp });
+      this.compraForm.detalles.push({ ...this.detalleTemp });
     }
 
     this.limpiarDetalleTemp();
   }
 
   removerDetalle(index: number) {
-      this.compraForm.detalles.splice(index, 1);
+    this.compraForm.detalles.splice(index, 1);
   }
 
   limpiarDetalleTemp() {
-      this.detalleTemp = { productoId: null, cantidad: 1, costoUnitario: 0, fechaCaducidad: null };
-      this.productoRequiereCaducidad = false;
+    this.detalleTemp = { productoId: null, cantidad: 1, costoUnitario: 0, fechaCaducidad: null };
+    this.productoRequiereCaducidad = false;
   }
 
   calcularTotalCompra(): number {
-      return this.compraForm.detalles.reduce((acc, current) => acc + (current.cantidad * current.costoUnitario), 0);
+    return this.compraForm.detalles.reduce((acc, current) => acc + (current.cantidad * current.costoUnitario), 0);
   }
 
   obtenerNombreProducto(id: number): string {
-      const prod = this.productos.find(p => p.id === id);
-      return prod ? `${prod.codigoPrincipal} - ${prod.nombre}` : 'Producto Desconocido';
+    const prod = this.productos.find(p => p.id === id);
+    return prod ? `${prod.codigoPrincipal} - ${prod.nombre}` : 'Producto Desconocido';
   }
 
 
@@ -224,7 +225,7 @@ export class Compras implements OnInit {
 
   private getHeaders(): HttpHeaders {
     const rawToken = localStorage.getItem('dilo_token') || '';
-    const cleanToken = rawToken.replace(/['"]+/g, ''); 
+    const cleanToken = rawToken.replace(/['"]+/g, '');
     return new HttpHeaders().set('Authorization', `Bearer ${cleanToken}`);
   }
 }
