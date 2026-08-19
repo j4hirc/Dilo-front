@@ -145,14 +145,12 @@
                         <ng-select [items]="productos" bindLabel="nombre" bindValue="id"
                             [(ngModel)]="detalleTemp.productoId" (change)="onProductoChange()"
                             placeholder="Buscar por código o nombre..." notFoundText="Producto no encontrado"
-                            [editableSearchTerm]="true" class="custom-ng-select">
+                            [editableSearchTerm]="true" [searchFn]="customProductSearch" class="custom-ng-select">
 
-                            <!-- Diseño limpio y plano cuando ya está seleccionado -->
                             <ng-template ng-label-tmp let-item="item">
                                 {{ item.codigoPrincipal }} - {{ item.nombre }}
                             </ng-template>
 
-                            <!-- Diseño estructurado al abrir la lista desplegable -->
                             <ng-template ng-option-tmp let-item="item" let-search="searchTerm">
                                 <div style="font-weight: 600; color: #0f172a;">{{ item.codigoPrincipal }}</div>
                                 <div style="font-size: 0.85rem; color: #64748b;">{{ item.nombre }}</div>
