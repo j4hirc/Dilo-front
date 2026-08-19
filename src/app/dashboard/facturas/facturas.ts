@@ -341,6 +341,25 @@ export class Facturas implements OnInit, OnDestroy {
     return !this.esConsumidorFinal && !!this.nuevaFactura.clienteId;
   }
 
+  /** Con tarjeta de crédito las cuotas son obligatorias (>= 1). */
+  get cuotasTarjetaValidas(): boolean {
+    if (this.nuevaFactura.metodoPago !== 'TARJETA_CREDITO') return true;
+    const n = Number(this.nuevaFactura.numeroCuotas);
+    return Number.isFinite(n) && n >= 1;
+  }
+
+  /** Valida reglas de tarjeta antes de emitir. Devuelve mensaje de error o null si OK. */
+  private validarTarjetaAntesDeEmitir(): string | null {
+    if (this.nuevaFactura.metodoPago !== 'TARJETA_CREDITO') return null;
+    if (!this.permiteTarjetaCredito) {
+      return 'Tarjeta de crédito solo con cliente registrado (no Consumidor Final).';
+    }
+    if (!this.cuotasTarjetaValidas) {
+      return 'Indica el número de cuotas (meses) antes de emitir con tarjeta de crédito.';
+    }
+    return null;
+  }
+
   /** Limpia campos de tarjeta y fuerza efectivo */
   private forzarEfectivoPorTarjetaInvalida(avisar = false, motivo?: string): void {
     this.nuevaFactura.metodoPago = 'EFECTIVO';
@@ -707,7 +726,13 @@ export class Facturas implements OnInit, OnDestroy {
       if (this.esRespuestaAfirmativa(transcriptLimpio)) {
         this.voiceState = VoiceStep.OFF;
         this.hablar("¡Listo! Emitiendo la factura.");
-        setTimeout(() => { this.guardarFactura(); }, 800);
+        const errT = this.validarTarjetaAntesDeEmitir();
+        if (errT) {
+          this.voiceState = VoiceStep.ESCUCHA_LIBRE;
+          this.hablar(errT + ' ¿Cuántas cuotas?', () => this.escuchar());
+        } else {
+          setTimeout(() => { this.guardarFactura(); }, 800);
+        }
         return;
       }
       if (this.esRespuestaNegativa(transcriptLimpio)) {
@@ -851,6 +876,25 @@ export class Facturas implements OnInit, OnDestroy {
   /**
    * Rechaza datos que la IA inventó y el usuario NO dijo (pago, productos, etc.).
    */
+
+  /** Extrae cuotas de la frase: "3 cuotas", "6 meses", "en 12". */
+  private extraerCuotasDeFrase(frase: string): number | null {
+    const f = this.limpiarTexto(frase || '');
+    const patterns = [
+      /\b(\d{1,2})\s*(cuotas?|meses?|mes)\b/,
+      /\ben\s+(\d{1,2})\s*(cuotas?|meses?)?\b/,
+      /\b(cuotas?|meses?)\s*(de\s*)?(\d{1,2})\b/,
+    ];
+    for (const re of patterns) {
+      const m = f.match(re);
+      if (m) {
+        const n = parseInt(m[1] || m[3], 10);
+        if (n >= 1 && n <= 48) return n;
+      }
+    }
+    return null;
+  }
+
   private sanearDatosVoz(datos: any, frase: string): any {
     const f = this.limpiarTexto(frase || this.ultimaFraseUsuario);
     const out: any = { ...(datos || {}) };
@@ -924,6 +968,17 @@ export class Facturas implements OnInit, OnDestroy {
     if (out.eliminarProducto && out.eliminarProducto !== 'null') {
       const diceQuitar = /\b(quita|quitar|borra|borrar|elimina|eliminar|saca|sacar)\b/.test(f);
       if (!diceQuitar) out.eliminarProducto = null;
+    }
+
+    // Si dijo tarjeta, intentar leer cuotas de la frase aunque la IA no las mandó
+    if (out.metodoPago === 'TARJETA_CREDITO') {
+      const desdeFrase = this.extraerCuotasDeFrase(f);
+      const desdeIa = out.cuotas != null ? parseInt(String(out.cuotas), 10) : NaN;
+      if (!isNaN(desdeIa) && desdeIa >= 1) {
+        out.cuotas = desdeIa;
+      } else if (desdeFrase) {
+        out.cuotas = desdeFrase;
+      }
     }
 
     return out;
@@ -1142,10 +1197,27 @@ export class Facturas implements OnInit, OnDestroy {
       this.hablar(`${prefijoAviso}El ticket está vacío. ¿Qué le agregamos?`, () => this.escuchar());
     }
     else if (quiereEmitir) {
-      // Solo cuando pide emitir → pedir confirmación explícita
-      this.voiceState = VoiceStep.CONFIRMAR;
-      const msj = `${prefijoAviso}Total a pagar $${this.totalCarrito.toFixed(2)}. ¿Confirmas que emitimos la factura? Di sí o no.`;
-      this.hablar(msj, () => this.escuchar());
+      // Tarjeta sin cuotas → no emitir aún
+      if (this.nuevaFactura.metodoPago === 'TARJETA_CREDITO' && !this.cuotasTarjetaValidas) {
+        this.voiceState = VoiceStep.ESCUCHA_LIBRE;
+        this.hablar(
+          `${prefijoAviso}Pagamos con tarjeta. ¿En cuántas cuotas? Di por ejemplo: 3 cuotas o 6 meses.`,
+          () => this.escuchar()
+        );
+      } else if (this.nuevaFactura.metodoPago === 'TARJETA_CREDITO' && !this.permiteTarjetaCredito) {
+        this.voiceState = VoiceStep.ESCUCHA_LIBRE;
+        this.hablar(
+          `${prefijoAviso}Tarjeta solo con cliente registrado. Elige un cliente o cambia a efectivo.`,
+          () => this.escuchar()
+        );
+      } else {
+        this.voiceState = VoiceStep.CONFIRMAR;
+        const cuotasTxt = this.nuevaFactura.metodoPago === 'TARJETA_CREDITO'
+          ? ` en ${this.nuevaFactura.numeroCuotas} cuota(s)`
+          : '';
+        const msj = `${prefijoAviso}Total a pagar $${this.totalCarrito.toFixed(2)}${cuotasTxt}. ¿Confirmas que emitimos la factura? Di sí o no.`;
+        this.hablar(msj, () => this.escuchar());
+      }
     } else if (algoAgregado) {
       // Solo agregó productos/descuento: informar y seguir escuchando (sin bloquear en CONFIRMAR)
       this.voiceState = VoiceStep.ESCUCHA_LIBRE;
@@ -1672,8 +1744,9 @@ export class Facturas implements OnInit, OnDestroy {
       Swal.fire('Error', 'Faltan datos para emitir la factura (cliente y al menos un producto).', 'error');
       return;
     }
-    if (this.nuevaFactura.metodoPago === 'TARJETA_CREDITO' && !this.permiteTarjetaCredito) {
-      this.bloquearTarjetaSiConsumidorFinal(true);
+    const errTarjeta = this.validarTarjetaAntesDeEmitir();
+    if (errTarjeta) {
+      Swal.fire('Tarjeta incompleta', errTarjeta, 'warning');
       return;
     }
     const total = this.totalCarrito;
@@ -1699,8 +1772,10 @@ export class Facturas implements OnInit, OnDestroy {
       return;
     }
 
-    if (this.nuevaFactura.metodoPago === 'TARJETA_CREDITO' && !this.permiteTarjetaCredito) {
-      this.bloquearTarjetaSiConsumidorFinal(true);
+    const errTarjeta = this.validarTarjetaAntesDeEmitir();
+    if (errTarjeta) {
+      this.isSaving = false;
+      Swal.fire('Tarjeta incompleta', errTarjeta, 'warning');
       return;
     }
 

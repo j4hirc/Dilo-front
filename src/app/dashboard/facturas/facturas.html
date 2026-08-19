@@ -239,9 +239,13 @@
                         </div>
 
                         <div class="form-group w-50" *ngIf="nuevaFactura.metodoPago === 'TARJETA_CREDITO'">
-                            <label>Meses (Cuotas)</label>
-                            <input type="number" [(ngModel)]="nuevaFactura.numeroCuotas" min="0" class="modern-input"
-                                placeholder="Ej. 3">
+                            <label>Meses (Cuotas) *</label>
+                            <input type="number" [(ngModel)]="nuevaFactura.numeroCuotas" min="1" max="48"
+                                class="modern-input" placeholder="Ej. 3" required>
+                            <small *ngIf="!cuotasTarjetaValidas"
+                                style="color:#dc2626;font-size:0.75rem;display:block;margin-top:4px;">
+                                Obligatorias para emitir con tarjeta.
+                            </small>
                         </div>
                     </div>
 
