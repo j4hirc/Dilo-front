@@ -33,15 +33,13 @@ export class Perfil implements OnInit {
   showNewPassword = false;
   showConfirmPassword = false;
 
-  // 🔥 NUEVA LISTA PARA LAS PARROQUIAS
   parroquiasList: any[] = [];
 
   ngOnInit(): void {
     this.cargarMiPerfil();
-    this.cargarParroquias(); // Cargar la lista al iniciar
+    this.cargarParroquias();
   }
 
-  // 🔥 Función para traer el catálogo de parroquias desde tu backend
   cargarParroquias() {
     const rawToken = localStorage.getItem('dilo_token') || '';
     const cleanToken = rawToken.replace(/['"]+/g, '');
@@ -94,7 +92,6 @@ export class Perfil implements OnInit {
         telefono: this.usuario.telefono,
         direccion: this.usuario.direccion,
         fechaNacimiento: this.usuario.fechaNacimiento,
-        // 🔥 Asignamos el ID de la parroquia actual para que salga seleccionada
         id_parroquia: this.usuario.id_parroquia || this.usuario.parroquia?.id || null
       };
       this.selectedFile = null;
