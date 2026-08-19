@@ -834,7 +834,6 @@ export class Facturas implements OnInit, OnDestroy {
       max_tokens: 450
     };
 
-    // Mantener mic bloqueado hasta terminar de aplicar (evita eco / comandos fantasma)
     this.bloqueoEscucha = true;
     this.isThinking = true;
 
