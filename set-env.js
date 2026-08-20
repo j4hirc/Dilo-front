@@ -9,7 +9,8 @@ if (!fs.existsSync(dir)) {
 const envConfigFile = `export const environment = {
   production: true,
   apiUrl: '${process.env.API_URL || "https://dilo-backend-mxlu.onrender.com/api/v1"}',
-  groqApiKey: '${process.env.GROQ_API_KEY || ""}' 
+  groqApiKey: '${process.env.GROQ_API_KEY || ""}',
+  diloAssistantApiKey: '${process.env.DILO_ASSISTANT_API_KEY || ""}'
 };
 `;
 

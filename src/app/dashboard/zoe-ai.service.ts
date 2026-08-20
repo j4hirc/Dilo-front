@@ -25,7 +25,7 @@ export class ZoeAiService {
   private zone = inject(NgZone);
   private router = inject(Router);
 
-  private groqApiKey = environment.groqApiKey;
+  private groqApiKey = environment.diloAssistantApiKey;
 
   isChatOpen = false;
   isListening = false;
@@ -382,7 +382,7 @@ REGLAS ABSOLUTAS:
         utterance.lang = 'es-EC';
       }
       
-      utterance.rate = 1.05; 
+      utterance.rate = 1.06; 
       utterance.pitch = 1.1; 
       utterance.volume = 1;
 
