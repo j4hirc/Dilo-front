@@ -267,8 +267,7 @@
 
             <div class="chat-fab-row">
                 
-                <!-- Mensaje flotante de VOZ para hablar con la IA (se mantiene) -->
-                <div class="chat-hint-bubble clickable" *ngIf="!zoeService.isChatOpen && !zoeService.isListening && !hintChatOculto" (click)="zoeService.toggleEscucha()">
+                <div class="chat-hint-bubble clickable" *ngIf="!zoeService.isChatOpen && !zoeService.isListening && !zoeService.isSpeaking && !zoeService.isChatLoading && !hintChatOculto" (click)="zoeService.toggleEscucha()">
                     <p style="display: flex; align-items: center; gap: 6px;">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary-orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
@@ -281,21 +280,20 @@
                     <div class="chat-hint-arrow"></div>
                 </div>
 
-                <div class="chat-hint-bubble listening-mode" *ngIf="!zoeService.isChatOpen && zoeService.isListening">
+                <div class="chat-hint-bubble listening-mode" *ngIf="!zoeService.isChatOpen && (zoeService.isListening || zoeService.isSpeaking || zoeService.isChatLoading)">
                     <p style="display: flex; align-items: center; gap: 6px; color: #ef4444; font-weight: 800;">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
                             <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
                             <line x1="12" y1="19" x2="12" y2="22"></line>
                         </svg>
-                        Te escucho...
+                        {{ zoeService.isSpeaking ? 'Hablando...' : (zoeService.isChatLoading ? 'Pensando...' : 'Te escucho...') }}
                     </p>
-                    <button type="button" class="btn-stop-mic" (click)="zoeService.toggleEscucha()" title="Apagar micrófono">
+                    <button type="button" class="btn-stop-mic" (click)="zoeService.detenerInteraccion()" title="Apagar todo">
                         Detener
                     </button>
                     <div class="chat-hint-arrow listening-arrow"></div>
                 </div>
-
                 <div class="chat-fab-wrap">
                     <button type="button" class="chat-fab-minimize" (click)="minimizarChat()" title="Ocultar asistente" aria-label="Ocultar Zoe">
                         <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="5" y1="12" x2="19" y2="12"></line></svg>

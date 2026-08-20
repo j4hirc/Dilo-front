@@ -55,6 +55,9 @@ export class ZoeAiService {
   private transcriptAcumulado = '';
   keepListeningActive = false;
   private vozFemenina: SpeechSynthesisVoice | null = null;
+  
+  // NUEVO: Identificador para cancelar respuestas pendientes de la IA
+  private peticionActivaId = 0;
 
   constructor() {
     this.initSpeechRecognition();
@@ -125,7 +128,6 @@ export class ZoeAiService {
 
     const listaRutasParaComando = modulosNavegables.map(m => m.ruta).join(', ');
 
-    // PROMPT PROFESIONAL PERO AMABLE
     this.promptSistemaBase = `Eres "Zoe", la asistente virtual inteligente de **Dilo** (software de gestión en Ecuador, Cuenca). Hablas con **${nombreUsuario}** (rol: **${rolUsuario}**) del negocio **"${negocioNombre}"**.
 
 DATOS ACTUALES DEL NEGOCIO:
@@ -152,6 +154,9 @@ REGLAS ABSOLUTAS:
 
     this.detenerInteraccion(); 
     this.keepListeningActive = responderConVoz; 
+    
+    // Capturamos el ID de esta petición específica
+    const miPeticionId = this.peticionActivaId;
 
     const mensajesActuales = this.chatMensajesSubject.value;
     this.chatMensajesSubject.next([
@@ -184,6 +189,9 @@ REGLAS ABSOLUTAS:
       .subscribe({
         next: (res) => {
           this.zone.run(() => {
+            // SI EL USUARIO PULSÓ "DETENER" MIENTRAS CARGABA, DESCARTAMOS LA RESPUESTA
+            if (this.peticionActivaId !== miPeticionId) return;
+
             let textoCompleto = res.choices[0]?.message?.content || '';
             textoCompleto = textoCompleto.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
 
@@ -226,6 +234,8 @@ REGLAS ABSOLUTAS:
         },
         error: (err) => {
           this.zone.run(() => {
+            if (this.peticionActivaId !== miPeticionId) return; // Descartar si el usuario detuvo
+
             let msjError = 'Lo siento, por favor revisa tu conexión a internet.';
             let detenerMicrofonoPorError = false;
 
@@ -271,7 +281,6 @@ REGLAS ABSOLUTAS:
         this.transcriptAcumulado += final;
         this.zone.run(() => {
           clearTimeout(this.silenceTimer);
-          // TIEMPO AJUSTADO A 1.5 SEGUNDOS (1500ms)
           this.silenceTimer = setTimeout(() => {
             if (this.transcriptAcumulado.trim()) {
               this.enviarMensaje(this.transcriptAcumulado.trim(), true);
@@ -297,17 +306,21 @@ REGLAS ABSOLUTAS:
     this.recognition.onerror = () => this.zone.run(() => this.isListening = false);
   }
 
+  // APAGADO MAESTRO TOTAL
   detenerInteraccion() {
     window.speechSynthesis.pause(); 
     window.speechSynthesis.cancel();
     
     this.keepListeningActive = false;
+    this.peticionActivaId++; // Mata cualquier respuesta pendiente en el aire
+
     if (this.silenceTimer) clearTimeout(this.silenceTimer);
     try { this.recognition.abort(); } catch (e) {}
     
     this.zone.run(() => {
       this.isSpeaking = false;
       this.isListening = false;
+      this.isChatLoadingSubject.next(false); // Quita los puntos de "pensando" inmediatamente
     });
   }
 
