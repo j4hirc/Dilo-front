@@ -29,35 +29,31 @@ export class ZoeAiService {
 
   isChatOpen = false;
   isListening = false;
+  public isSpeaking = false; 
 
-  // ========== ESTADO REACTIVO (esto soluciona el problema) ==========
   private chatMensajesSubject = new BehaviorSubject<ChatMessage[]>([]);
   chatMensajes$ = this.chatMensajesSubject.asObservable();
 
   private isChatLoadingSubject = new BehaviorSubject<boolean>(false);
   isChatLoading$ = this.isChatLoadingSubject.asObservable();
 
-  // Getters de compatibilidad (por si los usas en otros sitios)
   get chatMensajes(): ChatMessage[] {
     return this.chatMensajesSubject.value;
   }
   get isChatLoading(): boolean {
     return this.isChatLoadingSubject.value;
   }
-  // ================================================================
 
   private contextoGlobal = '';
   private promptSistemaBase = '';
-
   private modulosNavegables: ModuloNavegable[] = [];
-  private readonly REGEX_NAVEGACION = /\[\[NAVEGAR:\s*(\/[a-zA-Z0-9\-\/]*)\s*\]\]/;
+  
+  private readonly REGEX_NAVEGACION = /\[\[NAVEGAR:\s*(.+?)\s*\]\]/i;
 
-  // Control de Voz
   private recognition: any;
   private silenceTimer: any;
   private transcriptAcumulado = '';
   keepListeningActive = false;
-
   private vozFemenina: SpeechSynthesisVoice | null = null;
 
   constructor() {
@@ -81,44 +77,29 @@ export class ZoeAiService {
     const es = voices.filter(v => v.lang && v.lang.toLowerCase().startsWith('es'));
     if (!es.length) return null;
 
-    const preferidas = [
-      /google español.*estados unidos/i,
-      /google us spanish/i,
-      /google español/i,
-      /microsoft sabina/i,
-      /sabina/i,
-      /microsoft paulina/i,
-      /paulina/i,
-      /microsoft monica/i,
-      /m[oó]nica/i,
-      /luc[ií]a/i,
-      /mar[ií]a/i,
-      /elena/i,
-      /conchita/i,
-      /dalia/i,
-      /soledad/i,
-      /paloma/i,
-      /female/i,
-      /mujer/i,
-    ];
+    let vozPremium = es.find(v => v.name.toLowerCase().includes('natural') && v.name.toLowerCase().includes('mia')); 
+    if (!vozPremium) vozPremium = es.find(v => v.name.toLowerCase().includes('natural') && v.name.toLowerCase().includes('elena'));
+    if (!vozPremium) vozPremium = es.find(v => v.name.toLowerCase().includes('natural')); 
 
-    const masculinas = /pablo|jorge|diego|carlos|juan|pedro|antonio|male|hombre|david|jorge/i;
+    if (!vozPremium) vozPremium = es.find(v => v.name.toLowerCase().includes('google') && !v.name.toLowerCase().includes('masculino') && !v.name.toLowerCase().includes('male'));
 
-    for (const re of preferidas) {
-      const found = es.find(v => re.test(v.name) && !masculinas.test(v.name));
-      if (found) return found;
+    const preferidas = [/microsoft sabina/i, /microsoft paulina/i, /m[oó]nica/i, /luc[ií]a/i, /mar[ií]a/i];
+    if (!vozPremium) {
+      for (const re of preferidas) {
+        vozPremium = es.find(v => re.test(v.name));
+        if (vozPremium) break;
+      }
     }
 
+    const masculinas = /pablo|jorge|diego|carlos|juan|pedro|antonio|male|hombre|david/i;
     const noMale = es.find(v => !masculinas.test(v.name));
-    if (noMale) return noMale;
 
-    const porLang = es.find(v => /es-(ES|MX|US|AR|CO|CL|PE)/i.test(v.lang)) || es[0];
-    return porLang;
+    return vozPremium || noMale || es[0];
   }
 
   inicializarChat(nombreUsuario: string, rol: string) {
     if (this.chatMensajesSubject.value.length === 0) {
-      const textoBienvenida = `¡Hola! Soy **Zoe**, tu asistente en **Dilo**.\n\nPuedo ayudarte con:\n- Stock y bodegas (qué hay, qué falta, stock mínimo)\n- Productos, clientes, proveedores, facturas\n- Cómo usar cada módulo\n- Llevarte directo a cualquier pantalla\n\nDime por texto o por voz. Ejemplos: *"¿Qué productos faltan en bodega?"*, *"Llévame a Inventario"*, *"¿Por dónde empiezo?"*.\n\nCuéntame, ${nombreUsuario}, ¿en qué te ayudo hoy?`;
+      const textoBienvenida = `¡Hola! Soy **Zoe**. Cuéntame, ${nombreUsuario}, ¿qué revisamos hoy?`;
       this.chatMensajesSubject.next([{
         role: 'assistant',
         text: textoBienvenida,
@@ -143,109 +124,41 @@ export class ZoeAiService {
     this.modulosNavegables = modulosNavegables;
 
     const listaRutasParaComando = modulosNavegables.map(m => m.ruta).join(', ');
-    const listaNombresModulos = modulosNavegables.map(m => m.nombre).join(', ');
 
-    this.promptSistemaBase = `Eres "Zoe", asistente virtual oficial del sistema **Dilo** (software de gestión para negocios en Ecuador).
-Hablas con **${nombreUsuario}** (rol: **${rolUsuario}**) del negocio **"${negocioNombre}"**.
+    // PROMPT PROFESIONAL PERO AMABLE
+    this.promptSistemaBase = `Eres "Zoe", la asistente virtual inteligente de **Dilo** (software de gestión en Ecuador, Cuenca). Hablas con **${nombreUsuario}** (rol: **${rolUsuario}**) del negocio **"${negocioNombre}"**.
 
-══════════════════════════════════════
-CONOCIMIENTO DEL SISTEMA DILO (OBLIGATORIO)
-══════════════════════════════════════
-Dilo gestiona inventario multi-bodega, ventas, compras, clientes, proveedores y equipo.
+DATOS ACTUALES DEL NEGOCIO:
+${this.contextoGlobal}
+Alertas de caducidad: ${alertasTexto || 'Ninguna'}.
 
-ROLES:
-- PROPIETARIO: acceso total.
-- VENDEDOR: facturas, clientes, cuentas por cobrar, reportes. NO inventario/bodegas/compras.
-- BODEGUERO: productos, categorías, bodegas, inventario, kardex, compras/abastecimiento. NO facturación.
-
-MÓDULOS Y PARA QUÉ SIRVEN:
-- Dashboard / Propietario: resumen del negocio.
-- Facturas: registrar ventas, cobrar, emitir comprobantes. IVA 15% fijo.
-- Cuentas por Cobrar: saldos pendientes de clientes a crédito.
-- Abastecimiento (Compras): registrar compras a proveedores (entra stock a bodegas).
-- Clientes / Proveedores: directorios.
-- Productos: catálogo (nombre, código, costo promedio, categoría).
-- Categorías: organizar productos.
-- Bodegas: sucursales o espacios de almacenamiento. Un producto puede tener stock distinto en cada bodega.
-- Inventario: stock actual por producto y bodega. Muestra cantidadActual y stockMinimo. Si cantidadActual <= stockMinimo → está BAJO o FALTA.
-- Kardex (Movimientos): historial de entradas/salidas de inventario.
-- Mi Equipo: invitar empleados con código.
-- Configuración: datos del negocio.
-- Mi Perfil: datos del usuario.
-- Rendimiento (Reportes): métricas de ventas.
-
-REGLAS DE NEGOCIO CLAVE:
-- El stock es por BODEGA. Nunca digas "hay X unidades" sin indicar en qué bodega, salvo que el usuario pregunte el total global.
-- "Falta" o "stock bajo" = cantidadActual <= stockMinimo (o cantidadActual = 0).
-- El costo promedio se actualiza con las compras.
-- IVA de ventas = 15% (fijo en Ecuador para este sistema).
-- No inventes productos, cantidades, precios, clientes ni bodegas que no aparezcan en los DATOS REALES abajo.
-- Si no tienes el dato exacto en el contexto, dilo claramente: "No tengo ese dato cargado ahora" o sugiere ir al módulo correspondiente.
-
-MÓDULOS QUE PUEDE USAR ESTE USUARIO:
+MÓDULOS DE DILO (TUS ÚNICAS FUNCIONALIDADES):
 ${modulosPermitidos}
 
-Módulos restringidos para su rol: ${modulosRestringidos || 'Ninguno'}.
-Módulos en construcción: ${modulosEnConstruccion}.
-
-══════════════════════════════════════
-DATOS REALES DEL NEGOCIO (ÚNICA FUENTE DE VERDAD)
-══════════════════════════════════════
-${this.contextoGlobal}
-
-Alertas de caducidad (próximos 30 días): ${alertasTexto || 'Ninguna'}.
-
-══════════════════════════════════════
-NAVEGACIÓN
-══════════════════════════════════════
-Si el usuario pide ir a un módulo permitido, responde breve y AL FINAL (nueva línea) pon exactamente:
-[[NAVEGAR:/ruta/exacta]]
-Rutas válidas: ${listaRutasParaComando || 'ninguna'}.
-Nombres de módulos: ${listaNombresModulos || 'ninguno'}.
-No inventes rutas.
-
-══════════════════════════════════════
-PERSONALIDAD DE ZOE
-══════════════════════════════════════
-No hables como un bot que recita reportes: eres cercana, cálida, segura de ti misma y con chispa — la clase de persona con la que da gusto trabajar. Usa contracciones y expresiones naturales de Ecuador ("fíjate que...", "mira,...", "ojo con esto..."), varía cómo arrancas cada respuesta (nada de empezar siempre con "Claro" o "¡Hola!"), y deja que se note un poco de personalidad y buen humor cuando el contexto lo permita. Tu encanto está en la calidez y la atención genuina hacia la persona, no en insinuaciones: este es un entorno de trabajo, así que si aparece algo de picardía, es sutil, ingeniosa y siempre respetuosa — nunca explícita ni fuera de lugar.
-
-══════════════════════════════════════
-ESTILO Y REGLAS DE RESPUESTA
-══════════════════════════════════════
-1. 🚨 REGLA DE ORO: DEBES RESPONDER ÚNICA Y EXCLUSIVAMENTE EN ESPAÑOL. ESTÁ TOTALMENTE PROHIBIDO USAR INGLÉS. 🚨
-2. Habla como se habla en Ecuador: natural, cercana, con calidez humana real. Tutea siempre. Evita sonar acartonada o repetitiva — nada de fórmulas fijas en cada mensaje.
-3. Sé útil y concreta. Prefiere listas cortas con **negrita** en datos clave (cantidades, nombres, bodegas).
-4. Máximo 2-3 párrafos o una lista clara. Si es por voz, sé aún más breve, natural y con ritmo de conversación real (sin markdown exagerado).
-5. NUNCA inventes datos de stock, productos, precios o bodegas. Solo usa lo que está en DATOS REALES.
-6. Cuando pregunten por stock / faltantes / "qué hay" / "qué falta":
-   - Usa la sección STOCK POR BODEGA y PRODUCTOS CON STOCK BAJO O CERO.
-   - Indica siempre la bodega y la cantidad.
-   - Si hay muchos, resume los más importantes y menciona el total.
-7. Si preguntan "¿por dónde empiezo?" o "cómo funciona", explica según su rol los 2-3 módulos más útiles primero.
-8. Si piden algo de un módulo restringido, explica amablemente que su rol no tiene acceso.
-9. El IVA es 15%. No cambies ese valor.
-10. Si el contexto dice "Vacío" o no hay datos, dilo sin inventar.
-11. Nunca coquetees de forma explícita, comentes sobre la apariencia de la persona ni saques temas ajenos al negocio: tu calidez se nota en el trato, no en insinuaciones.`;
+REGLAS ABSOLUTAS:
+1. SOLO ERES UNA ASISTENTE DE CONSULTA: ESTRICTAMENTE PROHIBIDO decir que puedes "crear", "registrar", "editar" o "hacer facturas". Tú SOLO lees información y llevas al usuario a las pantallas.
+2. CERO ALUCINACIONES: Usa SOLO la información que te proveo aquí. Si te piden algo que no tienes, di: "No tengo esa información" o "Ese módulo no existe en Dilo todavía".
+3. CEREBRO DIVIDIDO Y VOZ AMABLE: Tu respuesta DEBE estar en dos partes SIEMPRE:
+   - Texto principal: Para leer en pantalla (sin tablas markdown).
+   - Tag <voz>: Al final de todo, añade <voz>Tu frase hablada aquí</voz>. Esto será lo ÚNICO que se lea en voz alta. 
+     IMPORTANTE PARA LA VOZ: DEBES DECIR LA INFORMACIÓN EN VOZ ALTA de forma fluida, amable y profesional. Evita jerga informal (NO uses "che", "mi rey", ni "amigo"), pero mantén un tono cálido y dispuesto ("claro que sí", "con gusto"). Si el usuario te pregunta qué productos hay, MENCIONA LOS NOMBRES DE LOS PRODUCTOS Y SUS CANTIDADES en la voz. 
+     NUNCA digas "Aquí tienes la información en la pantalla" o "Míralo en la pantalla". Dilo TODO en voz alta, aunque te demores. Excepción: si son más de 10 productos, di los 4 o 5 más importantes y menciona el total. Prohibido leer códigos de ID.
+     Ejemplo excelente: <voz>Claro que sí. Revisando la bodega norte, tenemos 10 mouse Logitech, 5 teclados mecánicos y 3 monitores. Todo está en orden.</voz>
+4. NAVEGACIÓN: Si piden ir a un módulo, al final escribe: [[NAVEGAR:/ruta/exacta]]. Rutas válidas: ${listaRutasParaComando}.`;
   }
 
   enviarMensaje(texto: string, responderConVoz: boolean = false) {
     if (!texto.trim() || this.isChatLoadingSubject.value) return;
 
-    // Agregar mensaje del usuario + activar loading
+    this.detenerInteraccion(); 
+    this.keepListeningActive = responderConVoz; 
+
     const mensajesActuales = this.chatMensajesSubject.value;
     this.chatMensajesSubject.next([
       ...mensajesActuales,
-      {
-        role: 'user',
-        text: texto,
-        safeHtml: this.formatearMensaje(texto)
-      }
+      { role: 'user', text: texto, safeHtml: this.formatearMensaje(texto) }
     ]);
     this.isChatLoadingSubject.next(true);
-
-    if (this.recognition) {
-      try { this.recognition.stop(); } catch (e) {}
-    }
 
     const headers = new HttpHeaders({
       'Authorization': `Bearer ${this.groqApiKey}`,
@@ -258,86 +171,81 @@ ESTILO Y REGLAS DE RESPUESTA
     }));
 
     const rutaActual = this.router.url;
-    const promptConUbicacion = `${this.promptSistemaBase}\n\nUBICACIÓN ACTUAL DEL USUARIO: ${rutaActual}\n(Usa esta info solo como contexto; no inventes pantallas).`;
+    const promptConUbicacion = `${this.promptSistemaBase}\n\nUBICACIÓN ACTUAL DEL USUARIO: ${rutaActual}`;
 
     const payload = {
       model: 'openai/gpt-oss-120b',
       messages: [{ role: 'system', content: promptConUbicacion }, ...historial],
-      temperature: 0.25,
-      max_tokens: 450
+      temperature: 0.2, 
+      max_tokens: 500
     };
 
     this.http.post<any>('https://api.groq.com/openai/v1/chat/completions', payload, { headers })
       .subscribe({
         next: (res) => {
           this.zone.run(() => {
-            let respuestaCruda = res.choices[0]?.message?.content || '';
-            respuestaCruda = respuestaCruda.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+            let textoCompleto = res.choices[0]?.message?.content || '';
+            textoCompleto = textoCompleto.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
 
-            const { textoLimpio: respuestaBot, ruta: rutaSolicitada } = this.extraerComandoNavegacion(respuestaCruda);
+            const navMatch = textoCompleto.match(/\[\[NAVEGAR:\s*([^\]]+)\]\]/i);
+            let rutaSolicitada = null;
+            if (navMatch) {
+              rutaSolicitada = navMatch[1].trim();
+              textoCompleto = textoCompleto.replace(navMatch[0], '').trim();
+            }
 
-            // Agregar respuesta de Zoe + desactivar loading
+            let textoParaPantalla = textoCompleto;
+            let textoParaVoz = textoCompleto; 
+
+            const vozMatch = textoCompleto.match(/<voz>([\s\S]*?)<\/voz>/i);
+            if (vozMatch) {
+              textoParaVoz = vozMatch[1].trim();
+              textoParaPantalla = textoCompleto.replace(vozMatch[0], '').trim();
+            } else {
+              textoParaPantalla = textoCompleto.replace(/<voz>|<\/voz>/gi, '').trim();
+            }
+
             this.chatMensajesSubject.next([
               ...this.chatMensajesSubject.value,
-              {
-                role: 'assistant',
-                text: respuestaBot,
-                safeHtml: this.formatearMensaje(respuestaBot)
-              }
+              { role: 'assistant', text: textoParaPantalla, safeHtml: this.formatearMensaje(textoParaPantalla) }
             ]);
             this.isChatLoadingSubject.next(false);
 
             if (rutaSolicitada && this.modulosNavegables.some(m => m.ruta === rutaSolicitada)) {
-              setTimeout(() => this.zone.run(() => this.router.navigate([rutaSolicitada])), 600);
+              setTimeout(() => this.zone.run(() => this.router.navigate([rutaSolicitada])), 500);
             }
 
             if (responderConVoz) {
-              this.hablar(respuestaBot.replace(/\*\*/g, ''), () => {
-                if (this.keepListeningActive) {
-                  this.iniciarEscucha();
-                }
+              this.hablar(textoParaVoz, () => {
+                if (this.keepListeningActive) this.iniciarEscucha();
               });
             } else {
-              if (this.keepListeningActive) {
-                this.iniciarEscucha();
-              }
+              if (this.keepListeningActive) this.iniciarEscucha();
             }
           });
         },
         error: (err) => {
           this.zone.run(() => {
-            console.error('❌ Error de comunicación con Groq:', err);
-            let msjError = 'Lo siento, hubo un fallo en mi conexión. Revisa tu internet.';
+            let msjError = 'Lo siento, por favor revisa tu conexión a internet.';
             let detenerMicrofonoPorError = false;
 
-            if (err.status === 404) {
-              msjError = 'Error 404: Groq rechazó la conexión o el modelo no existe.';
-            } else if (err.status === 429) {
-              msjError = 'Uy, me hiciste pensar demasiado rápido y me quedé sin aire. Espera unos segundos.';
-              detenerMicrofonoPorError = true;
-              this.keepListeningActive = false;
+            if (err.status === 429) {
+              msjError = 'Dame un segundito. Tus consultas van muy rápido, háblame un poco más despacio por favor.';
+              detenerMicrofonoPorError = false; 
             }
 
             this.chatMensajesSubject.next([
               ...this.chatMensajesSubject.value,
-              {
-                role: 'assistant',
-                text: msjError,
-                safeHtml: this.formatearMensaje(msjError)
-              }
+              { role: 'assistant', text: msjError, safeHtml: this.formatearMensaje(msjError) }
             ]);
             this.isChatLoadingSubject.next(false);
 
             if (responderConVoz) {
               this.hablar(msjError, () => {
-                if (this.keepListeningActive && !detenerMicrofonoPorError) {
-                  this.iniciarEscucha();
-                }
+                if (this.keepListeningActive && !detenerMicrofonoPorError) this.iniciarEscucha();
               });
             } else {
-              if (this.keepListeningActive && !detenerMicrofonoPorError) {
-                this.iniciarEscucha();
-              }
+              if (this.keepListeningActive && !detenerMicrofonoPorError) this.iniciarEscucha();
             }
           });
         }
@@ -363,13 +271,13 @@ ESTILO Y REGLAS DE RESPUESTA
         this.transcriptAcumulado += final;
         this.zone.run(() => {
           clearTimeout(this.silenceTimer);
-
+          // TIEMPO AJUSTADO A 1.5 SEGUNDOS (1500ms)
           this.silenceTimer = setTimeout(() => {
             if (this.transcriptAcumulado.trim()) {
               this.enviarMensaje(this.transcriptAcumulado.trim(), true);
               this.transcriptAcumulado = '';
             }
-          }, 2200);
+          }, 1500); 
         });
       }
     };
@@ -377,7 +285,7 @@ ESTILO Y REGLAS DE RESPUESTA
     this.recognition.onend = () => {
       this.zone.run(() => {
         this.isListening = false;
-        if (this.keepListeningActive && !this.isChatLoadingSubject.value) {
+        if (this.keepListeningActive && !this.isChatLoadingSubject.value && !this.isSpeaking) {
           try {
             this.recognition.start();
             this.isListening = true;
@@ -389,18 +297,33 @@ ESTILO Y REGLAS DE RESPUESTA
     this.recognition.onerror = () => this.zone.run(() => this.isListening = false);
   }
 
+  detenerInteraccion() {
+    window.speechSynthesis.pause(); 
+    window.speechSynthesis.cancel();
+    
+    this.keepListeningActive = false;
+    if (this.silenceTimer) clearTimeout(this.silenceTimer);
+    try { this.recognition.abort(); } catch (e) {}
+    
+    this.zone.run(() => {
+      this.isSpeaking = false;
+      this.isListening = false;
+    });
+  }
+
   toggleEscucha() {
     if (this.keepListeningActive) {
-      this.detenerEscuchaManejoUsuario();
+      this.detenerInteraccion(); 
     } else {
       this.keepListeningActive = true;
-      this.iniciarEscucha();
+      this.iniciarEscucha(); 
     }
   }
 
   private iniciarEscucha() {
     if (!this.recognition) return;
     this.transcriptAcumulado = '';
+    window.speechSynthesis.pause();
     window.speechSynthesis.cancel();
     try {
       this.recognition.start();
@@ -408,34 +331,27 @@ ESTILO Y REGLAS DE RESPUESTA
     } catch (e) {}
   }
 
-  private detenerEscuchaManejoUsuario() {
-    this.keepListeningActive = false;
-    if (this.recognition) {
-      try { this.recognition.stop(); } catch (e) {}
-    }
-    this.isListening = false;
-  }
-
   private hablar(texto: string, onFinish?: () => void) {
+    window.speechSynthesis.pause();
     window.speechSynthesis.cancel();
-    const limpio = (texto || '')
-      .replace(/\*\*/g, '')
+    
+    try { this.recognition.abort(); } catch(e) {}
+
+    this.zone.run(() => {
+      this.isSpeaking = true;
+      this.isListening = false;
+    });
+
+    const textoParaVoz = (texto || '')
       .replace(/\*/g, '')
-      .replace(/#{1,6}\s*/g, '')
-      .replace(/\[\[NAVEGAR:[^\]]*\]\]/g, '')
-      .replace(/•/g, ',')
-      .replace(/⚠/g, 'Atención:')
-      .replace(/✖/g, 'Sin stock:')
-      .replace(/\buds\.?/gi, ' unidades')
-      .replace(/\bud\.?/gi, ' unidad')
-      .replace(/\bmín\.?/gi, ' mínimo')
-      .replace(/\bmin\.?/gi, ' mínimo')
-      .replace(/\bmáx\.?/gi, ' máximo')
-      .replace(/\bmax\.?/gi, ' máximo')
-      .replace(/\bcant\.?/gi, ' cantidad')
-      .replace(/\bdesc\.?/gi, ' descuento')
-      .replace(/\bdir\.?/gi, ' dirección')
-      .replace(/\s+/g, ' ')
+      .replace(/#/g, '')
+      .replace(/\|/g, '') 
+      .replace(/id:\d+/gi, '') 
+      .replace(/\(.*?\)/g, '') 
+      .replace(/\[.*?\]/g, '') 
+      .replace(/⚠|✖/g, '')
+      .replace(/\$/g, ' dólares ')
+      .replace(/-/g, '') 
       .trim();
 
     setTimeout(() => {
@@ -444,30 +360,31 @@ ESTILO Y REGLAS DE RESPUESTA
         this.vozFemenina = this.seleccionarVozFemenina(voices);
       }
 
-      const utterance = new SpeechSynthesisUtterance(limpio);
+      const utterance = new SpeechSynthesisUtterance(textoParaVoz);
+      
       if (this.vozFemenina) {
         utterance.voice = this.vozFemenina;
-        utterance.lang = this.vozFemenina.lang || 'es-ES';
+        utterance.lang = this.vozFemenina.lang;
       } else {
-        utterance.lang = 'es-ES';
+        utterance.lang = 'es-EC';
       }
-      utterance.rate = 0.97;
-      utterance.pitch = 1.0;
+      
+      utterance.rate = 1.05; 
+      utterance.pitch = 1.1; 
       utterance.volume = 1;
 
-      utterance.onend = () => { if (onFinish) onFinish(); };
-      utterance.onerror = () => { if (onFinish) onFinish(); };
+      utterance.onend = () => { 
+        this.zone.run(() => this.isSpeaking = false);
+        if (onFinish) onFinish(); 
+      };
+      
+      utterance.onerror = () => { 
+        this.zone.run(() => this.isSpeaking = false);
+        if (onFinish) onFinish(); 
+      };
 
       window.speechSynthesis.speak(utterance);
-    }, 80);
-  }
-
-  private extraerComandoNavegacion(texto: string): { textoLimpio: string; ruta: string | null } {
-    if (!texto) return { textoLimpio: texto, ruta: null };
-    const match = texto.match(this.REGEX_NAVEGACION);
-    if (!match) return { textoLimpio: texto, ruta: null };
-    const textoLimpio = texto.replace(this.REGEX_NAVEGACION, '').trim();
-    return { textoLimpio, ruta: match[1].trim() };
+    }, 100);
   }
 
   toggleChat() {
@@ -476,23 +393,37 @@ ESTILO Y REGLAS DE RESPUESTA
 
   private formatearMensaje(texto: string): SafeHtml {
     if (!texto) return '';
-    let html = texto.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    
+    let html = texto.replace(/\|/g, '').replace(/---/g, ''); 
+    html = html.trim().replace(/</g, '&lt;').replace(/>/g, '&gt;');
     html = html.replace(/\*\*([\s\S]*?)\*\*/g, '<strong>$1</strong>');
 
     const lineas = html.split('\n');
     let dentroDeLista = false;
     let resultado = '';
 
-    for (const linea of lineas) {
-      if (/^\s*[-*]\s+/.test(linea)) {
-        if (!dentroDeLista) { resultado += '<ul>'; dentroDeLista = true; }
-        resultado += `<li>${linea.replace(/^\s*[-*]\s+/, '')}</li>`;
+    for (let linea of lineas) {
+      linea = linea.trim();
+      if (!linea) continue; 
+
+      if (/^[-*]\s+/.test(linea)) {
+        if (!dentroDeLista) { 
+          resultado += '<ul style="margin: 8px 0; padding-left: 20px;">'; 
+          dentroDeLista = true; 
+        }
+        resultado += `<li>${linea.replace(/^[-*]\s+/, '')}</li>`;
       } else {
-        if (dentroDeLista) { resultado += '</ul>'; dentroDeLista = false; }
-        resultado += linea + '<br>';
+        if (dentroDeLista) { 
+          resultado += '</ul>'; 
+          dentroDeLista = false; 
+        }
+        resultado += linea + '<br><br>'; 
       }
     }
+    
     if (dentroDeLista) resultado += '</ul>';
-    return this.sanitizer.bypassSecurityTrustHtml(resultado.replace(/<br>\s*$/, ''));
+    resultado = resultado.replace(/(<br>)+$/, '');
+    
+    return this.sanitizer.bypassSecurityTrustHtml(resultado);
   }
 }

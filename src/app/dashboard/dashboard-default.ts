@@ -40,28 +40,27 @@ export class DashboardDefault implements OnInit, OnDestroy, AfterViewChecked {
   private contextoNegocioTexto: string = 'Aún no se ha cargado la información del negocio.';
   nuevoMensajeTexto = '';
 
-  /** Chat flotante minimizado (solo pestaña lateral) — no estorba */
   chatMinimizado = false;
-  /** Burbuja de ayuda "¿Necesitas ayuda?" ocultada por el usuario */
   hintChatOculto = false;
   private hintAutoHideTimer: ReturnType<typeof setTimeout> | null = null;
 
+  // DESCRIPCIONES DE MÓDULOS ORIENTADAS AL USUARIO (No a la IA)
   private readonly modulosSistema = [
-    { nombre: 'Dashboard', ruta: '/dashboard/propietario', roles: ['PROPIETARIO'], descripcion: 'Pantalla de inicio con resumen general del negocio.', disponible: true },
-    { nombre: 'Facturas', ruta: '/dashboard/facturas', roles: ['PROPIETARIO', 'VENDEDOR'], descripcion: 'Registrar nuevas ventas, cobrar a clientes y emitir comprobantes.', disponible: true },
-    { nombre: 'Cuentas por Cobrar', ruta: '/dashboard/cuentas-cobrar', roles: ['PROPIETARIO', 'VENDEDOR'], descripcion: 'Ver y gestionar los saldos pendientes de clientes a crédito.', disponible: true },
-    { nombre: 'Abastecimiento', ruta: '/dashboard/compras', roles: ['PROPIETARIO', 'BODEGUERO'], descripcion: 'Registrar compras de mercadería a proveedores.', disponible: true },
-    { nombre: 'Clientes', ruta: '/dashboard/clientes', roles: ['PROPIETARIO', 'VENDEDOR'], descripcion: 'Directorio para registrar y consultar clientes.', disponible: true },
-    { nombre: 'Proveedores', ruta: '/dashboard/proveedores', roles: ['PROPIETARIO', 'BODEGUERO'], descripcion: 'Directorio de empresas y contactos que abastecen al negocio.', disponible: true },
-    { nombre: 'Productos', ruta: '/dashboard/productos', roles: ['PROPIETARIO', 'BODEGUERO'], descripcion: 'Catálogo de mercadería.', disponible: true },
-    { nombre: 'Categorías', ruta: '/dashboard/categorias', roles: ['PROPIETARIO', 'BODEGUERO'], descripcion: 'Organizar los productos por categoría.', disponible: true },
-    { nombre: 'Bodegas', ruta: '/dashboard/bodegas', roles: ['PROPIETARIO', 'BODEGUERO'], descripcion: 'Creación y administración de sucursales o cuartos de almacenamiento.', disponible: true },
-    { nombre: 'Inventario', ruta: '/dashboard/inventario', roles: ['PROPIETARIO', 'BODEGUERO'], descripcion: 'Stock actual por bodega y valor total invertido.', disponible: true },
-    { nombre: 'Movimientos (Kardex)', ruta: '/dashboard/kardex', roles: ['PROPIETARIO', 'BODEGUERO'], descripcion: 'Historial contable detallado de movimientos de inventario.', disponible: true },
-    { nombre: 'Mi Equipo', ruta: '/dashboard/equipo', roles: ['PROPIETARIO'], descripcion: 'Agregar empleados/cajeros mediante un código de invitación.', disponible: true },
-    { nombre: 'Configuración', ruta: '/dashboard/configuracion', roles: ['PROPIETARIO'], descripcion: 'Editar los datos del negocio.', disponible: true },
-    { nombre: 'Mi Perfil', ruta: '/dashboard/perfil', roles: ['PROPIETARIO', 'VENDEDOR', 'BODEGUERO'], descripcion: 'Ver y editar los datos personales del usuario.', disponible: true },
-    { nombre: 'Rendimiento', ruta: '/dashboard/reportes', roles: ['PROPIETARIO', 'VENDEDOR'], descripcion: 'Dashboard de rendimiento comercial: rachas de ventas, zonas de calor y comparativas.', disponible: true },
+    { nombre: 'Dashboard', ruta: '/dashboard/propietario', roles: ['PROPIETARIO'], descripcion: 'Pantalla donde el usuario puede ver estadísticas: ventas del mes, facturas, clientes, etc.', disponible: true },
+    { nombre: 'Categorías', ruta: '/dashboard/categorias', roles: ['PROPIETARIO', 'BODEGUERO'], descripcion: 'Módulo para que el usuario cree, describa o edite las categorías.', disponible: true },
+    { nombre: 'Bodegas', ruta: '/dashboard/bodegas', roles: ['PROPIETARIO', 'BODEGUERO'], descripcion: 'Módulo para que el usuario gestione las ubicaciones y nombres de sus bodegas.', disponible: true },
+    { nombre: 'Productos', ruta: '/dashboard/productos', roles: ['PROPIETARIO', 'BODEGUERO'], descripcion: 'Catálogo donde el usuario registra, edita e ingresa sus productos.', disponible: true },
+    { nombre: 'Proveedores', ruta: '/dashboard/proveedores', roles: ['PROPIETARIO', 'BODEGUERO'], descripcion: 'Directorio donde el usuario guarda las empresas que abastecen su inventario.', disponible: true },
+    { nombre: 'Abastecimiento', ruta: '/dashboard/compras', roles: ['PROPIETARIO', 'BODEGUERO'], descripcion: 'Pantalla donde el usuario registra la nueva mercadería que llega a la bodega.', disponible: true },
+    { nombre: 'Clientes', ruta: '/dashboard/clientes', roles: ['PROPIETARIO', 'VENDEDOR'], descripcion: 'Directorio donde el usuario guarda a sus clientes.', disponible: true },
+    { nombre: 'Facturas', ruta: '/dashboard/facturas', roles: ['PROPIETARIO', 'VENDEDOR'], descripcion: 'Módulo donde el usuario hace facturas manuales o por voz.', disponible: true },
+    { nombre: 'Cuentas por Cobrar', ruta: '/dashboard/cuentas-cobrar', roles: ['PROPIETARIO', 'VENDEDOR'], descripcion: 'Sección donde el usuario revisa las cuotas y deudas pendientes.', disponible: true },
+    { nombre: 'Inventario', ruta: '/dashboard/inventario', roles: ['PROPIETARIO', 'BODEGUERO'], descripcion: 'Consulta general de stock de productos organizados por cada bodega.', disponible: true },
+    { nombre: 'Movimientos (Kardex)', ruta: '/dashboard/kardex', roles: ['PROPIETARIO', 'BODEGUERO'], descripcion: 'Historial donde el usuario ve las entradas, salidas y costos de mercadería.', disponible: true },
+    { nombre: 'Rendimiento', ruta: '/dashboard/reportes', roles: ['PROPIETARIO', 'VENDEDOR'], descripcion: 'Pantalla de métricas para que el usuario vea zonas de calor, demanda, top clientes, etc.', disponible: true },
+    { nombre: 'Mi Equipo', ruta: '/dashboard/equipo', roles: ['PROPIETARIO'], descripcion: 'Módulo donde el usuario administra a las personas de su negocio y su código de acceso.', disponible: true },
+    { nombre: 'Configuración', ruta: '/dashboard/configuracion', roles: ['PROPIETARIO'], descripcion: 'Formulario donde el usuario edita la información del negocio.', disponible: true },
+    { nombre: 'Mi Perfil', ruta: '/dashboard/perfil', roles: ['PROPIETARIO', 'VENDEDOR', 'BODEGUERO'], descripcion: 'Ajustes de la cuenta del usuario actual.', disponible: true },
   ];
 
   private readonly rolesSistema = [
@@ -95,12 +94,6 @@ export class DashboardDefault implements OnInit, OnDestroy, AfterViewChecked {
 
     this.zoeService.inicializarChat(this.usuarioLogueado?.primerNombre || 'Usuario', this.rolUsuario);
 
-    // ── FIX: Zoe actualiza sus BehaviorSubject (chatMensajes$ / isChatLoading$)
-    // fuera del ciclo de detección de cambios que esta vista capta automáticamente
-    // (el mismo motivo por el que cargarDatosNegocio() y cargarAlertasCaducidad()
-    // ya usan cdr.detectChanges() manualmente más abajo). Sin esto, el mensaje
-    // nuevo queda guardado en el servicio pero no se pinta hasta el próximo ciclo
-    // de CD que se dispare por otra vía (por eso "aparecía" recién al salir y volver).
     this.zoeService.chatMensajes$
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => {
@@ -113,9 +106,7 @@ export class DashboardDefault implements OnInit, OnDestroy, AfterViewChecked {
         this.cdr.detectChanges();
       });
 
-    // Preferencias del chat flotante (no estorbar)
     this.chatMinimizado = localStorage.getItem('dilo_chat_minimizado') === '1';
-    // Burbuja de VOZ: se mantiene visible para hablar con la IA (solo se oculta si el usuario pulsa ×)
     this.hintChatOculto = localStorage.getItem('dilo_chat_hint_oculto') === '1';
 
     if (this.negocioId) {
@@ -127,7 +118,6 @@ export class DashboardDefault implements OnInit, OnDestroy, AfterViewChecked {
     }
   }
 
-  /** Minimiza el chat a una pestaña lateral (deja de estorbar) */
   minimizarChat() {
     if (this.zoeService.isChatOpen) this.zoeService.toggleChat();
     if (this.zoeService.isListening) this.zoeService.toggleEscucha();
@@ -135,13 +125,11 @@ export class DashboardDefault implements OnInit, OnDestroy, AfterViewChecked {
     localStorage.setItem('dilo_chat_minimizado', '1');
   }
 
-  /** Restaura el FAB del chat desde la pestaña minimizada */
   restaurarChat() {
     this.chatMinimizado = false;
     localStorage.removeItem('dilo_chat_minimizado');
   }
 
-  /** Cierra la burbuja de ayuda y no la vuelve a mostrar en esta sesión / navegador */
   ocultarHintChat(event?: Event) {
     if (event) event.stopPropagation();
     this.hintChatOculto = true;
@@ -266,7 +254,7 @@ export class DashboardDefault implements OnInit, OnDestroy, AfterViewChecked {
         }
 
         const modulosDisponiblesParaRol = this.modulosSistema.filter(m => m.disponible !== false && this.tieneRol(m.roles));
-        const modulosPerm = modulosDisponiblesParaRol.map(m => `- ${m.nombre} (ruta: ${m.ruta})`).join('\n');
+        const modulosPerm = modulosDisponiblesParaRol.map(m => `- ${m.nombre}: ${m.descripcion} (ruta: ${m.ruta})`).join('\n');
         
         const modulosRest = this.modulosSistema
           .filter(m => m.disponible !== false && !this.tieneRol(m.roles))
@@ -293,18 +281,15 @@ export class DashboardDefault implements OnInit, OnDestroy, AfterViewChecked {
     inventario: any[], facturas: any[], bodegas: any[], miembros: any[],
     cuentasPorCobrar: any[], negocioInfo: any
   ): string {
-    // Catálogo de productos (hasta 25 para no saturar el prompt)
     const listaProductos = productos.slice(0, 25).map(p => {
       const costo = Number(p.costoPromedioActual ?? p.costoPromedio ?? 0).toFixed(2);
       const cat = p.categoriaNombre || p.categoria?.nombre || '';
-      return `${p.nombre}${cat ? ' [' + cat + ']' : ''} (id:${p.id}, costo:$${costo})`;
+      return `${p.nombre}${cat ? ' [' + cat + ']' : ''} (costo:$${costo})`;
     }).join('; ');
     const avisoMasProductos = productos.length > 25 ? ` ...(+${productos.length - 25} productos más en el catálogo)` : '';
 
-    // Categorías
     const listaCategorias = categorias.slice(0, 15).map(c => c.nombre).filter(Boolean).join(', ') || 'Ninguna';
 
-    // Mapa de stock por bodega + detección de stock bajo / cero
     const bodegasMap = new Map<string, { items: string[]; bajos: string[]; ceros: string[] }>();
     const bajosGlobal: string[] = [];
     const cerosGlobal: string[] = [];
@@ -348,7 +333,6 @@ export class DashboardDefault implements OnInit, OnDestroy, AfterViewChecked {
       });
     }
 
-    // Resumen explícito de faltantes / bajos (lo más útil para el usuario)
     let resumenFaltantes = '';
     if (cerosGlobal.length === 0 && bajosGlobal.length === 0) {
       resumenFaltantes = 'Ningún producto con stock 0 ni por debajo del mínimo según los datos cargados.';
