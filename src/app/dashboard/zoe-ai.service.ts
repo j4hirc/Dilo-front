@@ -320,7 +320,7 @@ REGLAS ABSOLUTAS:
     this.zone.run(() => {
       this.isSpeaking = false;
       this.isListening = false;
-      this.isChatLoadingSubject.next(false); // Quita los puntos de "pensando" inmediatamente
+      this.isChatLoadingSubject.next(false); 
     });
   }
 
