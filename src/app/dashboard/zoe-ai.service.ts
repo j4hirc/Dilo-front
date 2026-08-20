@@ -189,7 +189,6 @@ REGLAS ABSOLUTAS:
       .subscribe({
         next: (res) => {
           this.zone.run(() => {
-            // SI EL USUARIO PULSÓ "DETENER" MIENTRAS CARGABA, DESCARTAMOS LA RESPUESTA
             if (this.peticionActivaId !== miPeticionId) return;
 
             let textoCompleto = res.choices[0]?.message?.content || '';
