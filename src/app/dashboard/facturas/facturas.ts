@@ -379,7 +379,6 @@ export class Facturas implements OnInit, OnDestroy {
     }
   }
 
-  /** Consumidor final NUNCA tarjeta; sin cliente tampoco */
   private bloquearTarjetaSiConsumidorFinal(avisar = false): boolean {
     if (this.nuevaFactura.metodoPago !== 'TARJETA_CREDITO') return false;
     if (this.esConsumidorFinal) {
@@ -399,7 +398,6 @@ export class Facturas implements OnInit, OnDestroy {
     return false;
   }
 
-  /** Cambio manual del select de método de pago */
   onMetodoPagoChange() {
     if (this.nuevaFactura.metodoPago === 'TARJETA_CREDITO' && !this.permiteTarjetaCredito) {
       const motivo = this.esConsumidorFinal
@@ -412,11 +410,7 @@ export class Facturas implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
-  /**
-   * Aplica método de pago con reglas de negocio.
-   * - TARJETA solo si hay cliente registrado (no CF)
-   * - Si aún no hay cliente pero vendrá en el mismo comando, devolver 'pendiente'
-   */
+  
   private aplicarMetodoPagoSeguro(metodo: string | null | undefined, mensajesAlerta: string[], esperarCliente = false): 'ok' | 'bloqueado' | 'pendiente' {
     if (!metodo || metodo === 'null' || metodo === 'NULL') return 'ok';
     const m = String(metodo).toUpperCase();
@@ -619,7 +613,6 @@ export class Facturas implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
-  /** Corta micrófono + voz de golpe (clic en opción o cambio de estado) */
   private pausarMicYVoz() {
     this.bloqueoEscucha = true;
     this.isListening = false;
@@ -634,6 +627,30 @@ export class Facturas implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
+  private seleccionarVozFemenina(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null {
+    const es = voices.filter(v => v.lang && v.lang.toLowerCase().startsWith('es'));
+    if (!es.length) return null;
+
+    let vozPremium = es.find(v => v.name.toLowerCase().includes('natural') && v.name.toLowerCase().includes('mia')); 
+    if (!vozPremium) vozPremium = es.find(v => v.name.toLowerCase().includes('natural') && v.name.toLowerCase().includes('elena'));
+    if (!vozPremium) vozPremium = es.find(v => v.name.toLowerCase().includes('natural')); 
+
+    if (!vozPremium) vozPremium = es.find(v => v.name.toLowerCase().includes('google') && !v.name.toLowerCase().includes('masculino') && !v.name.toLowerCase().includes('male'));
+
+    const preferidas = [/microsoft sabina/i, /microsoft paulina/i, /m[oó]nica/i, /luc[ií]a/i, /mar[ií]a/i];
+    if (!vozPremium) {
+      for (const re of preferidas) {
+        vozPremium = es.find(v => re.test(v.name));
+        if (vozPremium) break;
+      }
+    }
+
+    const masculinas = /pablo|jorge|diego|carlos|juan|pedro|antonio|male|hombre|david/i;
+    const noMale = es.find(v => !masculinas.test(v.name));
+
+    return vozPremium || noMale || es[0];
+  }
+
   private hablar(texto: string, callback?: () => void) {
     // Mientras habla no debe escuchar (evita eco / confusión)
     this.bloqueoEscucha = true;
@@ -645,6 +662,7 @@ export class Facturas implements OnInit, OnDestroy {
     if (this.recognition) {
       try { this.recognition.abort(); } catch (e) { }
     }
+    
 
     setTimeout(() => {
       if (this.voiceState === VoiceStep.OFF) return;
@@ -653,22 +671,21 @@ export class Facturas implements OnInit, OnDestroy {
       this.userTranscript = '';
       this.cdr.detectChanges();
 
-      const utterance = new SpeechSynthesisUtterance(texto);
-      utterance.lang = 'es-ES';
-      utterance.rate = 1.35;
-      utterance.pitch = 1.2;
-
+     const utterance = new SpeechSynthesisUtterance(texto);
+      
       let voices = window.speechSynthesis.getVoices();
-      let femaleVoice = voices.find(v =>
-        v.lang.startsWith('es') &&
-        /(sabina|paulina|helena|monica|victoria|lucia|sofia|laura|isabel|carmen|female|mujer|google español)/i.test(v.name)
-      );
-      if (!femaleVoice) {
-        femaleVoice = voices.find(v =>
-          v.lang.startsWith('es') && !/(pablo|jorge|diego|carlos|male|hombre)/i.test(v.name)
-        );
+      let femaleVoice = this.seleccionarVozFemenina(voices);
+
+      if (femaleVoice) {
+        utterance.voice = femaleVoice;
+        utterance.lang = femaleVoice.lang;
+      } else {
+        utterance.lang = 'es-EC';
       }
-      if (femaleVoice) utterance.voice = femaleVoice;
+      
+      utterance.rate = 1.15; 
+      utterance.pitch = 1.1; 
+      utterance.volume = 1;
 
       const fin = () => {
         this.isThinking = false;
