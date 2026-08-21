@@ -5,7 +5,6 @@ if (!fs.existsSync(dir)) {
   fs.mkdirSync(dir, { recursive: true });
 }
 
-// Tomamos las variables desde Netlify, o usamos valores por defecto
 const envConfigFile = `export const environment = {
   production: true,
   apiUrl: '${process.env.API_URL || "https://dilo-backend-mxlu.onrender.com/api/v1"}',
