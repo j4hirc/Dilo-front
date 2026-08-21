@@ -38,6 +38,9 @@ export class Facturas implements OnInit, OnDestroy {
   ivaActual: number = 0.15;
 
   showModal = false;
+  showPreviewFactura = false;
+  isLoadingPreview = false;
+  facturaPreview: any = null;
   isSaving = false;
 
   clientesList: any[] = [];
@@ -222,7 +225,16 @@ export class Facturas implements OnInit, OnDestroy {
           subtotalIvaAplicado: Number(f.subtotalIvaAplicado || 0),
           totalIva: Number(f.totalIva || 0),
           porcentajeIva: Number(f.porcentajeIvaAplicado || (this.ivaActual * 100)),
-          detalles: f.detallesFactura || f.detalles || f.items || []
+          detalles: (f.detallesFactura || f.detalles || f.items || []).map((d: any) => ({
+            productoId: d.productoId ?? d.producto?.id,
+            productoNombre: d.productoNombre || d.producto?.nombre || d.descripcion || d.nombre || 'Producto',
+            bodegaNombre: d.bodegaNombre || d.bodega?.nombre || '',
+            cantidad: Number(d.cantidad ?? 1),
+            precioUnitario: Number(d.precioUnitario ?? d.precio ?? 0),
+            descuento: Number(d.descuento ?? 0),
+            subtotal: Number(d.subtotal ?? d.subtotalItem ?? 0),
+            grabaIva: !!(d.grabaIva ?? d.producto?.grabaIva)
+          }))
         }));
 
         this.facturasBase = [...this.facturas]; // 🔥 NUEVO: Guardamos la original para buscar
@@ -342,7 +354,13 @@ export class Facturas implements OnInit, OnDestroy {
   }
 
   /** Con tarjeta de crédito las cuotas son obligatorias (>= 1). */
-  get cuotasTarjetaValidas(): boolean {
+  
+  get previewSubtotal(): number {
+    const d = this.facturaPreview?.detalles || [];
+    return d.reduce((s: number, x: any) => s + Number(x.subtotal || 0), 0);
+  }
+
+get cuotasTarjetaValidas(): boolean {
     if (this.nuevaFactura.metodoPago !== 'TARJETA_CREDITO') return true;
     const n = Number(this.nuevaFactura.numeroCuotas);
     return Number.isFinite(n) && n >= 1;
@@ -1958,6 +1976,92 @@ export class Facturas implements OnInit, OnDestroy {
         Swal.fire('Error', msg, 'error');
       }
     });
+  }
+
+  
+  /** Normaliza líneas de factura (API o lista) para el preview. */
+  private normalizarDetallesPreview(raw: any[]): any[] {
+    return (raw || []).map((d: any) => {
+      const cant = Number(d.cantidad ?? 1);
+      const precio = Number(d.precioUnitario ?? d.precio ?? d.costoPromedioActual ?? 0);
+      const desc = Number(d.descuento ?? d.descuentoItem ?? 0);
+      const sub = Number(d.subtotal ?? d.subtotalItem ?? (precio * cant - desc));
+      return {
+        productoId: d.productoId ?? d.producto?.id ?? null,
+        productoNombre: d.productoNombre || d.producto?.nombre || d.descripcion || d.nombre || 'Producto',
+        bodegaNombre: d.bodegaNombre || d.bodega?.nombre || '',
+        cantidad: cant,
+        precioUnitario: precio,
+        descuento: desc,
+        subtotal: sub,
+        grabaIva: !!(d.grabaIva ?? d.producto?.grabaIva)
+      };
+    });
+  }
+
+  abrirPreviewFactura(fac: any) {
+    if (!fac) return;
+    this.facturaPreview = {
+      ...fac,
+      detalles: this.normalizarDetallesPreview(fac.detalles || [])
+    };
+    this.showPreviewFactura = true;
+    this.cdr.detectChanges();
+
+    // Si la lista no trajo productos, pedir detalle al backend
+    const needsFetch = !this.facturaPreview.detalles?.length && fac.id && this.negocioId;
+    if (!needsFetch) return;
+
+    this.isLoadingPreview = true;
+    this.http.get<any>(
+      `${this.apiUrl}/negocios/${this.negocioId}/facturas/${fac.id}`,
+      { headers: this.getAuthHeaders() }
+    ).subscribe({
+      next: (res) => {
+        const det = res?.detallesFactura || res?.detalles || res?.items || [];
+        this.facturaPreview = {
+          ...this.facturaPreview,
+          numero: res?.numeroFactura || this.facturaPreview.numero,
+          cliente: res?.clienteNombre || this.facturaPreview.cliente,
+          tipo: res?.formaPago || this.facturaPreview.tipo,
+          monto: Number(res?.totalFactura ?? res?.total ?? this.facturaPreview.monto),
+          descuentoGlobal: Number(res?.totalDescuento ?? res?.descuentoGlobal ?? this.facturaPreview.descuentoGlobal ?? 0),
+          subtotalIva0: Number(res?.subtotalIva0 ?? this.facturaPreview.subtotalIva0 ?? 0),
+          subtotalIvaAplicado: Number(res?.subtotalIvaAplicado ?? this.facturaPreview.subtotalIvaAplicado ?? 0),
+          totalIva: Number(res?.totalIva ?? this.facturaPreview.totalIva ?? 0),
+          porcentajeIva: Number(res?.porcentajeIvaAplicado ?? this.facturaPreview.porcentajeIva ?? (this.ivaActual * 100)),
+          detalles: this.normalizarDetallesPreview(det)
+        };
+        this.isLoadingPreview = false;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        // Fallback: intentar lista anidada con query
+        this.http.get<any[]>(
+          `${this.apiUrl}/negocios/${this.negocioId}/facturas/${fac.id}/detalles`,
+          { headers: this.getAuthHeaders() }
+        ).subscribe({
+          next: (det) => {
+            this.facturaPreview = {
+              ...this.facturaPreview,
+              detalles: this.normalizarDetallesPreview(Array.isArray(det) ? det : [])
+            };
+            this.isLoadingPreview = false;
+            this.cdr.detectChanges();
+          },
+          error: () => {
+            this.isLoadingPreview = false;
+            this.cdr.detectChanges();
+          }
+        });
+      }
+    });
+  }
+
+  cerrarPreviewFactura() {
+    this.showPreviewFactura = false;
+    this.facturaPreview = null;
+    this.isLoadingPreview = false;
   }
 
   descargarPDF(fac: any) {
