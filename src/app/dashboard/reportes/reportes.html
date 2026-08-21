@@ -251,7 +251,8 @@
         </div>
         <div class="card-body ranking-body">
           <div class="empty-mini" *ngIf="topClientes.length === 0">Aún no hay clientes con compras en este periodo.</div>
-          <div class="rank-item" *ngFor="let c of topClientes; let i = index">
+          <div class="rank-item rank-clickable" *ngFor="let c of topClientes; let i = index"
+               (click)="abrirDetalleCliente(c)" title="Ver detalle del cliente">
             <span class="rank-num" [class.top3]="i < 3">{{ i + 1 }}</span>
             <div class="rank-info">
               <h4>{{ c.nombre }}</h4>
@@ -276,6 +277,233 @@
             <div class="progress-bg"><div class="progress-fill green" [style.width.%]="p.porcentaje"></div></div>
             <p class="pago-total">${{ p.total | number:'1.2-2' }}</p>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ REPORTE CLIENTES + CRÉDITO ============ -->
+    <div class="card mt-4 clientes-reporte-card">
+      <div class="card-header clientes-header">
+        <div class="clientes-title-block">
+          <div class="clientes-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+          </div>
+          <div>
+            <h3>Reporte de clientes</h3>
+            <p>Facturas y saldo a crédito · toca un cliente para ver el detalle</p>
+          </div>
+        </div>
+        <div class="clientes-kpi">
+          <div class="kpi-pill">
+            <span>Clientes</span>
+            <strong>{{ reporteClientes.length }}</strong>
+          </div>
+          <div class="kpi-pill debt">
+            <span>Con deuda</span>
+            <strong>{{ clientesConDeuda }}</strong>
+          </div>
+          <div class="kpi-pill debt">
+            <span>Por cobrar</span>
+            <strong>${{ totalCreditoClientes | number:'1.2-2' }}</strong>
+          </div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="clientes-filters">
+          <div class="search-wrap">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input type="text" class="search-input" placeholder="Buscar por nombre de cliente..."
+                   [(ngModel)]="busquedaClienteReporte" (input)="aplicarFiltroClientes()">
+          </div>
+          <label class="chk-deuda">
+            <input type="checkbox" [(ngModel)]="filtroSoloDeuda" (change)="aplicarFiltroClientes()">
+            Solo con deuda de crédito
+          </label>
+        </div>
+
+        <div class="table-responsive clientes-table-wrap">
+          <table class="data-table clientes-table">
+            <thead>
+              <tr>
+                <th>Cliente</th>
+                <th class="num">Facturas</th>
+                <th class="num">Total facturado</th>
+                <th class="num">Cuentas crédito</th>
+                <th class="num">Saldo pendiente</th>
+                <th class="center">Acción</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngIf="reporteClientesFiltrado.length === 0">
+                <td colspan="6" class="empty-row">
+                  <div class="empty-mini">No hay clientes para mostrar con estos filtros.</div>
+                </td>
+              </tr>
+              <tr *ngFor="let c of reporteClientesFiltrado" class="row-clickable" (click)="abrirDetalleCliente(c)">
+                <td>
+                  <div class="cli-cell">
+                    <div class="cli-avatar">{{ (c.nombre || '?').charAt(0).toUpperCase() }}</div>
+                    <div>
+                      <strong class="cli-name">{{ c.nombre }}</strong>
+                      <span *ngIf="c.saldoPendiente > 0" class="badge-deuda">Debe</span>
+                    </div>
+                  </div>
+                </td>
+                <td class="num">{{ c.numFacturas }}</td>
+                <td class="num money">${{ c.totalFacturado | number:'1.2-2' }}</td>
+                <td class="num">{{ c.numCuentasCredito }}</td>
+                <td class="num money" [class.debt-val]="c.saldoPendiente > 0" [class.ok-val]="!(c.saldoPendiente > 0)">
+                  ${{ c.saldoPendiente | number:'1.2-2' }}
+                </td>
+                <td class="center">
+                  <button type="button" class="btn-ver" (click)="abrirDetalleCliente(c); $event.stopPropagation()">
+                    Ver detalle
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+        <!-- Modal detalle cliente -->
+    <div class="modal-overlay-rep" *ngIf="showDetalleCliente" (click)="cerrarDetalleCliente()">
+      <div class="modal-cliente" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+
+        <div class="modal-cliente-header">
+          <div class="modal-cli-id">
+            <div class="cli-avatar lg">{{ (clienteDetalle?.nombre || '?').charAt(0).toUpperCase() }}</div>
+            <div class="modal-cli-text">
+              <h3>{{ clienteDetalle?.nombre }}</h3>
+              <p class="modal-sub" *ngIf="(clienteDetalle?.saldoPendiente || 0) > 0">
+                <span class="pill-debe">Debe ${{ clienteDetalle?.saldoPendiente | number:'1.2-2' }}</span>
+              </p>
+              <p class="modal-sub" *ngIf="!((clienteDetalle?.saldoPendiente ?? 0) > 0)">
+                <span class="pill-ok">Al día · sin deuda</span>
+              </p>
+            </div>
+          </div>
+          <button type="button" class="close-x" (click)="cerrarDetalleCliente()" aria-label="Cerrar">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+
+        <div class="modal-stats">
+          <div class="mstat">
+            <span>Facturas</span>
+            <strong>{{ clienteDetalle?.numFacturas || 0 }}</strong>
+          </div>
+          <div class="mstat">
+            <span>Facturado</span>
+            <strong>${{ (clienteDetalle?.totalFacturado || 0) | number:'1.2-2' }}</strong>
+          </div>
+          <div class="mstat" [class.alert]="(clienteDetalle?.saldoPendiente || 0) > 0">
+            <span>Por cobrar</span>
+            <strong>${{ (clienteDetalle?.saldoPendiente || 0) | number:'1.2-2' }}</strong>
+          </div>
+        </div>
+
+        <div class="modal-tabs">
+          <button type="button"
+                  class="modal-tab"
+                  [class.active]="modalTabCliente === 'facturas'"
+                  (click)="modalTabCliente = 'facturas'">
+            Facturas
+            <span class="tab-count">{{ clienteDetalle?.facturas?.length || 0 }}</span>
+          </button>
+          <button type="button"
+                  class="modal-tab"
+                  [class.active]="modalTabCliente === 'credito'"
+                  (click)="modalTabCliente = 'credito'">
+            Crédito
+            <span class="tab-count" [class.tab-debt]="(clienteDetalle?.saldoPendiente || 0) > 0">
+              {{ clienteDetalle?.creditos?.length || 0 }}
+            </span>
+          </button>
+        </div>
+
+        <div class="modal-cliente-body">
+          <div *ngIf="modalTabCliente === 'facturas'">
+            <div class="empty-modal" *ngIf="!(clienteDetalle?.facturas?.length)">
+              <div class="empty-icon">📄</div>
+              <p>Este cliente aún no tiene facturas registradas.</p>
+            </div>
+            <div class="table-responsive" *ngIf="clienteDetalle?.facturas?.length">
+              <table class="data-table modal-table">
+                <thead>
+                  <tr>
+                    <th>Número</th>
+                    <th>Fecha</th>
+                    <th>Pago</th>
+                    <th>Estado</th>
+                    <th class="num">Monto</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let f of clienteDetalle.facturas">
+                    <td><strong class="fac-num">{{ f.numero }}</strong></td>
+                    <td class="muted-cell">{{ f.fecha }}</td>
+                    <td><span class="tag-pago">{{ f.tipo }}</span></td>
+                    <td><span class="tag-estado">{{ f.estado }}</span></td>
+                    <td class="num money">${{ f.monto | number:'1.2-2' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div *ngIf="modalTabCliente === 'credito'">
+            <div class="empty-modal" *ngIf="!(clienteDetalle?.creditos?.length)">
+              <div class="empty-icon">💳</div>
+              <p>Sin cuentas de crédito para este cliente.</p>
+            </div>
+            <div class="table-responsive" *ngIf="clienteDetalle?.creditos?.length">
+              <table class="data-table modal-table">
+                <thead>
+                  <tr>
+                    <th>Referencia</th>
+                    <th>Vence</th>
+                    <th>Estado</th>
+                    <th class="num">Monto</th>
+                    <th class="num">Saldo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let cr of clienteDetalle.creditos">
+                    <td><strong>{{ cr.factura }}</strong></td>
+                    <td class="muted-cell">{{ cr.fechaVencimiento }}</td>
+                    <td>
+                      <span class="badge-estado"
+                            [class.pagada]="cr.saldoPendiente <= 0"
+                            [class.debe]="cr.saldoPendiente > 0">{{ cr.estado }}</span>
+                    </td>
+                    <td class="num">${{ cr.montoTotal | number:'1.2-2' }}</td>
+                    <td class="num money"
+                        [class.debt-val]="cr.saldoPendiente > 0"
+                        [class.ok-val]="!(cr.saldoPendiente > 0)">
+                      ${{ cr.saldoPendiente | number:'1.2-2' }}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-cliente-footer">
+          <button type="button" class="btn-secondary-rep" (click)="cerrarDetalleCliente()">Cerrar</button>
         </div>
       </div>
     </div>

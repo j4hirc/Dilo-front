@@ -30,6 +30,37 @@ interface Comparativa {
   variacion: number;
 }
 
+interface FacturaClienteResumen {
+  id: any;
+  numero: string;
+  fecha: string;
+  tipo: string;
+  monto: number;
+  estado: string;
+}
+
+interface CreditoClienteResumen {
+  id: any;
+  factura: string;
+  montoTotal: number;
+  saldoPendiente: number;
+  fechaVencimiento: string;
+  estado: string;
+}
+
+interface ClienteReporte {
+  key: string;
+  clienteId: any;
+  nombre: string;
+  totalFacturado: number;
+  numFacturas: number;
+  totalCredito: number;
+  saldoPendiente: number;
+  numCuentasCredito: number;
+  facturas: FacturaClienteResumen[];
+  creditos: CreditoClienteResumen[];
+}
+
 @Component({
   selector: 'app-reportes',
   standalone: true,
@@ -66,12 +97,26 @@ export class Reportes implements OnInit {
   calorPorHora: { hora: string; total: number; intensidad: number }[] = [];
 
   topProductos: ProductoDemanda[] = [];
-  topClientes: { nombre: string; total: number; facturas: number; porcentaje: number }[] = [];
+  topClientes: { nombre: string; total: number; facturas: number; porcentaje: number; key?: string }[] = [];
   porFormaPago: { nombre: string; total: number; porcentaje: number }[] = [];
 
   serieDiaria: { label: string; total: number; altura: number }[] = [];
 
+  /** Reporte completo por cliente (facturas + crédito) */
+  reporteClientes: ClienteReporte[] = [];
+  reporteClientesFiltrado: ClienteReporte[] = [];
+  busquedaClienteReporte = '';
+  filtroSoloDeuda = false;
+  totalCreditoClientes = 0;
+  clientesConDeuda = 0;
+
+  showDetalleCliente = false;
+  clienteDetalle: ClienteReporte | null = null;
+  /** 'facturas' | 'credito' */
+  modalTabCliente: 'facturas' | 'credito' = 'facturas';
+
   private facturasRaw: any[] = [];
+  private cuentasRaw: any[] = [];
 
   ngOnInit(): void {
     const userStr = localStorage.getItem('usuario') || localStorage.getItem('dilo_user');
@@ -93,6 +138,7 @@ export class Reportes implements OnInit {
   cambiarPeriodo(dias: number) {
     this.periodoDias = dias;
     this.procesarMetricas();
+    this.procesarReporteClientes();
   }
 
   private getHeaders(): HttpHeaders {
@@ -115,13 +161,19 @@ export class Reportes implements OnInit {
       .get<any>(`${this.apiUrl}/negocios/${id}`, { headers })
       .pipe(catchError(() => of(null)));
 
-    forkJoin([reqFacturas, reqNegocio]).subscribe(([facData, negData]) => {
+    const reqCuentas = this.http
+      .get<any[]>(`${this.apiUrl}/cuentas-por-cobrar/negocio/${id}`, { headers })
+      .pipe(catchError(() => of([])));
+
+    forkJoin([reqFacturas, reqNegocio, reqCuentas]).subscribe(([facData, negData, cxcData]) => {
       this.facturasRaw = Array.isArray(facData) ? facData : [];
+      this.cuentasRaw = Array.isArray(cxcData) ? cxcData : [];
       if (negData) {
         this.negocioNombre =
           negData.nombreComercial || negData.razonSocial || 'Mi Negocio';
       }
       this.procesarMetricas();
+      this.procesarReporteClientes();
       this.isLoading = false;
       this.cdr.detectChanges();
     });
@@ -287,6 +339,7 @@ export class Reportes implements OnInit {
     const maxCli = listaCli[0]?.total || 1;
     this.topClientes = listaCli.map((c) => ({
       ...c,
+      key: this.normalizarNombreCliente(c.nombre),
       porcentaje: Math.round((c.total / maxCli) * 100),
     }));
 
@@ -629,8 +682,21 @@ export class Reportes implements OnInit {
   }
 
   private parseFecha(val: any): Date | null {
-    if (!val) return null;
-    const d = new Date(val);
+    if (val == null || val === '') return null;
+    if (val instanceof Date) return isNaN(val.getTime()) ? null : val;
+    // array [y,m,d] típico de Java LocalDate
+    if (Array.isArray(val) && val.length >= 3) {
+      const d = new Date(Number(val[0]), Number(val[1]) - 1, Number(val[2]), 12, 0, 0);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    const s = String(val).trim();
+    // dd/MM/yyyy
+    const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+    if (m) {
+      const d = new Date(+m[3], +m[2] - 1, +m[1], 12, 0, 0);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    const d = new Date(s);
     return isNaN(d.getTime()) ? null : d;
   }
 
@@ -664,6 +730,330 @@ export class Reportes implements OnInit {
   private variacionPct(actual: number, anterior: number): number {
     if (anterior === 0) return actual > 0 ? 100 : 0;
     return Math.round(((actual - anterior) / anterior) * 1000) / 10;
+  }
+
+
+  /** Extrae dígitos de cédula/teléfono si vienen en el nombre: "María Vega (0987654525)" */
+  private extraerIdentificacionDeTexto(texto: any): string | null {
+    const s = String(texto || '');
+    const m = s.match(/\((\d{7,13})\)/) || s.match(/\b(\d{10,13})\b/);
+    return m ? m[1] : null;
+  }
+
+  /** Nombre limpio para agrupar: quita acentos, paréntesis con cédula/teléfono y ruido */
+  private normalizarNombreCliente(nombre: any): string {
+    return String(nombre || 'Consumidor Final')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      // "Maria Vega (0987654525)" → "Maria Vega"
+      .replace(/\(\s*\d{7,13}\s*\)/g, ' ')
+      .replace(/\b\d{10,13}\b/g, ' ')
+      .replace(/[^a-zA-Z0-9\s]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .toLowerCase()
+      .trim();
+  }
+
+  /** Nombre para mostrar: sin cédula entre paréntesis */
+  private nombreDisplay(nombre: any): string {
+    return String(nombre || 'Cliente')
+      .replace(/\(\s*\d{7,13}\s*\)/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim() || 'Cliente';
+  }
+
+  private armarNombrePersona(obj: any): string {
+    if (!obj) return '';
+    if (obj.nombreCompleto) return String(obj.nombreCompleto).trim();
+    if (obj.razonSocial) return String(obj.razonSocial).trim();
+    if (obj.nombre) return String(obj.nombre).trim();
+    const parts = [obj.primerNombre, obj.segundoNombre, obj.apellidoPaterno, obj.apellidoMaterno]
+      .filter(Boolean)
+      .map((x: any) => String(x).trim());
+    return parts.join(' ').trim();
+  }
+
+  private nombreClienteDeFactura(f: any): string {
+    const n =
+      f.clienteNombre ||
+      f.nombreCliente ||
+      this.armarNombrePersona(f.cliente) ||
+      this.armarNombrePersona(f);
+    if (n) return n;
+    return f.clienteId == null && f.cliente?.id == null ? 'Consumidor Final' : 'Cliente';
+  }
+
+  private nombreClienteDeCuenta(c: any): string {
+    return (
+      c.clienteNombre ||
+      c.nombreCliente ||
+      this.armarNombrePersona(c.cliente) ||
+      this.armarNombrePersona(c) ||
+      'Sin nombre'
+    );
+  }
+
+  private clienteIdDe(f: any): any {
+    return f.clienteId ?? f.cliente?.id ?? f.idCliente ?? null;
+  }
+
+  /**
+   * Arma el reporte por cliente: facturas del periodo + deuda de crédito (todas las cuentas pendientes).
+   */
+  private procesarReporteClientes() {
+    const ahora = new Date();
+    const inicioPeriodo = this.inicioDia(this.restarDias(ahora, this.periodoDias - 1));
+
+    const byId = new Map<string, ClienteReporte>();
+    const byName = new Map<string, ClienteReporte>();
+    const byDni = new Map<string, ClienteReporte>();
+
+    const registrarIndices = (row: ClienteReporte, idKey: string | null, nameKey: string, dni: string | null) => {
+      byName.set(nameKey, row);
+      if (idKey) byId.set(idKey, row);
+      if (dni) byDni.set(dni, row);
+    };
+
+    const ensure = (nombreRaw: string, clienteId: any = null, identificacion: any = null): ClienteReporte => {
+      const display = this.nombreDisplay(nombreRaw);
+      const nameKey = this.normalizarNombreCliente(nombreRaw || display || 'Cliente');
+      const idKey = clienteId != null && clienteId !== '' ? String(clienteId) : null;
+      const dni =
+        (identificacion != null && String(identificacion).trim() !== ''
+          ? String(identificacion).replace(/\D/g, '')
+          : null) ||
+        this.extraerIdentificacionDeTexto(nombreRaw);
+
+      let row: ClienteReporte | undefined;
+
+      if (idKey && byId.has(idKey)) {
+        row = byId.get(idKey)!;
+      } else if (dni && byDni.has(dni)) {
+        row = byDni.get(dni)!;
+      } else if (byName.has(nameKey)) {
+        row = byName.get(nameKey)!;
+      }
+
+      if (!row) {
+        row = {
+          key: nameKey,
+          clienteId: clienteId ?? null,
+          nombre: display,
+          totalFacturado: 0,
+          numFacturas: 0,
+          totalCredito: 0,
+          saldoPendiente: 0,
+          numCuentasCredito: 0,
+          facturas: [],
+          creditos: [],
+        };
+      } else {
+        // Preferir nombre sin cédula y más corto/limpio
+        const actualLimpio = this.nombreDisplay(row.nombre);
+        if (display && (!actualLimpio || display.length <= actualLimpio.length || /\d{7,}/.test(row.nombre))) {
+          if (!/\d{7,}/.test(display)) {
+            row.nombre = display;
+          }
+        }
+        if (clienteId != null && row.clienteId == null) row.clienteId = clienteId;
+      }
+
+      registrarIndices(row, idKey, nameKey, dni);
+      return row;
+    };
+
+    // Facturas
+    this.facturasRaw.forEach((f) => {
+      const d = this.parseFecha(f.fechaEmision || f.fecha || f.createdAt || f.fechaCreacion);
+      const nombre = this.nombreClienteDeFactura(f);
+      const cid = this.clienteIdDe(f);
+      const ident = f.clienteIdentificacion || f.cliente?.dni || f.dni || null;
+      const row = ensure(nombre, cid, ident);
+      const monto = Number(f.totalFactura ?? f.total ?? f.monto ?? 0);
+
+      const num = f.numeroFactura || f.numero || String(f.id || '');
+      if (row.facturas.some((x) => x.id === f.id || (num && x.numero === num))) return;
+
+      row.facturas.push({
+        id: f.id,
+        numero: f.numeroFactura || f.numero || 'S/N',
+        fecha: d ? d.toLocaleDateString('es-EC') : '—',
+        tipo: String(f.formaPago || f.metodoPago || f.tipo || '—'),
+        monto,
+        estado: String(f.estadoSri || f.estado || 'Emitida'),
+      });
+    });
+
+    // Totales de facturación (todas las facturas del cliente)
+    const recalcularFacturas = (row: ClienteReporte) => {
+      row.facturas.sort((a, b) => {
+        const da = this.parseFecha(a.fecha)?.getTime() || 0;
+        const db = this.parseFecha(b.fecha)?.getTime() || 0;
+        return db - da;
+      });
+      row.totalFacturado = row.facturas.reduce((s, x) => s + Number(x.monto || 0), 0);
+      row.numFacturas = row.facturas.length;
+    };
+
+    // Crédito
+    this.cuentasRaw.forEach((c) => {
+      const nombre = this.nombreClienteDeCuenta(c);
+      const cid = c.clienteId ?? c.cliente?.id ?? null;
+      const ident =
+        c.clienteIdentificacion ||
+        c.clienteDni ||
+        c.dni ||
+        c.cliente?.dni ||
+        this.extraerIdentificacionDeTexto(nombre);
+      const row = ensure(nombre, cid, ident);
+      const saldo = Number(c.saldoPendiente ?? 0);
+      const monto = Number(c.montoTotal ?? c.monto ?? 0);
+      if (c.id != null && row.creditos.some((x) => x.id === c.id)) return;
+      row.totalCredito += monto;
+      row.saldoPendiente += saldo;
+      if (saldo > 0) row.numCuentasCredito += 1;
+      const fv = this.parseFecha(c.fechaVencimiento);
+      row.creditos.push({
+        id: c.id,
+        factura: c.numeroFactura || c.facturaNumero || c.referencia || c.numero || '—',
+        montoTotal: monto,
+        saldoPendiente: saldo,
+        fechaVencimiento: fv ? fv.toLocaleDateString('es-EC') : '—',
+        estado: saldo <= 0 ? 'Pagada' : (c.estado || 'Pendiente'),
+      });
+    });
+
+    // Lista única
+    const seen = new Set<ClienteReporte>();
+    const lista: ClienteReporte[] = [];
+    const pushUnique = (row: ClienteReporte) => {
+      if (seen.has(row)) return;
+      seen.add(row);
+      recalcularFacturas(row);
+      lista.push(row);
+    };
+    byId.forEach(pushUnique);
+    byDni.forEach(pushUnique);
+    byName.forEach(pushUnique);
+
+    // Segunda pasada: fusionar residuales con mismo nameKey (por si quedaron separados)
+    const merged = new Map<string, ClienteReporte>();
+    for (const row of lista) {
+      const nk = this.normalizarNombreCliente(row.nombre);
+      if (merged.has(nk)) {
+        const base = merged.get(nk)!;
+        // fusionar facturas
+        row.facturas.forEach((f) => {
+          if (!base.facturas.some((x) => x.id === f.id || x.numero === f.numero)) {
+            base.facturas.push(f);
+          }
+        });
+        row.creditos.forEach((cr) => {
+          if (!base.creditos.some((x) => x.id === cr.id)) {
+            base.creditos.push(cr);
+            base.totalCredito += cr.montoTotal;
+            base.saldoPendiente += cr.saldoPendiente;
+            if (cr.saldoPendiente > 0) base.numCuentasCredito += 1;
+          }
+        });
+        if (row.clienteId != null && base.clienteId == null) base.clienteId = row.clienteId;
+        if (!/\d{7,}/.test(row.nombre) && /\d{7,}/.test(base.nombre)) {
+          base.nombre = this.nombreDisplay(row.nombre);
+        }
+        recalcularFacturas(base);
+      } else {
+        merged.set(nk, row);
+      }
+    }
+
+    const finalLista = [...merged.values()].filter((c) => {
+      const n = this.normalizarNombreCliente(c.nombre);
+      return n !== 'consumidor final' && n !== 'consumidorfinal';
+    });
+
+    this.reporteClientes = finalLista.sort((a, b) => {
+      if (b.saldoPendiente !== a.saldoPendiente) return b.saldoPendiente - a.saldoPendiente;
+      return b.totalFacturado - a.totalFacturado;
+    });
+
+    this.totalCreditoClientes = this.reporteClientes.reduce((s, c) => s + c.saldoPendiente, 0);
+    this.clientesConDeuda = this.reporteClientes.filter((c) => c.saldoPendiente > 0).length;
+    this.aplicarFiltroClientes();
+  }
+
+  aplicarFiltroClientes() {
+    const term = this.busquedaClienteReporte.trim().toLowerCase();
+    this.reporteClientesFiltrado = this.reporteClientes.filter((c) => {
+      if (this.filtroSoloDeuda && !(c.saldoPendiente > 0)) return false;
+      if (!term) return true;
+      return c.nombre.toLowerCase().includes(term);
+    });
+  }
+
+  abrirDetalleCliente(cli: ClienteReporte | { nombre: string; key?: string; total?: number; facturas?: number }) {
+    const key = (cli as any).key || this.normalizarNombreCliente(cli.nombre);
+    const found =
+      this.reporteClientes.find((c) => c.key === key) ||
+      this.reporteClientes.find((c) => this.normalizarNombreCliente(c.nombre) === key) ||
+      null;
+
+    const base: ClienteReporte = found
+      ? { ...found, facturas: [...found.facturas], creditos: [...found.creditos] }
+      : {
+          key,
+          clienteId: (cli as any).clienteId ?? null,
+          nombre: cli.nombre,
+          totalFacturado: (cli as any).total || 0,
+          numFacturas: (cli as any).facturas || 0,
+          totalCredito: 0,
+          saldoPendiente: 0,
+          numCuentasCredito: 0,
+          facturas: [],
+          creditos: [],
+        };
+
+    // Siempre rearmar facturas desde el raw (evita listas vacías por filtros)
+    const cid = base.clienteId;
+    const nKey = this.normalizarNombreCliente(base.nombre);
+    const facturas: FacturaClienteResumen[] = [];
+    this.facturasRaw.forEach((f) => {
+      const fid = this.clienteIdDe(f);
+      const fname = this.normalizarNombreCliente(this.nombreClienteDeFactura(f));
+      const match =
+        (cid != null && fid != null && String(cid) === String(fid)) ||
+        fname === nKey;
+      if (!match) return;
+      const d = this.parseFecha(f.fechaEmision || f.fecha || f.createdAt);
+      facturas.push({
+        id: f.id,
+        numero: f.numeroFactura || f.numero || 'S/N',
+        fecha: d ? d.toLocaleDateString('es-EC') : '—',
+        tipo: String(f.formaPago || f.metodoPago || '—'),
+        monto: Number(f.totalFactura ?? f.total ?? f.monto ?? 0),
+        estado: String(f.estadoSri || f.estado || 'Emitida'),
+      });
+    });
+    facturas.sort((a, b) => {
+      const da = this.parseFecha(a.fecha)?.getTime() || 0;
+      const db = this.parseFecha(b.fecha)?.getTime() || 0;
+      return db - da;
+    });
+    base.facturas = facturas;
+    base.numFacturas = facturas.length;
+    base.totalFacturado = facturas.reduce((s, x) => s + x.monto, 0);
+
+    this.clienteDetalle = base;
+    this.modalTabCliente = (base.saldoPendiente || 0) > 0 && !(base.facturas?.length)
+      ? 'credito'
+      : 'facturas';
+    this.showDetalleCliente = true;
+    this.cdr.detectChanges();
+  }
+
+  cerrarDetalleCliente() {
+    this.showDetalleCliente = false;
+    this.clienteDetalle = null;
+    this.modalTabCliente = 'facturas';
   }
 
   colorCalor(intensidad: number): string {
