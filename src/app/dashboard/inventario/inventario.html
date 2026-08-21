@@ -132,7 +132,7 @@
 <div class="modal-overlay" *ngIf="showModalLotes">
     <div class="modal-content modal-lg">
         <div class="modal-header">
-            <h3>Auditoría de Lotes Activos: <span style="color: var(--primary-orange);">{{ productoLotesActivo?.productoNombre }}</span></h3>
+            <h3>Detalle: <span style="color: var(--primary-orange);">{{ productoLotesActivo?.productoNombre }}</span></h3>
             <button class="close-btn" (click)="cerrarModalLotes()">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
             </button>
@@ -140,7 +140,7 @@
         
         <div class="modal-body" style="background: #f8fafc;">
             
-            <div style="display: flex; flex-wrap: wrap; justify-content: space-between; margin-bottom: 20px; background: white; padding: 15px 20px; border-radius: 8px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+            <div style="display: flex; flex-wrap: wrap; justify-content: space-between; margin-bottom: 16px; background: white; padding: 15px 20px; border-radius: 8px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
                 <div>
                     <p style="margin: 0; color: #64748b; font-size: 0.85rem; text-transform: uppercase; font-weight: 700;">Bodega Analizada</p>
                     <p style="margin: 5px 0 0 0; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 6px; font-size: 1.1rem;">
@@ -154,7 +154,18 @@
                 </div>
             </div>
 
-            <div class="detail-table-container">
+            <!-- Pestañas: Lotes | Movimientos -->
+            <div class="modal-tabs">
+                <button type="button" class="modal-tab" [class.active]="tabActiva === 'lotes'" (click)="cambiarTab('lotes')">
+                    Lotes activos
+                </button>
+                <button type="button" class="modal-tab" [class.active]="tabActiva === 'movimientos'" (click)="cambiarTab('movimientos')">
+                    Movimientos (Kardex)
+                </button>
+            </div>
+
+            <!-- Contenido: Lotes -->
+            <div *ngIf="tabActiva === 'lotes'" class="detail-table-container">
                 <table class="detail-table">
                     <thead>
                         <tr>
@@ -201,6 +212,69 @@
                             
                             <td style="text-align: center;">
                                 <span class="status status-green">Activo</span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Contenido: Movimientos Kardex -->
+            <div *ngIf="tabActiva === 'movimientos'" class="detail-table-container">
+                <table class="detail-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 14%;">Fecha</th>
+                            <th style="width: 12%;">Tipo</th>
+                            <th style="text-align: center; width: 10%;">Cant.</th>
+                            <th style="text-align: right; width: 12%;">Costo U.</th>
+                            <th style="text-align: right; width: 12%;">Total</th>
+                            <th style="width: 20%;">Ubicación</th>
+                            <th style="width: 20%;">Motivo / Resp.</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr *ngIf="isLoadingMovimientos">
+                            <td colspan="7" style="text-align: center; padding: 40px;">
+                                <div class="spinner" style="margin: 0 auto;"></div>
+                            </td>
+                        </tr>
+                        <tr *ngIf="!isLoadingMovimientos && movimientosProducto.length === 0">
+                            <td colspan="7" style="text-align: center; color: #94a3b8; padding: 30px;">
+                                No hay movimientos registrados para este producto.
+                            </td>
+                        </tr>
+                        <tr *ngFor="let kx of movimientosProducto">
+                            <td>
+                                <div style="font-weight: 700; color: #0f172a; font-size: 0.9rem;">{{ kx.fechaTransaccion | date:'dd/MM/yyyy' }}</div>
+                                <div style="font-size: 0.75rem; color: #64748b;">{{ kx.fechaTransaccion | date:'HH:mm' }}</div>
+                            </td>
+                            <td>
+                                <span class="status"
+                                    [ngClass]="{'status-green': kx.tipo === 'INGRESO', 'status-red': kx.tipo === 'EGRESO', 'status-blue': kx.tipo === 'TRANSFERENCIA'}">
+                                    {{ kx.tipo }}
+                                </span>
+                            </td>
+                            <td style="font-weight: 900; font-size: 1.1rem; text-align: center;"
+                                [ngClass]="{'text-green': kx.tipo === 'INGRESO', 'text-red': kx.tipo === 'EGRESO', 'text-blue': kx.tipo === 'TRANSFERENCIA'}">
+                                {{ kx.tipo === 'EGRESO' ? '-' : '+' }}{{ kx.cantidad }}
+                            </td>
+                            <td style="text-align: right; font-weight: 600; color: #475569;">
+                                {{ kx.costoUnitario != null ? ('$' + formatCosto(kx.costoUnitario)) : '-' }}
+                            </td>
+                            <td style="text-align: right; font-weight: 800; color: #0f172a;">
+                                {{ kx.costoTotal != null ? ('$' + (kx.costoTotal | number:'1.2-2')) : '-' }}
+                            </td>
+                            <td style="font-size: 0.85rem; color: #475569; line-height: 1.4;">
+                                <div *ngIf="kx.tipo === 'INGRESO'">Hacia: <strong>{{ kx.bodegaDestinoNombre }}</strong></div>
+                                <div *ngIf="kx.tipo === 'EGRESO'">Desde: <strong>{{ kx.bodegaOrigenNombre }}</strong></div>
+                                <div *ngIf="kx.tipo === 'TRANSFERENCIA'">
+                                    De: <strong>{{ kx.bodegaOrigenNombre }}</strong><br>➔ A: <strong>{{ kx.bodegaDestinoNombre }}</strong>
+                                </div>
+                                <div *ngIf="kx.numeroLote" style="font-size: 0.7rem; color: #64748b; margin-top: 2px;">Lote #{{ kx.numeroLote }}</div>
+                            </td>
+                            <td>
+                                <div style="font-weight: 600; color: #0f172a; font-size: 0.85rem;">{{ kx.motivo }}</div>
+                                <div style="font-size: 0.75rem; color: #64748b; margin-top: 2px;">{{ kx.usuarioResponsableNombre }}</div>
                             </td>
                         </tr>
                     </tbody>

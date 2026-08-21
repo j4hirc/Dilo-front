@@ -19,6 +19,7 @@
     color: #dc2626; 
     animation: pulseRed 2s infinite; 
 }
+.text-blue { color: #2563eb; }
 
 /* Etiquetas de Estado Profesionales */
 .status {
@@ -41,6 +42,12 @@
     background-color: #fee2e2;
     color: #b91c1c;
     border: 1px solid #fecaca;
+}
+
+.status-blue {
+    background-color: #dbeafe;
+    color: #1e40af;
+    border: 1px solid #bfdbfe;
 }
 
 @keyframes pulseRed {
@@ -165,6 +172,39 @@
     white-space: nowrap;
 }
 
+/* Pestañas dentro del modal de lotes */
+.modal-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 14px;
+    background: #e2e8f0;
+    padding: 4px;
+    border-radius: 10px;
+}
+
+.modal-tab {
+    flex: 1;
+    border: none;
+    background: transparent;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.modal-tab:hover {
+    color: #0f172a;
+    background: rgba(255, 255, 255, 0.5);
+}
+
+.modal-tab.active {
+    background: #ffffff;
+    color: #ea580c;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
 
 /* =========================================
    🔥 INSTRUCCIONES Y FILTROS AVANZADOS

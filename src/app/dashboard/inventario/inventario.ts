@@ -36,6 +36,10 @@ export class Inventario implements OnInit {
   productoLotesActivo: any = null;
   lotesDelProducto: any[] = [];
 
+  tabActiva: 'lotes' | 'movimientos' = 'lotes';
+  isLoadingMovimientos = false;
+  movimientosProducto: any[] = [];
+
   ngOnInit(): void {
     const userStr = localStorage.getItem('usuario');
     const usuarioLogueado = userStr ? JSON.parse(userStr) : null;
@@ -204,8 +208,11 @@ export class Inventario implements OnInit {
 
     this.productoLotesActivo = item;
     this.showModalLotes = true;
+    this.tabActiva = 'lotes';
     this.isLoadingLotes = true;
     this.lotesDelProducto = [];
+    this.movimientosProducto = [];
+    this.isLoadingMovimientos = false;
 
     const headers = this.getAuthHeaders();
     this.http.get<any[]>(
@@ -230,6 +237,51 @@ export class Inventario implements OnInit {
     });
   }
 
+  cambiarTab(tab: 'lotes' | 'movimientos') {
+    this.tabActiva = tab;
+    if (tab === 'movimientos' && this.movimientosProducto.length === 0 && !this.isLoadingMovimientos) {
+      this.cargarMovimientosProducto();
+    }
+    this.cdr.detectChanges();
+  }
+
+  private cargarMovimientosProducto() {
+    if (!this.negocioId || !this.productoLotesActivo) return;
+
+    this.isLoadingMovimientos = true;
+    this.movimientosProducto = [];
+
+    const headers = this.getAuthHeaders();
+    const productoId = this.productoLotesActivo.productoId;
+    const productoNombre = (this.productoLotesActivo.productoNombre || '').toLowerCase();
+
+    this.http.get<any[]>(`${this.apiUrl}/negocios/${this.negocioId}/kardex`, { headers }).subscribe({
+      next: (data) => {
+        const lista = Array.isArray(data) ? data : [];
+        this.movimientosProducto = lista
+          .filter((k: any) => {
+            if (productoId != null && (k.productoId === productoId || k.producto?.id === productoId)) {
+              return true;
+            }
+            const nombre = (k.productoNombre || k.producto?.nombre || '').toLowerCase();
+            return nombre && productoNombre && nombre === productoNombre;
+          })
+          .sort((a: any, b: any) => {
+            const fa = new Date(a.fechaTransaccion || 0).getTime();
+            const fb = new Date(b.fechaTransaccion || 0).getTime();
+            return fb - fa;
+          });
+        this.isLoadingMovimientos = false;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Error al cargar movimientos del producto:', err);
+        this.isLoadingMovimientos = false;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
   /** Siempre exactamente 2 decimales: 12 -> 12.00 | 8.9813 -> 8.98 */
   formatCosto(valor: any): string {
     const n = Number(valor);
@@ -241,5 +293,7 @@ export class Inventario implements OnInit {
     this.showModalLotes = false;
     this.productoLotesActivo = null;
     this.lotesDelProducto = [];
+    this.movimientosProducto = [];
+    this.tabActiva = 'lotes';
   }
 }
