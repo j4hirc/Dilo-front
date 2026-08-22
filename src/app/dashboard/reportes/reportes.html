@@ -471,27 +471,59 @@
               <div class="empty-icon">📄</div>
               <p>Este cliente aún no tiene facturas registradas.</p>
             </div>
-            <div class="table-responsive" *ngIf="clienteDetalle?.facturas?.length">
-              <table class="data-table modal-table">
-                <thead>
-                  <tr>
-                    <th>Número</th>
-                    <th>Fecha</th>
-                    <th>Pago</th>
-                    <th>Estado</th>
-                    <th class="num">Monto</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr *ngFor="let f of clienteDetalle?.facturas">
-                    <td><strong class="fac-num">{{ f.numero }}</strong></td>
-                    <td class="muted-cell">{{ f.fecha }}</td>
-                    <td><span class="tag-pago">{{ f.tipo }}</span></td>
-                    <td><span class="tag-estado">{{ f.estado }}</span></td>
-                    <td class="num money">${{ f.monto | number:'1.2-2' }}</td>
-                  </tr>
-                </tbody>
-              </table>
+            
+            <!-- 🔥 LISTA DE FACTURAS TIPO ACORDEÓN -->
+            <div class="facturas-cliente-list" *ngIf="clienteDetalle?.facturas?.length">
+              <div class="factura-item-card" *ngFor="let f of clienteDetalle?.facturas">
+                
+                <div class="fac-summary-row" (click)="toggleDetallesFactura(f)">
+                  <div class="fac-left">
+                    <strong class="fac-num">#{{ f.numero }}</strong>
+                    <span class="muted-cell">{{ f.fecha }}</span>
+                    <span class="tag-pago">{{ f.tipo }}</span>
+                  </div>
+                  <div class="fac-right">
+                    <span class="tag-estado" [ngClass]="{'pagada': f.estado === 'Autorizada' || f.estado === 'Pagada', 'debe': f.estado === 'Anulada'}">{{ f.estado }}</span>
+                    <strong class="money">${{ f.monto | number:'1.2-2' }}</strong>
+                    <svg class="chevron-icon" [class.rotated]="f.showDetalles" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                  </div>
+                </div>
+
+                <!-- 🔥 DESPLIEGABLE CON LOS PRODUCTOS Y DESGLOSE -->
+                <div class="fac-details-dropdown fade-in" *ngIf="f.showDetalles">
+                  <table class="sub-table-detalles">
+                    <thead>
+                      <tr>
+                        <th>Cant.</th>
+                        <th>Producto</th>
+                        <th class="num">P. Unit</th>
+                        <th class="num">Desc.</th>
+                        <th class="num">Subtotal</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let det of f.detalles">
+                        <td><strong>{{ det.cantidad }}</strong></td>
+                        <td>{{ det.productoNombre }}</td>
+                        <td class="num">${{ det.precioUnitario | number:'1.2-2' }}</td>
+                        <td class="num text-red" *ngIf="det.descuento > 0">-${{ det.descuento | number:'1.2-2' }}</td>
+                        <td class="num" *ngIf="!(det.descuento > 0)">$0.00</td>
+                        <td class="num"><strong>${{ det.subtotalItem | number:'1.2-2' }}</strong></td>
+                      </tr>
+                    </tbody>
+                  </table>
+
+                  <!-- Totales de la factura individual -->
+                  <div class="fac-mini-totales">
+                    <div *ngIf="f.subtotalIvaAplicado > 0">Subtotal Gravado: ${{ f.subtotalIvaAplicado | number:'1.2-2' }}</div>
+                    <div *ngIf="f.subtotalIva0 > 0">Subtotal Exento: ${{ f.subtotalIva0 | number:'1.2-2' }}</div>
+                    <div class="text-red" *ngIf="f.totalDescuento > 0">Descuento Global: -${{ f.totalDescuento | number:'1.2-2' }}</div>
+                    <div>IVA: ${{ f.totalIva | number:'1.2-2' }}</div>
+                    <div class="total-final">Total: ${{ f.monto | number:'1.2-2' }}</div>
+                  </div>
+                </div>
+
+              </div>
             </div>
           </div>
 

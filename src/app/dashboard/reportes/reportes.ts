@@ -30,6 +30,15 @@ interface Comparativa {
   variacion: number;
 }
 
+// 🔥 NUEVO: Interfaz para los productos dentro de la factura del cliente
+interface DetalleFacturaResumen {
+  productoNombre: string;
+  cantidad: number;
+  precioUnitario: number;
+  descuento: number;
+  subtotalItem: number;
+}
+
 interface FacturaClienteResumen {
   id: any;
   numero: string;
@@ -37,6 +46,12 @@ interface FacturaClienteResumen {
   tipo: string;
   monto: number;
   estado: string;
+  subtotalIva0: number;
+  subtotalIvaAplicado: number;
+  totalIva: number;
+  totalDescuento: number;
+  detalles: DetalleFacturaResumen[];
+  showDetalles?: boolean; 
 }
 
 interface CreditoClienteResumen {
@@ -46,12 +61,18 @@ interface CreditoClienteResumen {
   saldoPendiente: number;
   fechaVencimiento: string;
   estado: string;
+  subtotalIva0?: number;
+  subtotalIvaAplicado?: number;
+  totalIva?: number;
+  totalDescuento?: number;
+  detalles?: DetalleFacturaResumen[];
+  showDetalles?: boolean; 
 }
 
 interface ClienteReporte {
   key: string;
   clienteId: any;
-  identificacion: string | null; // <--- NUEVA PROPIEDAD
+  identificacion: string | null; 
   nombre: string;
   totalFacturado: number;
   numFacturas: number;
@@ -81,7 +102,7 @@ export class Reportes implements OnInit {
 
   periodoDias: number = 30;
 
-  tabPrincipal: 'general' | 'clientes' = 'general'; // Pestaña activa por defecto
+  tabPrincipal: 'general' | 'clientes' = 'general'; 
 
   ventasPeriodo = 0;
   facturasPeriodo = 0;
@@ -105,7 +126,6 @@ export class Reportes implements OnInit {
 
   serieDiaria: { label: string; total: number; altura: number }[] = [];
 
-  /** Reporte completo por cliente (facturas + crédito) */
   reporteClientes: ClienteReporte[] = [];
   reporteClientesFiltrado: ClienteReporte[] = [];
   busquedaClienteReporte = '';
@@ -115,7 +135,6 @@ export class Reportes implements OnInit {
 
   showDetalleCliente = false;
   clienteDetalle: ClienteReporte | null = null;
-  /** 'facturas' | 'credito' */
   modalTabCliente: 'facturas' | 'credito' = 'facturas';
 
   private facturasRaw: any[] = [];
@@ -687,13 +706,11 @@ export class Reportes implements OnInit {
   private parseFecha(val: any): Date | null {
     if (val == null || val === '') return null;
     if (val instanceof Date) return isNaN(val.getTime()) ? null : val;
-    // array [y,m,d] típico de Java LocalDate
     if (Array.isArray(val) && val.length >= 3) {
       const d = new Date(Number(val[0]), Number(val[1]) - 1, Number(val[2]), 12, 0, 0);
       return isNaN(d.getTime()) ? null : d;
     }
     const s = String(val).trim();
-    // dd/MM/yyyy
     const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
     if (m) {
       const d = new Date(+m[3], +m[2] - 1, +m[1], 12, 0, 0);
@@ -735,20 +752,16 @@ export class Reportes implements OnInit {
     return Math.round(((actual - anterior) / anterior) * 1000) / 10;
   }
 
-
-  /** Extrae dígitos de cédula/teléfono si vienen en el nombre: "María Vega (0987654525)" */
   private extraerIdentificacionDeTexto(texto: any): string | null {
     const s = String(texto || '');
     const m = s.match(/\((\d{7,13})\)/) || s.match(/\b(\d{10,13})\b/);
     return m ? m[1] : null;
   }
 
-  /** Nombre limpio para agrupar: quita acentos, paréntesis con cédula/teléfono y ruido */
   private normalizarNombreCliente(nombre: any): string {
     return String(nombre || 'Consumidor Final')
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
-      // "Maria Vega (0987654525)" → "Maria Vega"
       .replace(/\(\s*\d{7,13}\s*\)/g, ' ')
       .replace(/\b\d{10,13}\b/g, ' ')
       .replace(/[^a-zA-Z0-9\s]/g, ' ')
@@ -757,7 +770,6 @@ export class Reportes implements OnInit {
       .trim();
   }
 
-  /** Nombre para mostrar: sin cédula entre paréntesis */
   private nombreDisplay(nombre: any): string {
     return String(nombre || 'Cliente')
       .replace(/\(\s*\d{7,13}\s*\)/g, ' ')
@@ -800,9 +812,6 @@ export class Reportes implements OnInit {
     return f.clienteId ?? f.cliente?.id ?? f.idCliente ?? null;
   }
 
-  /**
-   * Arma el reporte por cliente: facturas del periodo + deuda de crédito (todas las cuentas pendientes).
-   */
   private procesarReporteClientes() {
     const ahora = new Date();
     const inicioPeriodo = this.inicioDia(this.restarDias(ahora, this.periodoDias - 1));
@@ -841,7 +850,7 @@ export class Reportes implements OnInit {
         row = {
           key: nameKey,
           clienteId: clienteId ?? null,
-          identificacion: dni, // Guardamos la identificación
+          identificacion: dni,
           nombre: display,
           totalFacturado: 0,
           numFacturas: 0,
@@ -852,7 +861,7 @@ export class Reportes implements OnInit {
           creditos: [],
         };
       } else {
-        if (!row.identificacion && dni) row.identificacion = dni; // Actualizamos si no tenía
+        if (!row.identificacion && dni) row.identificacion = dni;
         const actualLimpio = this.nombreDisplay(row.nombre);
         if (display && (!actualLimpio || display.length <= actualLimpio.length || /\d{7,}/.test(row.nombre))) {
           if (!/\d{7,}/.test(display)) {
@@ -866,8 +875,6 @@ export class Reportes implements OnInit {
       return row;
     };
 
-    // --- El resto de tu lógica original de facturas y créditos se mantiene igual ---
-    // (Solo cópialo de tu código actual desde "this.facturasRaw.forEach..." hasta "...this.aplicarFiltroClientes();")
     this.facturasRaw.forEach((f) => {
       const d = this.parseFecha(f.fechaEmision || f.fecha || f.createdAt || f.fechaCreacion);
       const nombre = this.nombreClienteDeFactura(f);
@@ -879,6 +886,14 @@ export class Reportes implements OnInit {
       const num = f.numeroFactura || f.numero || String(f.id || '');
       if (row.facturas.some((x) => x.id === f.id || (num && x.numero === num))) return;
 
+      const dets: DetalleFacturaResumen[] = (f.detalles || []).map((det: any) => ({
+        productoNombre: det.productoNombre || det.nombre || 'Producto',
+        cantidad: Number(det.cantidad || 0),
+        precioUnitario: Number(det.precioUnitario || 0),
+        descuento: Number(det.descuento || 0),
+        subtotalItem: Number(det.subtotalItem || 0)
+      }));
+
       row.facturas.push({
         id: f.id,
         numero: f.numeroFactura || f.numero || 'S/N',
@@ -886,6 +901,12 @@ export class Reportes implements OnInit {
         tipo: String(f.formaPago || f.metodoPago || f.tipo || '—'),
         monto,
         estado: String(f.estadoSri || f.estado || 'Emitida'),
+        subtotalIva0: Number(f.subtotalIva0 || 0),
+        subtotalIvaAplicado: Number(f.subtotalIvaAplicado || 0),
+        totalIva: Number(f.totalIva || 0),
+        totalDescuento: Number(f.totalDescuento || 0),
+        detalles: dets,
+        showDetalles: false
       });
     });
 
@@ -911,13 +932,36 @@ export class Reportes implements OnInit {
       row.saldoPendiente += saldo;
       if (saldo > 0) row.numCuentasCredito += 1;
       const fv = this.parseFecha(c.fechaVencimiento);
+
+      // 🔥 BUSCAMOS LA FACTURA ORIGINAL PARA EXTRAER LOS DETALLES A LA CUENTA DE CRÉDITO
+      const numFacturaCredito = c.numeroFactura || c.facturaNumero || c.referencia || c.numero;
+      const facturaOriginal = row.facturas.find(f => f.numero === numFacturaCredito);
+      
+      let detallesClonados: DetalleFacturaResumen[] = [];
+      let sb0 = 0, sbAplicado = 0, tIva = 0, tDesc = 0;
+
+      if (facturaOriginal) {
+          detallesClonados = facturaOriginal.detalles || [];
+          sb0 = facturaOriginal.subtotalIva0;
+          sbAplicado = facturaOriginal.subtotalIvaAplicado;
+          tIva = facturaOriginal.totalIva;
+          tDesc = facturaOriginal.totalDescuento;
+      }
+
       row.creditos.push({
         id: c.id,
-        factura: c.numeroFactura || c.facturaNumero || c.referencia || c.numero || '—',
+        factura: numFacturaCredito || '—',
         montoTotal: monto,
         saldoPendiente: saldo,
         fechaVencimiento: fv ? fv.toLocaleDateString('es-EC') : '—',
         estado: saldo <= 0 ? 'Pagada' : (c.estado || 'Pendiente'),
+        // Añadimos datos para el desglose
+        detalles: detallesClonados,
+        subtotalIva0: sb0,
+        subtotalIvaAplicado: sbAplicado,
+        totalIva: tIva,
+        totalDescuento: tDesc,
+        showDetalles: false
       });
     });
 
@@ -1005,10 +1049,10 @@ export class Reportes implements OnInit {
           creditos: [],
         };
 
-    // Siempre rearmar facturas desde el raw (evita listas vacías por filtros)
     const cid = base.clienteId;
     const nKey = this.normalizarNombreCliente(base.nombre);
     const facturas: FacturaClienteResumen[] = [];
+    
     this.facturasRaw.forEach((f) => {
       const fid = this.clienteIdDe(f);
       const fname = this.normalizarNombreCliente(this.nombreClienteDeFactura(f));
@@ -1017,6 +1061,16 @@ export class Reportes implements OnInit {
         fname === nKey;
       if (!match) return;
       const d = this.parseFecha(f.fechaEmision || f.fecha || f.createdAt);
+      
+      // 🔥 AQUÍ MAPEO LOS PRODUCTOS EN EL DETALLE AL ABRIR
+      const dets: DetalleFacturaResumen[] = (f.detalles || []).map((det: any) => ({
+        productoNombre: det.productoNombre || det.nombre || 'Producto',
+        cantidad: Number(det.cantidad || 0),
+        precioUnitario: Number(det.precioUnitario || 0),
+        descuento: Number(det.descuento || 0),
+        subtotalItem: Number(det.subtotalItem || 0)
+      }));
+
       facturas.push({
         id: f.id,
         numero: f.numeroFactura || f.numero || 'S/N',
@@ -1024,8 +1078,15 @@ export class Reportes implements OnInit {
         tipo: String(f.formaPago || f.metodoPago || '—'),
         monto: Number(f.totalFactura ?? f.total ?? f.monto ?? 0),
         estado: String(f.estadoSri || f.estado || 'Emitida'),
+        subtotalIva0: Number(f.subtotalIva0 || 0),
+        subtotalIvaAplicado: Number(f.subtotalIvaAplicado || 0),
+        totalIva: Number(f.totalIva || 0),
+        totalDescuento: Number(f.totalDescuento || 0),
+        detalles: dets,
+        showDetalles: false
       });
     });
+    
     facturas.sort((a, b) => {
       const da = this.parseFecha(a.fecha)?.getTime() || 0;
       const db = this.parseFecha(b.fecha)?.getTime() || 0;
@@ -1047,6 +1108,12 @@ export class Reportes implements OnInit {
     this.showDetalleCliente = false;
     this.clienteDetalle = null;
     this.modalTabCliente = 'facturas';
+  }
+
+  // 🔥 NUEVO: Función para alternar el acordeón
+  toggleDetallesFactura(f: FacturaClienteResumen) {
+    f.showDetalles = !f.showDetalles;
+    this.cdr.detectChanges();
   }
 
   colorCalor(intensidad: number): string {
