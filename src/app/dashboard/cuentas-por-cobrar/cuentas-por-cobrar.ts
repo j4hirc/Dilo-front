@@ -15,20 +15,25 @@ export class CuentasPorCobrar implements OnInit {
   private http = inject(HttpClient);
   private cdr = inject(ChangeDetectorRef);
 
+  tabPrincipal: 'general' | 'clientes' = 'general';
+
   cuentas: any[] = [];
   cuentasBase: any[] = [];
+  
+  clientesAgrupados: any[] = [];
+  clientesFiltrados: any[] = [];
+  terminoCliente: string = '';
+  showModalCliente = false;
+  clienteActivo: any = null;
+
   metodoPagoAbono: string = 'EFECTIVO';
   referenciaAbono: string = '';
 
   terminoBusqueda: string = '';
   filtroEstado: string = 'TODAS';
-  /** Fecha desde (YYYY-MM-DD) para filtrar por vencimiento */
   filtroFechaDesde: string = '';
-  /** Fecha hasta (YYYY-MM-DD) para filtrar por vencimiento */
   filtroFechaHasta: string = '';
-  /** Campo por el que se ordena */
   ordenCampo: string = 'fechaVencimiento';
-  /** Dirección: 'asc' | 'desc' */
   ordenDireccion: 'asc' | 'desc' = 'asc';
 
   isLoading = true;
@@ -39,6 +44,16 @@ export class CuentasPorCobrar implements OnInit {
   isSaving = false;
   cuentaSeleccionada: any = null;
   montoAbono: number | null = null;
+  
+  modalTab: 'abonar' | 'historial' | 'factura' = 'abonar';
+  detalleFacturaCargando = false;
+  facturaCompleta: any = null; 
+  pagoRecienRealizado = false; 
+
+  // 🔥 VARIABLES CORREGIDAS PARA EL BANNER Y FILA DESTACADA
+  cuentaDestacadaId: number | null = null;
+  bannerNotificacion: { titulo: string; mensaje: string } | null = null;
+  private animacionTimeout: any; 
 
   totalPorCobrar = 0;
   totalAbonado = 0;
@@ -62,8 +77,16 @@ export class CuentasPorCobrar implements OnInit {
     return new HttpHeaders().set('Authorization', `Bearer ${cleanToken}`);
   }
 
-  cargarCuentas(id: number) {
-    this.isLoading = true;
+  cambiarTabPrincipal(tab: 'general' | 'clientes') {
+    this.tabPrincipal = tab;
+    // Limpiamos el resaltado SOLO cuando cambiamos de pestaña manualmente
+    this.cuentaDestacadaId = null; 
+  }
+
+  cargarCuentas(id: number, backgroundRefresh: boolean = false) {
+    if (!backgroundRefresh) {
+      this.isLoading = true;
+    }
 
     this.http.get<any[]>(`${this.apiUrl}/cuentas-por-cobrar/negocio/${id}`, {
       headers: this.getAuthHeaders()
@@ -73,17 +96,30 @@ export class CuentasPorCobrar implements OnInit {
           this.cuentasBase = Array.isArray(data)
             ? data.map(c => {
               const nombre = this.obtenerNombreCliente(c);
+              const identificacion = c.clienteIdentificacion || c.cliente?.dni || c.dni || '';
               return {
                 ...c,
                 showCuotas: false,
-                // Unificamos en clienteNombre (el DTO trae "nombreCliente")
                 clienteNombre: nombre || 'Sin nombre',
-                nombreCliente: nombre || c.nombreCliente || null
+                identificacionFinal: identificacion
               };
             })
             : [];
+            
           this.calcularEstadisticas();
+          this.agruparClientes(); 
           this.aplicarFiltros();
+          
+          if (this.cuentaSeleccionada) {
+            const cuentaActualizada = this.cuentasBase.find(c => c.id === this.cuentaSeleccionada.id);
+            if (cuentaActualizada) {
+              this.cuentaSeleccionada = cuentaActualizada;
+              this.ordenarHistorial(); 
+            } else {
+              this.cerrarModal(); 
+            }
+          }
+
           this.isLoading = false;
           this.cdr.detectChanges();
         }, 0);
@@ -96,12 +132,88 @@ export class CuentasPorCobrar implements OnInit {
     });
   }
 
+  agruparClientes() {
+    const map = new Map<string, any>();
+    this.cuentasBase.forEach(c => {
+      const nombre = c.clienteNombre;
+      const ident = c.identificacionFinal;
+      const key = this.limpiarTexto(nombre) + '-' + this.limpiarTexto(ident);
+
+      if (!map.has(key)) {
+        map.set(key, {
+          nombre,
+          identificacion: ident,
+          totalDeuda: 0,
+          cuentasPendientes: 0,
+          cuentas: []
+        });
+      }
+      const cli = map.get(key);
+      cli.cuentas.push(c);
+      
+      if (c.saldoPendiente > 0) {
+        cli.totalDeuda += Number(c.saldoPendiente);
+        cli.cuentasPendientes++;
+      }
+    });
+
+    this.clientesAgrupados = Array.from(map.values()).sort((a, b) => b.totalDeuda - a.totalDeuda);
+    
+    this.clientesAgrupados.forEach(cli => {
+        cli.cuentas.sort((a: any, b: any) => {
+            const aPagada = a.estado === 'PAGADA' ? 1 : 0;
+            const bPagada = b.estado === 'PAGADA' ? 1 : 0;
+            if (aPagada !== bPagada) return aPagada - bPagada;
+            const dateA = a.fechaVencimiento ? new Date(a.fechaVencimiento).getTime() : 0;
+            const dateB = b.fechaVencimiento ? new Date(b.fechaVencimiento).getTime() : 0;
+            return dateA - dateB;
+        });
+    });
+
+    this.filtrarClientes();
+
+    if (this.clienteActivo) {
+        const clienteActualizado = this.clientesAgrupados.find(c => c.identificacion === this.clienteActivo.identificacion && c.nombre === this.clienteActivo.nombre);
+        if (clienteActualizado) {
+            this.clienteActivo = clienteActualizado;
+        } else {
+            this.cerrarModalCliente();
+        }
+    }
+  }
+
+  filtrarClientes() {
+    const term = this.limpiarTexto(this.terminoCliente);
+    if (!term) {
+      this.clientesFiltrados = [...this.clientesAgrupados];
+    } else {
+      this.clientesFiltrados = this.clientesAgrupados.filter(c =>
+        this.limpiarTexto(c.nombre).includes(term) ||
+        this.limpiarTexto(c.identificacion).includes(term)
+      );
+    }
+  }
+
+  abrirModalCliente(cliente: any) {
+    this.clienteActivo = cliente;
+    this.showModalCliente = true;
+  }
+
+  cerrarModalCliente() {
+    this.showModalCliente = false;
+    this.clienteActivo = null;
+  }
+
+  esClienteDestacado(cli: any): boolean {
+    if (!this.cuentaDestacadaId) return false;
+    return cli.cuentas.some((c: any) => c.id === this.cuentaDestacadaId);
+  }
+
   setFiltro(estado: string) {
     this.filtroEstado = estado;
     this.aplicarFiltros();
   }
 
-  /** Cambia el campo de ordenación (toggle asc/desc si es el mismo campo) */
   ordenarPor(campo: string) {
     if (this.ordenCampo === campo) {
       this.ordenDireccion = this.ordenDireccion === 'asc' ? 'desc' : 'asc';
@@ -112,7 +224,6 @@ export class CuentasPorCobrar implements OnInit {
     this.aplicarFiltros();
   }
 
-  /** Icono visual del orden actual en cabeceras */
   iconoOrden(campo: string): string {
     if (this.ordenCampo !== campo) return '';
     return this.ordenDireccion === 'asc' ? ' ▲' : ' ▼';
@@ -124,54 +235,33 @@ export class CuentasPorCobrar implements OnInit {
     this.aplicarFiltros();
   }
 
-  /** Normaliza texto para búsquedas (quita acentos, minúsculas, trim) */
   private limpiarTexto(texto: any): string {
     if (texto === null || texto === undefined) return '';
-    return String(texto)
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase()
-      .trim();
+    return String(texto).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
   }
 
-  /**
-   * Obtiene el nombre del cliente.
-   * El backend (CuentaPorCobrarResponseDTO) expone el campo como `nombreCliente`
-   * y ahora incluye el DNI: "Juan Pérez (12345678)"
-   */
   private obtenerNombreCliente(c: any): string {
     if (!c) return '';
-    const nombre =
-      c.nombreCliente ||
-      c.clienteNombre ||
-      c.cliente?.nombreCompleto ||
-      c.cliente?.nombre ||
-      c.cliente?.razonSocial ||
-      (c.cliente?.primerNombre
-        ? `${c.cliente.primerNombre || ''} ${c.cliente.apellidoPaterno || ''}`.trim()
-        : '');
+    const nombre = c.nombreCliente || c.clienteNombre || c.cliente?.nombreCompleto || c.cliente?.nombre || c.cliente?.razonSocial || (c.cliente?.primerNombre ? `${c.cliente.primerNombre || ''} ${c.cliente.apellidoPaterno || ''}`.trim() : '');
     return (nombre && String(nombre).trim()) || '';
   }
 
   aplicarFiltros() {
     let filtradas = [...this.cuentasBase];
 
-    // Filtro por estado
     if (this.filtroEstado !== 'TODAS') {
       filtradas = filtradas.filter(c => c.estado === this.filtroEstado);
     }
 
-    // Búsqueda por cliente (nombre o DNI) o número de factura
     if (this.terminoBusqueda.trim()) {
       const term = this.limpiarTexto(this.terminoBusqueda);
       filtradas = filtradas.filter(c => {
-        const nombre = this.limpiarTexto(this.obtenerNombreCliente(c)); // incluye DNI
-        const factura = this.limpiarTexto(c.numeroFactura ?? c.numero ?? '');
+        const nombre = this.limpiarTexto(c.clienteNombre);
+        const factura = this.limpiarTexto(c.numeroFactura ?? '');
         return nombre.includes(term) || factura.includes(term);
       });
     }
 
-    // Filtro por rango de fechas de vencimiento
     if (this.filtroFechaDesde) {
       const desde = new Date(this.filtroFechaDesde);
       desde.setHours(0, 0, 0, 0);
@@ -192,33 +282,20 @@ export class CuentasPorCobrar implements OnInit {
       });
     }
 
-    // Ordenación
     filtradas.sort((a, b) => {
-      let valA: any;
-      let valB: any;
-
-      switch (this.ordenCampo) {
-        case 'fechaVencimiento':
-          valA = a.fechaVencimiento ? new Date(a.fechaVencimiento).getTime() : 0;
-          valB = b.fechaVencimiento ? new Date(b.fechaVencimiento).getTime() : 0;
-          break;
-        case 'montoTotal':
-          valA = Number(a.montoTotal || 0);
-          valB = Number(b.montoTotal || 0);
-          break;
-        case 'saldoPendiente':
-          valA = Number(a.saldoPendiente || 0);
-          valB = Number(b.saldoPendiente || 0);
-          break;
-        case 'clienteNombre':
-          valA = this.limpiarTexto(this.obtenerNombreCliente(a));
-          valB = this.limpiarTexto(this.obtenerNombreCliente(b));
-          break;
-        default:
-          valA = a.fechaVencimiento ? new Date(a.fechaVencimiento).getTime() : 0;
-          valB = b.fechaVencimiento ? new Date(b.fechaVencimiento).getTime() : 0;
+      const aPagada = a.estado === 'PAGADA' ? 1 : 0;
+      const bPagada = b.estado === 'PAGADA' ? 1 : 0;
+      if (aPagada !== bPagada) {
+          return aPagada - bPagada; 
       }
 
+      let valA: any, valB: any;
+      switch (this.ordenCampo) {
+        case 'montoTotal': valA = Number(a.montoTotal || 0); valB = Number(b.montoTotal || 0); break;
+        case 'saldoPendiente': valA = Number(a.saldoPendiente || 0); valB = Number(b.saldoPendiente || 0); break;
+        case 'clienteNombre': valA = this.limpiarTexto(a.clienteNombre); valB = this.limpiarTexto(b.clienteNombre); break;
+        default: valA = a.fechaVencimiento ? new Date(a.fechaVencimiento).getTime() : 0; valB = b.fechaVencimiento ? new Date(b.fechaVencimiento).getTime() : 0;
+      }
       if (valA < valB) return this.ordenDireccion === 'asc' ? -1 : 1;
       if (valA > valB) return this.ordenDireccion === 'asc' ? 1 : -1;
       return 0;
@@ -232,20 +309,15 @@ export class CuentasPorCobrar implements OnInit {
     this.totalPorCobrar = 0;
     this.totalAbonado = 0;
     this.cuentasVencidas = 0;
-
     const hoy = new Date().getTime();
 
     this.cuentasBase.forEach(c => {
       const monto = Number(c.montoTotal || 0);
       const saldo = Number(c.saldoPendiente || 0);
-
       this.totalPorCobrar += saldo;
       this.totalAbonado += (monto - saldo);
-
       const fechaVence = new Date(c.fechaVencimiento).getTime();
-      if (saldo > 0 && fechaVence < hoy) {
-        this.cuentasVencidas++;
-      }
+      if (saldo > 0 && fechaVence < hoy) this.cuentasVencidas++;
     });
   }
 
@@ -253,9 +325,34 @@ export class CuentasPorCobrar implements OnInit {
     cuenta.showCuotas = !cuenta.showCuotas;
   }
 
+  ordenarHistorial() {
+    if (this.cuentaSeleccionada && this.cuentaSeleccionada.historialAbonos) {
+      this.cuentaSeleccionada.historialAbonos.sort((a: any, b: any) => {
+        return new Date(b.fechaAbono).getTime() - new Date(a.fechaAbono).getTime();
+      });
+    }
+  }
+
+  // 🔥 MAGIA: Obtiene las cuotas pendientes y las ordena para que la más próxima a vencer salga de primera
+  getCuotasPendientes() {
+    if (!this.cuentaSeleccionada || !this.cuentaSeleccionada.cuotas) return [];
+    
+    return this.cuentaSeleccionada.cuotas
+        .filter((c: any) => c.saldoPendienteCuota > 0)
+        .sort((a: any, b: any) => {
+            const dateA = a.fechaVencimiento ? new Date(a.fechaVencimiento).getTime() : 0;
+            const dateB = b.fechaVencimiento ? new Date(b.fechaVencimiento).getTime() : 0;
+            return dateA - dateB; // Orden ascendente (la fecha menor/más cercana arriba)
+        });
+  }
+
   abrirModalPago(cuenta: any, montoSugerido?: number) {
     this.cuentaSeleccionada = cuenta;
     this.montoAbono = montoSugerido !== undefined ? montoSugerido : null;
+    this.modalTab = 'abonar'; 
+    this.facturaCompleta = null; 
+    this.pagoRecienRealizado = false; 
+    this.ordenarHistorial(); 
     this.showModalPago = true;
   }
 
@@ -265,10 +362,42 @@ export class CuentasPorCobrar implements OnInit {
     this.metodoPagoAbono = 'EFECTIVO'; 
     this.referenciaAbono = ''; 
     this.cuentaSeleccionada = null;
-  } 
-   
+    this.facturaCompleta = null;
+    this.pagoRecienRealizado = false;
+  }
 
- registrarPago() {
+  cambiarTabModal(tab: 'abonar' | 'historial' | 'factura') {
+    this.modalTab = tab;
+    if (tab === 'factura' && !this.facturaCompleta && this.negocioId) {
+      this.cargarDetalleFactura();
+    }
+  }
+
+  cargarDetalleFactura() {
+    if (!this.cuentaSeleccionada?.facturaId) {
+      Swal.fire('Atención', 'No hay ID de factura asociada a esta cuenta.', 'info');
+      return;
+    }
+
+    this.detalleFacturaCargando = true;
+    
+    this.http.get<any>(`${this.apiUrl}/negocios/${this.negocioId}/facturas/${this.cuentaSeleccionada.facturaId}`, { headers: this.getAuthHeaders() })
+      .subscribe({
+        next: (factura) => {
+          this.detalleFacturaCargando = false;
+          this.facturaCompleta = factura;
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          this.detalleFacturaCargando = false;
+          console.error('Error al cargar detalle de factura:', err);
+          Swal.fire('Error', 'No se pudo cargar el detalle de la factura.', 'error');
+          this.cdr.detectChanges();
+        }
+      });
+  }
+
+  registrarPago() {
     if (!this.montoAbono || this.montoAbono <= 0) {
       Swal.fire('Error', 'Ingresa un monto válido.', 'warning');
       return;
@@ -277,10 +406,18 @@ export class CuentasPorCobrar implements OnInit {
       Swal.fire('Error', 'El abono es mayor a la deuda.', 'warning');
       return;
     }
+    if (this.metodoPagoAbono === 'TRANSFERENCIA' && !this.referenciaAbono.trim()) {
+      Swal.fire('Atención', 'Debes ingresar el número de referencia para transferencias.', 'warning');
+      return;
+    }
 
     this.isSaving = true;
     
-    // ENVIAMOS EL MÉTODO DE PAGO Y LA REFERENCIA AL BACKEND
+    const idPagado = this.cuentaSeleccionada.id;
+    const numFacturaPagada = this.cuentaSeleccionada.numeroFactura;
+    const clientePagado = this.obtenerNombreCliente(this.cuentaSeleccionada);
+    const montoPagado = this.montoAbono;
+
     const payload = { 
       montoPago: this.montoAbono,
       metodoPago: this.metodoPagoAbono,
@@ -292,9 +429,30 @@ export class CuentasPorCobrar implements OnInit {
     }).subscribe({
       next: () => {
         this.isSaving = false;
+        
         this.cerrarModal();
-        Swal.fire('¡Pago Registrado!', 'El abono se aplicó y se guardó el recibo.', 'success');
-        this.cargarCuentas(this.negocioId!);
+        if (this.showModalCliente) this.cerrarModalCliente(); 
+
+        // 🔥 Asignamos la fila a destacar permanentemente (hasta que cambie de tab)
+        this.cuentaDestacadaId = idPagado;
+
+        // Configuramos el Banner Toast 
+        this.bannerNotificacion = {
+            titulo: '¡Abono Registrado!',
+            mensaje: `Has abonado $${montoPagado.toFixed(2)} a la Factura #${numFacturaPagada} de ${clientePagado}.`
+        };
+
+        // Recargamos datos sin pantalla de carga blanca
+        this.cargarCuentas(this.negocioId!, true);
+
+        // 🔥 Solo desaparece el Banner flotante de arriba a los 10 segundos. LA FILA VERDE SE QUEDA.
+        if (this.animacionTimeout) {
+            clearTimeout(this.animacionTimeout);
+        }
+        this.animacionTimeout = setTimeout(() => {
+            this.bannerNotificacion = null; 
+            this.cdr.detectChanges();
+        }, 10000); 
       },
       error: (err) => {
         this.isSaving = false;

@@ -363,3 +363,525 @@
     color: #1e3a8a;
     transform: translateY(-1px);
 }
+
+/* Pestañas del Modal Panel de Cuenta */
+.modal-tabs {
+    display: flex;
+    gap: 15px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.modal-tab {
+    background: transparent;
+    border: none;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #94a3b8;
+    padding: 10px 15px;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s;
+    margin-bottom: -1px;
+}
+
+.modal-tab:hover {
+    color: #475569;
+}
+
+.modal-tab.active {
+    color: var(--primary-orange);
+    border-bottom-color: var(--primary-orange);
+}
+/* =========================================
+   🔥 PESTAÑAS PRINCIPALES (TABS)
+   ========================================= */
+.main-tabs-container {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+    border-bottom: 2px solid var(--border-color);
+    padding-bottom: 0;
+    overflow-x: auto;
+}
+
+.main-tab {
+    background: transparent;
+    border: none;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    padding: 12px 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.main-tab:hover {
+    color: var(--text-main);
+    background: rgba(241, 245, 249, 0.6);
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+}
+
+.main-tab.active {
+    color: var(--primary-orange);
+    border-bottom-color: var(--primary-orange);
+}
+
+/* =========================================
+   🔥 AVATAR DE CLIENTES EN LA TABLA
+   ========================================= */
+.cli-avatar {
+    width: 36px; 
+    height: 36px; 
+    border-radius: 10px;
+    background: linear-gradient(135deg, #ea580c, #f97316);
+    color: #fff; 
+    font-weight: 800; 
+    font-size: 1.1rem;
+    display: flex; 
+    align-items: center; 
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.cli-id-info {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    font-weight: 600;
+    margin-top: 2px;
+}
+
+/* =========================================
+   🔥 PESTAÑAS DEL MODAL PANEL DE CUENTA
+   ========================================= */
+.modal-tabs {
+    display: flex;
+    gap: 15px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.modal-tab {
+    background: transparent;
+    border: none;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #94a3b8;
+    padding: 10px 15px;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s;
+    margin-bottom: -1px;
+}
+
+.modal-tab:hover {
+    color: #475569;
+}
+
+.modal-tab.active {
+    color: var(--primary-orange);
+    border-bottom-color: var(--primary-orange);
+}
+
+/* =========================================
+   🔥 DISEÑO DEL HISTORIAL DE PAGOS
+   ========================================= */
+.historial-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 15px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    margin-bottom: 10px;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.historial-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+}
+
+.historial-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    margin-right: 15px;
+    flex-shrink: 0;
+}
+
+.historial-icon.bg-green { background: #dcfce7; }
+.historial-icon.bg-blue { background: #dbeafe; }
+
+.historial-info {
+    flex-grow: 1;
+}
+
+.historial-title {
+    font-weight: 700;
+    color: #0f172a;
+    font-size: 0.9rem;
+    margin-bottom: 2px;
+}
+
+.historial-date {
+    font-size: 0.75rem;
+    color: #64748b;
+}
+
+.historial-ref {
+    font-size: 0.7rem;
+    color: #94a3b8;
+    margin-top: 2px;
+    font-family: monospace;
+}
+
+.historial-amount {
+    font-size: 1.1rem;
+    font-weight: 800;
+}
+
+.text-green { color: #16a34a; }
+
+.new-abono-highlight {
+    border: 2px solid #10b981 !important;
+    background: #f0fdf4 !important;
+    transform: scale(1.02); /* Se hace un poco más grande */
+    animation: pulse-green 2s ease-out infinite;
+}
+
+@keyframes pulse-green {
+    0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+    70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+.badge-new-abono {
+    background: #10b981;
+    color: white;
+    font-size: 0.65rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: 8px;
+    text-transform: uppercase;
+    font-weight: 800;
+    vertical-align: middle;
+}
+
+.badge-ultimo {
+    background: #f1f5f9;
+    color: #64748b;
+    font-size: 0.65rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: 8px;
+    text-transform: uppercase;
+    font-weight: 700;
+    vertical-align: middle;
+    border: 1px solid #e2e8f0;
+}
+
+.toast-premium-container {
+    position: fixed;
+    top: 25px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 99999;
+    pointer-events: none; /* Permite hacer click debajo si se equivocan */
+}
+
+.toast-premium {
+    pointer-events: auto; /* Permite hacer click en la "X" para cerrar */
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 20px 25px -5px rgba(16, 185, 129, 0.15), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    border-radius: 16px;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    min-width: 320px;
+    animation: slideDownToast 8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.toast-icon {
+    width: 38px;
+    height: 38px;
+    background: #10b981;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 4px 10px rgba(16, 185, 129, 0.4);
+}
+
+.toast-content {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+
+.toast-title {
+    color: #0f172a;
+    font-weight: 800;
+    font-size: 0.95rem;
+    margin-bottom: 2px;
+}
+
+.toast-message {
+    color: #64748b;
+    font-size: 0.85rem;
+    line-height: 1.3;
+}
+
+.toast-close {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 50%;
+    transition: all 0.2s;
+}
+
+.toast-close:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+}
+
+@keyframes slideDownToast {
+    0% { opacity: 0; transform: translateY(-40px) scale(0.9); }
+    4% { opacity: 1; transform: translateY(0) scale(1); }
+    96% { opacity: 1; transform: translateY(0) scale(1); }
+    100% { opacity: 0; transform: translateY(-40px) scale(0.9); }
+}
+
+/* =========================================
+   🔥 HIGHLIGHT SÓLIDO (DESTELLO VERDE EN FILA)
+   ========================================= */
+/* Usamos un color fijo para que no desaparezca al repintar la tabla */
+.table-row-hover.row-highlight td {
+    background-color: #f0fdf4 !important;
+}
+
+.table-row-hover.row-highlight td:first-child {
+    box-shadow: inset 4px 0 0 #10b981;
+}
+
+/* Insignia que aparece al lado del número de factura */
+.badge-reciente {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #10b981;
+    color: white;
+    font-size: 0.65rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: 8px;
+    text-transform: uppercase;
+    font-weight: 800;
+    vertical-align: middle;
+    animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes popIn {
+    0% { transform: scale(0); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+/* =========================================
+   🔥 TARJETAS DE PAGO INTERACTIVAS (CUOTAS)
+   ========================================= */
+.cuotas-payment-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 12px;
+}
+
+.cuota-pay-card {
+    border: 2px solid #e2e8f0;
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 12px 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.cuota-pay-card:hover {
+    border-color: #fdba74;
+    background: #fff7ed;
+    transform: translateY(-2px);
+}
+
+.cuota-pay-card.selected {
+    border-color: var(--primary-orange);
+    background: #ffedd5;
+    box-shadow: 0 4px 12px rgba(234, 88, 12, 0.15);
+}
+
+/* Tarjeta especial para Saldo Total */
+.cuota-pay-card.total-card {
+    border-color: #cbd5e1;
+    background: #f8fafc;
+}
+.cuota-pay-card.total-card.selected {
+    border-color: var(--primary-orange);
+    background: #ffedd5;
+}
+
+.cp-info strong {
+    display: block;
+    color: #0f172a;
+    font-size: 0.85rem;
+    font-weight: 800;
+}
+
+.cp-info .cp-date {
+    display: block;
+    color: #64748b;
+    font-size: 0.7rem;
+    margin-top: 3px;
+}
+
+.cp-info .vencida-text {
+    color: #dc2626;
+    font-weight: 700;
+}
+
+.cp-amount {
+    margin-top: 8px;
+    color: var(--primary-orange);
+    font-weight: 800;
+    font-size: 1.15rem;
+}
+
+/* =========================================
+   🔥 DISEÑO DE NOTIFICACIÓN PREMIUM (TOAST)
+   ========================================= */
+.toast-premium-container {
+    position: fixed;
+    top: 25px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 99999;
+    pointer-events: none; 
+}
+
+.toast-premium {
+    pointer-events: auto; 
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 20px 25px -5px rgba(16, 185, 129, 0.15), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    border-radius: 16px;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    min-width: 320px;
+    animation: slideDownToast 10s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.toast-icon {
+    width: 38px;
+    height: 38px;
+    background: #10b981;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 4px 10px rgba(16, 185, 129, 0.4);
+}
+
+.toast-content {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+
+.toast-title {
+    color: #0f172a;
+    font-weight: 800;
+    font-size: 0.95rem;
+    margin-bottom: 2px;
+}
+
+.toast-message {
+    color: #64748b;
+    font-size: 0.85rem;
+    line-height: 1.3;
+}
+
+.toast-close {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 50%;
+    transition: all 0.2s;
+}
+
+.toast-close:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+}
+
+@keyframes slideDownToast {
+    0% { opacity: 0; transform: translateY(-40px) scale(0.9); }
+    4% { opacity: 1; transform: translateY(0) scale(1); }
+    96% { opacity: 1; transform: translateY(0) scale(1); }
+    100% { opacity: 0; transform: translateY(-40px) scale(0.9); }
+}
+
+/* =========================================
+   🔥 HIGHLIGHT SÓLIDO (DESTELLO VERDE EN FILA)
+   ========================================= */
+/* Usamos un color fijo para que no desaparezca al repintar la tabla */
+.table-row-hover.row-highlight td {
+    background-color: #f0fdf4 !important;
+    transition: background-color 0.5s ease;
+}
+
+.table-row-hover.row-highlight td:first-child {
+    box-shadow: inset 4px 0 0 #10b981;
+}
+
+/* Insignia que aparece al lado del número de factura */
+.badge-reciente {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #10b981;
+    color: white;
+    font-size: 0.65rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: 8px;
+    text-transform: uppercase;
+    font-weight: 800;
+    vertical-align: middle;
+}
