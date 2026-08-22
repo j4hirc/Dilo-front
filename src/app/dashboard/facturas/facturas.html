@@ -92,9 +92,10 @@
                                 's-red': fac.estado === 'ANULADA' || fac.estado === 'ERROR_SRI'
                             }">{{ fac.estado }}</span>
                         </td>
-                        <td class="action-cells" style="display:flex;gap:6px;justify-content:center;align-items:center;">
-                            <button class="btn-action-icon" title="Ver detalle / productos" (click)="abrirPreviewFactura(fac)"
-                                style="color:#0f172a;">
+                        <td class="action-cells"
+                            style="display:flex;gap:6px;justify-content:center;align-items:center;">
+                            <button class="btn-action-icon" title="Ver detalle / productos"
+                                (click)="abrirPreviewFactura(fac)" style="color:#0f172a;">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
                                     fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
@@ -395,7 +396,8 @@
                         <div *ngIf="nuevaFactura.metodoPago === 'TARJETA_CREDITO'"
                             style="margin-bottom: 10px; font-size: 0.8rem; color: #64748b; font-weight: 600; display:flex; flex-wrap:wrap; gap:6px; align-items:center;">
                             <span>💳 Pago con Tarjeta</span>
-                            <span *ngIf="nuevaFactura.tarjetaNumero"> (**** {{ nuevaFactura.tarjetaNumero | slice:-4 }})</span>
+                            <span *ngIf="nuevaFactura.tarjetaNumero"> (**** {{ nuevaFactura.tarjetaNumero | slice:-4
+                                }})</span>
                             <span *ngIf="cuotasTarjetaValidas"
                                 style="background:#ecfdf5;color:#059669;padding:2px 8px;border-radius:999px;font-size:0.72rem;font-weight:700;">
                                 {{ nuevaFactura.numeroCuotas }} cuota(s)
@@ -466,8 +468,7 @@
                 </button>
 
                 <div class="zoe-header">
-                    <div class="mic-container-small"
-                        [ngClass]="{
+                    <div class="mic-container-small" [ngClass]="{
                             'is-listening': isListening,
                             'is-thinking': isThinking,
                             'is-confirm': voiceState === 'CONFIRMAR'
@@ -485,7 +486,8 @@
                     </div>
                     <div style="flex:1;min-width:0;">
                         <h4 style="margin: 0; font-size: 1rem; color: #0f172a;">Zoe Activa ✨</h4>
-                        <span class="listening-indicator" *ngIf="isListening && !isThinking" style="font-size: 0.75rem;">
+                        <span class="listening-indicator" *ngIf="isListening && !isThinking"
+                            style="font-size: 0.75rem;">
                             Te escucho…
                         </span>
                         <span class="thinking-indicator" *ngIf="isThinking"
@@ -502,12 +504,13 @@
                     style="display:flex;flex-wrap:wrap;gap:6px;padding:0 14px 8px;font-size:0.7rem;">
                     <span *ngIf="clienteSeleccionadoInfo || esConsumidorFinal"
                         style="background:#f1f5f9;color:#334155;padding:2px 8px;border-radius:999px;font-weight:600;">
-                        👤 {{ esConsumidorFinal ? 'Consumidor Final' : (clienteSeleccionadoInfo?.nombreCompleto || clienteSeleccionadoInfo?.primerNombre || 'Cliente') }}
+                        👤 {{ esConsumidorFinal ? 'Consumidor Final' : (clienteSeleccionadoInfo?.nombreCompleto ||
+                        clienteSeleccionadoInfo?.primerNombre || 'Cliente') }}
                     </span>
                     <span *ngIf="metodoPagoConfirmado || nuevaFactura.metodoPago"
                         style="background:#f1f5f9;color:#334155;padding:2px 8px;border-radius:999px;font-weight:600;">
                         {{ nuevaFactura.metodoPago === 'TARJETA_CREDITO' ? '💳 Tarjeta' :
-                           nuevaFactura.metodoPago === 'TRANSFERENCIA' ? '🏦 Transfer' : '💵 Efectivo' }}
+                        nuevaFactura.metodoPago === 'TRANSFERENCIA' ? '🏦 Transfer' : '💵 Efectivo' }}
                     </span>
                     <span *ngIf="nuevaFactura.metodoPago === 'TARJETA_CREDITO' && cuotasTarjetaValidas"
                         style="background:#ecfdf5;color:#059669;padding:2px 8px;border-radius:999px;font-weight:700;">
@@ -534,8 +537,7 @@
                             Sí, emitir
                         </button>
                         <button type="button" class="btn-outline-secondary"
-                            style="flex:1;height:40px;border-radius:10px;"
-                            (click)="cancelarEmisionVoz()">
+                            style="flex:1;height:40px;border-radius:10px;" (click)="cancelarEmisionVoz()">
                             No aún
                         </button>
                     </div>
@@ -543,7 +545,7 @@
                     <div class="voice-options-list fade-in" *ngIf="opcionesVoz.length > 0">
                         <p class="voice-options-title" style="margin-bottom:8px;">
                             {{ tipoOpciones === 'CLIENTE' ? 'Elige el cliente' :
-                               tipoOpciones === 'PRODUCTO' ? 'Elige el producto' : 'Elige una opción' }}
+                            tipoOpciones === 'PRODUCTO' ? 'Elige el producto' : 'Elige una opción' }}
                             <span style="font-weight:400;color:#94a3b8;"> · di el número o toca</span>
                         </p>
                         <div class="voice-option-item" *ngFor="let opt of opcionesVoz; let i = index"
@@ -567,9 +569,11 @@
                                 <span *ngIf="opt.codigoPrincipal"
                                     style="display:block;color:#64748b;font-size:0.78rem;margin-top:2px;">
                                     {{ opt.codigoPrincipal }}
-                                    <span *ngIf="(opt.precioFactura ?? opt.costoPromedioActual ?? opt.precioUnitario) != null"
+                                    <span
+                                        *ngIf="(opt.precioFactura ?? opt.costoPromedioActual ?? opt.precioUnitario) != null"
                                         style="color:#16a34a;font-weight:700;margin-left:6px;">
-                                        ${{ (opt.precioFactura ?? opt.costoPromedioActual ?? opt.precioUnitario) | number:'1.2-2' }}
+                                        ${{ (opt.precioFactura ?? opt.costoPromedioActual ?? opt.precioUnitario) |
+                                        number:'1.2-2' }}
                                     </span>
                                 </span>
                             </span>
@@ -597,93 +601,103 @@
 
 <!-- PREVIEW FACTURA (productos) -->
 <div class="modal-overlay" *ngIf="showPreviewFactura" style="z-index: 1200;" (click)="cerrarPreviewFactura()">
-  <div class="modal-content" style="max-width: 720px; width: 95%; max-height: 90vh; overflow: auto; background: #fff; border-radius: 16px; box-shadow: 0 25px 50px rgba(0,0,0,.25);"
-       (click)="$event.stopPropagation()">
-    <div class="modal-header" style="display:flex;justify-content:space-between;align-items:center;padding:18px 22px;border-bottom:1px solid #e2e8f0;">
-      <div>
-        <h3 style="margin:0;font-size:1.15rem;color:#0f172a;">Factura {{ facturaPreview?.numero }}</h3>
-        <p style="margin:4px 0 0;font-size:0.85rem;color:#64748b;">
-          {{ facturaPreview?.cliente }} · {{ facturaPreview?.fecha }} · {{ facturaPreview?.tipo }}
-        </p>
-      </div>
-      <button class="close-btn" (click)="cerrarPreviewFactura()" type="button">
-        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>
-        </svg>
-      </button>
+    <div class="modal-content"
+        style="max-width: 720px; width: 95%; max-height: 90vh; overflow: auto; background: #fff; border-radius: 16px; box-shadow: 0 25px 50px rgba(0,0,0,.25);"
+        (click)="$event.stopPropagation()">
+        <div class="modal-header"
+            style="display:flex;justify-content:space-between;align-items:center;padding:18px 22px;border-bottom:1px solid #e2e8f0;">
+            <div>
+                <h3 style="margin:0;font-size:1.15rem;color:#0f172a;">Factura {{ facturaPreview?.numero }}</h3>
+                <p style="margin:4px 0 0;font-size:0.85rem;color:#64748b;">
+                    {{ facturaPreview?.cliente }} · {{ facturaPreview?.fecha }} · {{ facturaPreview?.tipo }}
+                </p>
+            </div>
+            <button class="close-btn" (click)="cerrarPreviewFactura()" type="button">
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+
+        <div style="padding: 18px 22px;">
+            <div *ngIf="isLoadingPreview" style="text-align:center;padding:40px 0;color:#64748b;">
+                <div class="spinner" style="margin:0 auto 12px;"></div>
+                Cargando productos…
+            </div>
+
+            <div *ngIf="!isLoadingPreview">
+                <div style="overflow-x:auto;border:1px solid #e2e8f0;border-radius:12px;">
+                    <table class="data-table" style="margin:0;width:100%;">
+                        <thead>
+                            <tr>
+                                <th style="width:8%;text-align:center;">Cant.</th>
+                                <th>Producto</th>
+                                <th style="text-align:right;width:18%;">P. Unit.</th>
+                                <th style="text-align:right;width:14%;">Desc.</th>
+                                <th style="text-align:right;width:18%;">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr *ngIf="!(facturaPreview?.detalles?.length)">
+                                <td colspan="5" style="text-align:center;padding:28px;color:#94a3b8;">
+                                    No hay productos en esta factura.
+                                </td>
+                            </tr>
+                            <tr *ngFor="let d of facturaPreview?.detalles">
+                                <td style="text-align:center;font-weight:600;">{{ d.cantidad }}</td>
+                                <td>
+                                    <div style="font-weight:600;color:#0f172a;">{{ d.productoNombre }}</div>
+                                    <small *ngIf="d.bodegaNombre" style="color:#64748b;">{{ d.bodegaNombre }}</small>
+                                    <span *ngIf="d.grabaIva"
+                                        style="display:inline-block;margin-left:6px;font-size:0.65rem;background:#ecfdf5;color:#059669;padding:1px 6px;border-radius:4px;">IVA</span>
+                                </td>
+                                <td style="text-align:right;">${{ d.precioUnitario | number:'1.2-2' }}</td>
+                                <td style="text-align:right;color:#ea580c;">
+                                    <span *ngIf="d.descuento > 0">-${{ d.descuento | number:'1.2-2' }}</span>
+                                    <span *ngIf="!(d.descuento > 0)" style="color:#cbd5e1;">—</span>
+                                </td>
+                                <td style="text-align:right;font-weight:700;">${{ d.subtotal | number:'1.2-2' }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div style="margin-top:16px;display:flex;justify-content:flex-end;">
+                    <div
+                        style="min-width:260px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;">
+                        <div
+                            style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:0.9rem;color:#475569;">
+                            <span>Subtotal</span>
+                            <strong style="color:#0f172a;">${{ previewSubtotal | number:'1.2-2' }}</strong>
+                        </div>
+                        <div *ngIf="(facturaPreview?.descuentoGlobal || 0) > 0"
+                            style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:0.9rem;color:#ea580c;">
+                            <span>Descuento</span>
+                            <strong>-${{ facturaPreview.descuentoGlobal | number:'1.2-2' }}</strong>
+                        </div>
+                        <div
+                            style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:0.9rem;color:#475569;">
+                            <span>IVA</span>
+                            <strong style="color:#0f172a;">${{ (facturaPreview?.totalIva || 0) | number:'1.2-2'
+                                }}</strong>
+                        </div>
+                        <div
+                            style="display:flex;justify-content:space-between;padding-top:8px;border-top:1px dashed #cbd5e1;font-size:1.05rem;">
+                            <span style="font-weight:700;color:#0f172a;">Total</span>
+                            <strong style="color:#ed8936;">${{ (facturaPreview?.monto || 0) | number:'1.2-2' }}</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-top:18px;display:flex;gap:10px;justify-content:flex-end;">
+                    <button class="btn-secondary" type="button" (click)="cerrarPreviewFactura()">Cerrar</button>
+                    <button class="btn-primary" type="button" (click)="descargarPDF(facturaPreview)">
+                        Imprimir PDF
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
-
-    <div style="padding: 18px 22px;">
-      <div *ngIf="isLoadingPreview" style="text-align:center;padding:40px 0;color:#64748b;">
-        <div class="spinner" style="margin:0 auto 12px;"></div>
-        Cargando productos…
-      </div>
-
-      <div *ngIf="!isLoadingPreview">
-        <div style="overflow-x:auto;border:1px solid #e2e8f0;border-radius:12px;">
-          <table class="data-table" style="margin:0;width:100%;">
-            <thead>
-              <tr>
-                <th style="width:8%;text-align:center;">Cant.</th>
-                <th>Producto</th>
-                <th style="text-align:right;width:18%;">P. Unit.</th>
-                <th style="text-align:right;width:14%;">Desc.</th>
-                <th style="text-align:right;width:18%;">Subtotal</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngIf="!(facturaPreview?.detalles?.length)">
-                <td colspan="5" style="text-align:center;padding:28px;color:#94a3b8;">
-                  No hay productos en esta factura.
-                </td>
-              </tr>
-              <tr *ngFor="let d of facturaPreview?.detalles">
-                <td style="text-align:center;font-weight:600;">{{ d.cantidad }}</td>
-                <td>
-                  <div style="font-weight:600;color:#0f172a;">{{ d.productoNombre }}</div>
-                  <small *ngIf="d.bodegaNombre" style="color:#64748b;">{{ d.bodegaNombre }}</small>
-                  <span *ngIf="d.grabaIva" style="display:inline-block;margin-left:6px;font-size:0.65rem;background:#ecfdf5;color:#059669;padding:1px 6px;border-radius:4px;">IVA</span>
-                </td>
-                <td style="text-align:right;">${{ d.precioUnitario | number:'1.2-2' }}</td>
-                <td style="text-align:right;color:#ea580c;">
-                  <span *ngIf="d.descuento > 0">-${{ d.descuento | number:'1.2-2' }}</span>
-                  <span *ngIf="!(d.descuento > 0)" style="color:#cbd5e1;">—</span>
-                </td>
-                <td style="text-align:right;font-weight:700;">${{ d.subtotal | number:'1.2-2' }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div style="margin-top:16px;display:flex;justify-content:flex-end;">
-          <div style="min-width:260px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;">
-            <div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:0.9rem;color:#475569;">
-              <span>Subtotal</span>
-              <strong style="color:#0f172a;">${{ previewSubtotal | number:'1.2-2' }}</strong>
-            </div>
-            <div *ngIf="(facturaPreview?.descuentoGlobal || 0) > 0"
-                 style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:0.9rem;color:#ea580c;">
-              <span>Descuento</span>
-              <strong>-${{ facturaPreview.descuentoGlobal | number:'1.2-2' }}</strong>
-            </div>
-            <div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:0.9rem;color:#475569;">
-              <span>IVA</span>
-              <strong style="color:#0f172a;">${{ (facturaPreview?.totalIva || 0) | number:'1.2-2' }}</strong>
-            </div>
-            <div style="display:flex;justify-content:space-between;padding-top:8px;border-top:1px dashed #cbd5e1;font-size:1.05rem;">
-              <span style="font-weight:700;color:#0f172a;">Total</span>
-              <strong style="color:#ed8936;">${{ (facturaPreview?.monto || 0) | number:'1.2-2' }}</strong>
-            </div>
-          </div>
-        </div>
-
-        <div style="margin-top:18px;display:flex;gap:10px;justify-content:flex-end;">
-          <button class="btn-secondary" type="button" (click)="cerrarPreviewFactura()">Cerrar</button>
-          <button class="btn-primary" type="button" (click)="descargarPDF(facturaPreview)">
-            Imprimir PDF
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
 </div>
