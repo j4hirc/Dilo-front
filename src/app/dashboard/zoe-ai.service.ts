@@ -29,7 +29,8 @@ export class ZoeAiService {
 
   isChatOpen = false;
   isListening = false;
-  public isSpeaking = false; 
+  public isSpeaking = false;
+  private currentUtterance: SpeechSynthesisUtterance | null = null;
 
   private chatMensajesSubject = new BehaviorSubject<ChatMessage[]>([]);
   chatMensajes$ = this.chatMensajesSubject.asObservable();
@@ -47,7 +48,7 @@ export class ZoeAiService {
   private contextoGlobal = '';
   private promptSistemaBase = '';
   private modulosNavegables: ModuloNavegable[] = [];
-  
+
   private readonly REGEX_NAVEGACION = /\[\[NAVEGAR:\s*(.+?)\s*\]\]/i;
 
   private recognition: any;
@@ -55,7 +56,7 @@ export class ZoeAiService {
   private transcriptAcumulado = '';
   keepListeningActive = false;
   private vozFemenina: SpeechSynthesisVoice | null = null;
-  
+
   private peticionActivaId = 0;
 
   constructor() {
@@ -76,42 +77,42 @@ export class ZoeAiService {
   }
 
   private seleccionarVozFemenina(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null {
-  // 1. Filtrar voces en español y descartar hombres
-  const vocesEspañol = voices.filter(v => 
-    v.lang && v.lang.toLowerCase().startsWith('es') && 
-    !/pablo|jorge|diego|carlos|juan|pedro|antonio|male|hombre|david|boy/i.test(v.name)
-  );
+    // 1. Filtrar voces en español y descartar hombres
+    const vocesEspañol = voices.filter(v =>
+      v.lang && v.lang.toLowerCase().startsWith('es') &&
+      !/pablo|jorge|diego|carlos|juan|pedro|antonio|male|hombre|david|boy/i.test(v.name)
+    );
 
-  if (!vocesEspañol.length) {
-    return voices.find(v => /female|mujer|woman/i.test(v.name) || !/male|hombre|boy/i.test(v.name)) || voices[0];
+    if (!vocesEspañol.length) {
+      return voices.find(v => /female|mujer|woman/i.test(v.name) || !/male|hombre|boy/i.test(v.name)) || voices[0];
+    }
+
+    // PRIORIDAD 1: Voces Neurales/Naturales (Edge, Windows 11). Son las más humanas.
+    // Ejemplos: "Microsoft Elvira Online (Natural) - Spanish", "Microsoft Dalia Online"
+    const vozNeural = vocesEspañol.find(v =>
+      (/natural|neural|online/i.test(v.name)) &&
+      /mia|elvira|dalia|paloma|elena|camila|lucrecia|salome|ximena/i.test(v.name)
+    );
+    if (vozNeural) return vozNeural;
+
+    // PRIORIDAD 2: Voces de Apple/iOS (Premium o de alta calidad nativa)
+    const vozApple = vocesEspañol.find(v =>
+      (/premium|enhanced/i.test(v.name)) ||
+      /m[oó]nica|paulina|luc[ií]a|mar[ií]a|isabel|sofia|laura|victoria/i.test(v.name)
+    );
+    if (vozApple) return vozApple;
+
+    // PRIORIDAD 3: Voces de Google (Chrome inyecta "Google español" que suele ser buena)
+    const vozGoogle = vocesEspañol.find(v => v.name.toLowerCase().includes('google'));
+    if (vozGoogle) return vozGoogle;
+
+    // PRIORIDAD 4: Cualquier otra que indique ser de mujer explícitamente
+    const vozFemeninaGenerica = vocesEspañol.find(v => /female|mujer/i.test(v.name));
+    if (vozFemeninaGenerica) return vozFemeninaGenerica;
+
+    // FALLBACK: La primera voz en español (ej. Microsoft Sabina Desktop)
+    return vocesEspañol[0];
   }
-
-  // PRIORIDAD 1: Voces Neurales/Naturales (Edge, Windows 11). Son las más humanas.
-  // Ejemplos: "Microsoft Elvira Online (Natural) - Spanish", "Microsoft Dalia Online"
-  const vozNeural = vocesEspañol.find(v => 
-    (/natural|neural|online/i.test(v.name)) && 
-    /mia|elvira|dalia|paloma|elena|camila|lucrecia|salome|ximena/i.test(v.name)
-  );
-  if (vozNeural) return vozNeural;
-
-  // PRIORIDAD 2: Voces de Apple/iOS (Premium o de alta calidad nativa)
-  const vozApple = vocesEspañol.find(v => 
-    (/premium|enhanced/i.test(v.name)) || 
-    /m[oó]nica|paulina|luc[ií]a|mar[ií]a|isabel|sofia|laura|victoria/i.test(v.name)
-  );
-  if (vozApple) return vozApple;
-
-  // PRIORIDAD 3: Voces de Google (Chrome inyecta "Google español" que suele ser buena)
-  const vozGoogle = vocesEspañol.find(v => v.name.toLowerCase().includes('google'));
-  if (vozGoogle) return vozGoogle;
-
-  // PRIORIDAD 4: Cualquier otra que indique ser de mujer explícitamente
-  const vozFemeninaGenerica = vocesEspañol.find(v => /female|mujer/i.test(v.name));
-  if (vozFemeninaGenerica) return vozFemeninaGenerica;
-
-  // FALLBACK: La primera voz en español (ej. Microsoft Sabina Desktop)
-  return vocesEspañol[0]; 
-}
 
   inicializarChat(nombreUsuario: string, rol: string) {
     if (this.chatMensajesSubject.value.length === 0) {
@@ -156,18 +157,21 @@ REGLAS DE ORO - ACTÚA COMO HUMANA SIMPÁTICA Y EFICIENTE:
    - Ejemplo de lo que NO debes hacer: "- Teclados: 5. - Mouses: 10."
 3. EQUILIBRIO PERFECTO: No des respuestas de una sola línea cortante, pero tampoco des discursos. Explica bien el dato que te piden de forma resumida y agradable.
 4. ESTRUCTURA OBLIGATORIA (TEXTO Y VOZ):
-   - Texto principal: Para la pantalla, usa Markdown bonito, limpio y bien estructurado.
+   - Texto principal: Para la pantalla, usa Markdown bonito, limpio y bien estructurado (aquí sí puedes usar listas, viñetas y tablas).
    - Tag <voz>: OBLIGATORIO al final de tu respuesta. <voz>Tu explicación hablada aquí</voz>.
-     REGLA PARA LA VOZ: Lo que pongas en <voz> será lo único que se escuche. Escribe ahí de 1 a 3 oraciones naturales, interpretando la información solicitada de forma amigable y útil. 
+     REGLA PARA LA VOZ: Lo que pongas en <voz> será lo único que el usuario escuchará. Puedes extenderte hasta 3 o 4 párrafos si la información lo requiere. 
+     ¡MUY IMPORTANTE! NUNCA leas listas, viñetas, guiones ni tablas de forma literal en la etiqueta <voz>. Debes interpretar los datos y decirlos de forma fluida y conversacional.
+     - EJEMPLO MALO en <voz>: "- Almohadas: 0 - Sábanas: 5"
+     - EJEMPLO BUENO en <voz>: "Revisando el inventario, veo que actualmente no nos quedan almohadas en la bodega central, el stock está en cero. Sin embargo, tenemos cinco sábanas disponibles para la venta."
 5. NAVEGACIÓN: Si piden ir a un módulo, añade al final: [[NAVEGAR:/ruta/exacta]]. Rutas: ${listaRutasParaComando}.`;
   }
 
   enviarMensaje(texto: string, responderConVoz: boolean = false) {
     if (!texto.trim() || this.isChatLoadingSubject.value) return;
 
-    this.detenerInteraccion(); 
-    this.keepListeningActive = responderConVoz; 
-    
+    this.detenerInteraccion();
+    this.keepListeningActive = responderConVoz;
+
     const miPeticionId = this.peticionActivaId;
 
     const mensajesActuales = this.chatMensajesSubject.value;
@@ -193,10 +197,9 @@ REGLAS DE ORO - ACTÚA COMO HUMANA SIMPÁTICA Y EFICIENTE:
     const payload = {
       model: 'openai/gpt-oss-120b',
       messages: [{ role: 'system', content: promptConUbicacion }, ...historial],
-      temperature: 0.6, // MEJORA: Un poco más alto para que sea más natural, cálida y menos robótica.
-      max_tokens: 400 // MEJORA: Más espacio para que pueda desarrollar bien la respuesta conversacional.
+      temperature: 0.6, 
+      max_tokens: 800 
     };
-
     this.http.post<any>('https://api.groq.com/openai/v1/chat/completions', payload, { headers })
       .subscribe({
         next: (res) => {
@@ -214,27 +217,26 @@ REGLAS DE ORO - ACTÚA COMO HUMANA SIMPÁTICA Y EFICIENTE:
             }
 
             let textoParaPantalla = textoCompleto;
-            let textoParaVoz = ''; 
+            let textoParaVoz = '';
 
             const vozMatch = textoCompleto.match(/<voz>([\s\S]*?)<\/voz>/i);
             if (vozMatch) {
               textoParaVoz = vozMatch[1].trim();
+              
               textoParaPantalla = textoCompleto.replace(vozMatch[0], '').trim();
             } else {
-              // MEJORA EN EL FALLBACK: Si olvida <voz>, leemos un resumen limpio del texto para que no se quede muda ni lea cosas raras.
               textoParaPantalla = textoCompleto.replace(/<voz>|<\/voz>/gi, '').trim();
-              
-              // Limpiamos markdown para que la lectura de respaldo sea natural
+
               let textoLimpio = textoParaPantalla
                 .replace(/\*\*/g, '')
                 .replace(/#/g, '')
                 .replace(/-/g, '')
                 .replace(/\|/g, '')
+                .replace(/\n/g, '. ') 
+                .replace(/\s{2,}/g, ' ') 
                 .trim();
-                
-              // Si el texto es largo, agarramos las primeras 2 oraciones para que no lea biblias.
-              const oraciones = textoLimpio.split(/(?<=[.!?])\s+/);
-              textoParaVoz = oraciones.slice(0, 2).join(' ');
+
+              textoParaVoz = textoLimpio;
             }
 
             this.chatMensajesSubject.next([
@@ -265,7 +267,7 @@ REGLAS DE ORO - ACTÚA COMO HUMANA SIMPÁTICA Y EFICIENTE:
 
             if (err.status === 429) {
               msjError = 'Dame un segundito. Tus consultas van muy rápido, háblame un poco más despacio por favor.';
-              detenerMicrofonoPorError = false; 
+              detenerMicrofonoPorError = false;
             }
 
             this.chatMensajesSubject.next([
@@ -310,7 +312,7 @@ REGLAS DE ORO - ACTÚA COMO HUMANA SIMPÁTICA Y EFICIENTE:
               this.enviarMensaje(this.transcriptAcumulado.trim(), true);
               this.transcriptAcumulado = '';
             }
-          }, 1500); 
+          }, 1500);
         });
       }
     };
@@ -322,7 +324,7 @@ REGLAS DE ORO - ACTÚA COMO HUMANA SIMPÁTICA Y EFICIENTE:
           try {
             this.recognition.start();
             this.isListening = true;
-          } catch (e) {}
+          } catch (e) { }
         }
       });
     };
@@ -331,28 +333,30 @@ REGLAS DE ORO - ACTÚA COMO HUMANA SIMPÁTICA Y EFICIENTE:
   }
 
   detenerInteraccion() {
-    window.speechSynthesis.pause(); 
+    window.speechSynthesis.pause();
     window.speechSynthesis.cancel();
-    
+
+    this.currentUtterance = null; 
+
     this.keepListeningActive = false;
-    this.peticionActivaId++; 
+    this.peticionActivaId++;
 
     if (this.silenceTimer) clearTimeout(this.silenceTimer);
-    try { this.recognition.abort(); } catch (e) {}
-    
+    try { this.recognition.abort(); } catch (e) { }
+
     this.zone.run(() => {
       this.isSpeaking = false;
       this.isListening = false;
-      this.isChatLoadingSubject.next(false); 
+      this.isChatLoadingSubject.next(false);
     });
   }
 
   toggleEscucha() {
     if (this.keepListeningActive) {
-      this.detenerInteraccion(); 
+      this.detenerInteraccion();
     } else {
       this.keepListeningActive = true;
-      this.iniciarEscucha(); 
+      this.iniciarEscucha();
     }
   }
 
@@ -364,7 +368,7 @@ REGLAS DE ORO - ACTÚA COMO HUMANA SIMPÁTICA Y EFICIENTE:
     try {
       this.recognition.start();
       this.isListening = true;
-    } catch (e) {}
+    } catch (e) { }
   }
 
   private hablar(texto: string, onFinish?: () => void) {
@@ -375,8 +379,8 @@ REGLAS DE ORO - ACTÚA COMO HUMANA SIMPÁTICA Y EFICIENTE:
 
     window.speechSynthesis.pause();
     window.speechSynthesis.cancel();
-    
-    try { this.recognition.abort(); } catch(e) {}
+
+    try { this.recognition.abort(); } catch (e) { }
 
     this.zone.run(() => {
       this.isSpeaking = true;
@@ -386,13 +390,13 @@ REGLAS DE ORO - ACTÚA COMO HUMANA SIMPÁTICA Y EFICIENTE:
     const textoParaVoz = (texto || '')
       .replace(/\*/g, '')
       .replace(/#/g, '')
-      .replace(/\|/g, '') 
-      .replace(/id:\d+/gi, '') 
-      .replace(/\(.*?\)/g, '') 
-      .replace(/\[.*?\]/g, '') 
+      .replace(/\|/g, '')
+      .replace(/id:\d+/gi, '')
+      .replace(/\(.*?\)/g, '')
+      .replace(/\[.*?\]/g, '')
       .replace(/⚠|✖/g, '')
       .replace(/\$/g, ' dólares ')
-      .replace(/-/g, '') 
+      .replace(/-/g, '')
       .trim();
 
     setTimeout(() => {
@@ -401,30 +405,32 @@ REGLAS DE ORO - ACTÚA COMO HUMANA SIMPÁTICA Y EFICIENTE:
         this.vozFemenina = this.seleccionarVozFemenina(voices);
       }
 
-      const utterance = new SpeechSynthesisUtterance(textoParaVoz);
-      
+      this.currentUtterance = new SpeechSynthesisUtterance(textoParaVoz);
+
       if (this.vozFemenina) {
-        utterance.voice = this.vozFemenina;
-        utterance.lang = this.vozFemenina.lang;
+        this.currentUtterance.voice = this.vozFemenina;
+        this.currentUtterance.lang = this.vozFemenina.lang;
       } else {
-        utterance.lang = 'es-EC';
+        this.currentUtterance.lang = 'es-EC';
       }
-      
-      utterance.rate = 1.05; 
-      utterance.pitch = 1.0; 
-      utterance.volume = 1;
 
-      utterance.onend = () => { 
+      this.currentUtterance.rate = 1.05;
+      this.currentUtterance.pitch = 1.0;
+      this.currentUtterance.volume = 1;
+
+      this.currentUtterance.onend = () => {
         this.zone.run(() => this.isSpeaking = false);
-        if (onFinish) onFinish(); 
-      };
-      
-      utterance.onerror = () => { 
-        this.zone.run(() => this.isSpeaking = false);
-        if (onFinish) onFinish(); 
+        this.currentUtterance = null; 
+        if (onFinish) onFinish();
       };
 
-      window.speechSynthesis.speak(utterance);
+      this.currentUtterance.onerror = () => {
+        this.zone.run(() => this.isSpeaking = false);
+        this.currentUtterance = null; 
+        if (onFinish) onFinish();
+      };
+
+      window.speechSynthesis.speak(this.currentUtterance);
     }, 100);
   }
 
@@ -434,12 +440,12 @@ REGLAS DE ORO - ACTÚA COMO HUMANA SIMPÁTICA Y EFICIENTE:
 
   private formatearMensaje(texto: string): SafeHtml {
     if (!texto) return '';
-    
+
     let html = texto.trim();
-    
+
     // Proteger etiquetas html inyectadas vs símbolos propios
     html = html.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    
+
     // Renderizado de Títulos (H1, H2, H3)
     html = html.replace(/^### (.*$)/gim, '<h4 style="margin: 12px 0 6px; font-weight: bold; color: var(--primary-orange, #ea580c); font-size: 1.05em;">$1</h4>');
     html = html.replace(/^## (.*$)/gim, '<h3 style="margin: 14px 0 8px; font-weight: bold; color: var(--primary-orange, #ea580c); font-size: 1.15em;">$1</h3>');
@@ -447,10 +453,10 @@ REGLAS DE ORO - ACTÚA COMO HUMANA SIMPÁTICA Y EFICIENTE:
 
     // Negritas
     html = html.replace(/\*\*([\s\S]*?)\*\*/g, '<strong>$1</strong>');
-    
+
     // Tablas Markdown muy simples
-    html = html.replace(/\|/g, ''); 
-    html = html.replace(/---/g, ''); 
+    html = html.replace(/\|/g, '');
+    html = html.replace(/---/g, '');
 
     const lineas = html.split('\n');
     let dentroDeLista = false;
@@ -458,44 +464,44 @@ REGLAS DE ORO - ACTÚA COMO HUMANA SIMPÁTICA Y EFICIENTE:
 
     for (let linea of lineas) {
       linea = linea.trim();
-      
+
       if (!linea) {
-        if (dentroDeLista) { 
-          resultado += '</ul>'; 
-          dentroDeLista = false; 
+        if (dentroDeLista) {
+          resultado += '</ul>';
+          dentroDeLista = false;
         }
         if (!resultado.endsWith('<br>')) {
-          resultado += '<br>'; 
+          resultado += '<br>';
         }
-        continue; 
+        continue;
       }
 
       // Renderizado de listas
       if (/^[-*]\s+/.test(linea)) {
-        if (!dentroDeLista) { 
-          resultado += '<ul style="margin: 6px 0; padding-left: 20px; line-height: 1.4;">'; 
-          dentroDeLista = true; 
+        if (!dentroDeLista) {
+          resultado += '<ul style="margin: 6px 0; padding-left: 20px; line-height: 1.4;">';
+          dentroDeLista = true;
         }
         let itemLimpio = linea.replace(/^[-*]\s+/, '');
         resultado += `<li style="margin-bottom: 4px;">${itemLimpio}</li>`;
       } else {
-        if (dentroDeLista) { 
-          resultado += '</ul>'; 
-          dentroDeLista = false; 
+        if (dentroDeLista) {
+          resultado += '</ul>';
+          dentroDeLista = false;
         }
-        
+
         if (linea.startsWith('<h')) {
           resultado += linea;
         } else {
-          resultado += linea + '<br>'; 
+          resultado += linea + '<br>';
         }
       }
     }
-    
+
     if (dentroDeLista) resultado += '</ul>';
-    
+
     resultado = resultado.replace(/^(<br>)+/, '').replace(/(<br>)+$/, '');
-    
+
     return this.sanitizer.bypassSecurityTrustHtml(resultado);
   }
 }
