@@ -8,16 +8,12 @@
     </div>
     <div class="header-actions">
       <div class="periodo-selector">
-        <button type="button" class="chip" [class.active]="periodoDias === 7" (click)="cambiarPeriodo(7)">7
-          días</button>
-        <button type="button" class="chip" [class.active]="periodoDias === 30" (click)="cambiarPeriodo(30)">30
-          días</button>
-        <button type="button" class="chip" [class.active]="periodoDias === 90" (click)="cambiarPeriodo(90)">90
-          días</button>
+        <button type="button" class="chip" [class.active]="periodoDias === 7" (click)="cambiarPeriodo(7)">7 días</button>
+        <button type="button" class="chip" [class.active]="periodoDias === 30" (click)="cambiarPeriodo(30)">30 días</button>
+        <button type="button" class="chip" [class.active]="periodoDias === 90" (click)="cambiarPeriodo(90)">90 días</button>
       </div>
       <button type="button" class="btn-pdf" (click)="exportarPdf()" [disabled]="isLoading || exportandoPdf">
-        <svg *ngIf="!exportandoPdf" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
-          fill="none" stroke="currentColor" stroke-width="2">
+        <svg *ngIf="!exportandoPdf" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
           <polyline points="14 2 14 8 20 8"></polyline>
           <line x1="16" y1="13" x2="8" y2="13"></line>
@@ -30,6 +26,18 @@
     </div>
   </div>
 
+  <!-- Navegación Principal (Pestañas) -->
+  <div class="main-tabs-container" *ngIf="!isLoading">
+    <button class="main-tab" [class.active]="tabPrincipal === 'general'" (click)="tabPrincipal = 'general'">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+      Resumen General
+    </button>
+    <button class="main-tab" [class.active]="tabPrincipal === 'clientes'" (click)="tabPrincipal = 'clientes'">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+      Reporte de Clientes
+    </button>
+  </div>
+
   <!-- Loading -->
   <div class="loading-container" *ngIf="isLoading">
     <div class="spinner"></div>
@@ -38,369 +46,365 @@
 
   <ng-container *ngIf="!isLoading">
 
-    <!-- KPI cards -->
-    <div class="stats-grid">
-      <div class="stat-card orange-card">
-        <div class="stat-icon-wrapper bg-orange">
-          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
-            stroke="#ea580c" stroke-width="2">
-            <line x1="12" y1="1" x2="12" y2="23"></line>
-            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+    <!-- ============================================== -->
+    <!-- PESTAÑA: RESUMEN GENERAL                       -->
+    <!-- ============================================== -->
+    <div *ngIf="tabPrincipal === 'general'" class="fade-in">
+      
+      <!-- KPI cards -->
+      <div class="stats-grid">
+        <div class="stat-card orange-card">
+          <div class="stat-icon-wrapper bg-orange">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="2">
+              <line x1="12" y1="1" x2="12" y2="23"></line>
+              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+            </svg>
+          </div>
+          <div class="stat-info">
+            <h3 class="text-orange">${{ ventasPeriodo | number:'1.2-2' }}</h3>
+            <p>Ventas del periodo</p>
+          </div>
+        </div>
+
+        <div class="stat-card blue-card">
+          <div class="stat-icon-wrapper bg-blue">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+            </svg>
+          </div>
+          <div class="stat-info">
+            <h3 class="text-blue">{{ facturasPeriodo }}</h3>
+            <p>Facturas emitidas</p>
+          </div>
+        </div>
+
+        <div class="stat-card purple-card">
+          <div class="stat-icon-wrapper bg-purple">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+          </div>
+          <div class="stat-info">
+            <h3 class="text-purple">{{ diasConVenta }}</h3>
+            <p>Días con venta</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Racha de ventas -->
+      <div class="racha-banner" [class.racha-activa]="rachaActual > 0">
+        <div class="racha-flame">
+          <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"></path>
           </svg>
         </div>
-        <div class="stat-info">
-          <h3 class="text-orange">${{ ventasPeriodo | number:'1.2-2' }}</h3>
-          <p>Ventas del periodo</p>
-        </div>
-      </div>
-
-      <div class="stat-card blue-card">
-        <div class="stat-icon-wrapper bg-blue">
-          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
-            stroke="#3b82f6" stroke-width="2">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-            <polyline points="14 2 14 8 20 8"></polyline>
-          </svg>
-        </div>
-        <div class="stat-info">
-          <h3 class="text-blue">{{ facturasPeriodo }}</h3>
-          <p>Facturas emitidas</p>
-        </div>
-      </div>
-
-      <div class="stat-card purple-card">
-        <div class="stat-icon-wrapper bg-purple">
-          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
-            stroke="#8b5cf6" stroke-width="2">
-            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-            <line x1="16" y1="2" x2="16" y2="6"></line>
-            <line x1="8" y1="2" x2="8" y2="6"></line>
-            <line x1="3" y1="10" x2="21" y2="10"></line>
-          </svg>
-        </div>
-        <div class="stat-info">
-          <h3 class="text-purple">{{ diasConVenta }}</h3>
-          <p>Días con venta</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Racha de ventas -->
-    <div class="racha-banner" [class.racha-activa]="rachaActual > 0">
-      <div class="racha-flame">
-        <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none"
-          stroke="currentColor" stroke-width="2">
-          <path
-            d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z">
-          </path>
-        </svg>
-      </div>
-      <div class="racha-content">
-        <h3>
-          <ng-container *ngIf="rachaActual > 0; else sinRacha">
-            ¡Racha de <span class="highlight">{{ rachaActual }}</span> día{{ rachaActual === 1 ? '' : 's' }} con ventas!
-          </ng-container>
-          <ng-template #sinRacha>Sin racha activa</ng-template>
-        </h3>
-        <p *ngIf="rachaActual > 0">
-          {{ rachaActivaHoy ? 'Hoy ya registraste al menos una factura. ¡Sigue así!' : 'Ayer cerraste con ventas. Emite
-          una factura hoy para no romper la racha.' }}
-          Mejor racha del periodo: <strong>{{ mejorRacha }} día{{ mejorRacha === 1 ? '' : 's' }}</strong>.
-        </p>
-        <p *ngIf="rachaActual === 0">
-          Emite una factura hoy para empezar una nueva racha.
-          <span *ngIf="mejorRacha > 0"> Tu mejor racha en este periodo fue de <strong>{{ mejorRacha }} día{{ mejorRacha
-              === 1 ? '' : 's' }}</strong>.</span>
-        </p>
-      </div>
-      <div class="racha-badge" *ngIf="rachaActual >= 3">
-        <span *ngIf="rachaActual >= 7">🔥 En racha</span>
-        <span *ngIf="rachaActual >= 3 && rachaActual < 7">💪 Constante</span>
-      </div>
-    </div>
-
-    <!-- Comparativas -->
-    <div class="section-block">
-      <div class="section-header">
-        <h3>Comparativa de desempeño</h3>
-        <span class="badge-gray">Periodo actual vs anterior ({{ periodoDias }} días)</span>
-      </div>
-      <div class="comparativa-grid">
-        <div class="comp-card" *ngFor="let c of comparativas">
-          <p class="comp-label">{{ c.label }}</p>
-          <h4 class="comp-actual">
-            <ng-container *ngIf="c.label.includes('Ventas'); else plainNum">
-              ${{ c.actual | number:'1.2-2' }}
+        <div class="racha-content">
+          <h3>
+            <ng-container *ngIf="rachaActual > 0; else sinRacha">
+              ¡Racha de <span class="highlight">{{ rachaActual }}</span> día{{ rachaActual === 1 ? '' : 's' }} con ventas!
             </ng-container>
-            <ng-template #plainNum>{{ c.actual | number:'1.0-0' }}</ng-template>
-          </h4>
-          <div class="comp-footer">
-            <span class="comp-anterior">
-              Antes:
-              <ng-container *ngIf="c.label.includes('Ventas'); else plainAnt">
-                ${{ c.anterior | number:'1.2-2' }}
+            <ng-template #sinRacha>Sin racha activa</ng-template>
+          </h3>
+          <p *ngIf="rachaActual > 0">
+            {{ rachaActivaHoy ? 'Hoy ya registraste al menos una factura. ¡Sigue así!' : 'Ayer cerraste con ventas. Emite una factura hoy para no romper la racha.' }}
+            Mejor racha del periodo: <strong>{{ mejorRacha }} día{{ mejorRacha === 1 ? '' : 's' }}</strong>.
+          </p>
+          <p *ngIf="rachaActual === 0">
+            Emite una factura hoy para empezar una nueva racha.
+            <span *ngIf="mejorRacha > 0"> Tu mejor racha en este periodo fue de <strong>{{ mejorRacha }} día{{ mejorRacha === 1 ? '' : 's' }}</strong>.</span>
+          </p>
+        </div>
+        <div class="racha-badge" *ngIf="rachaActual >= 3">
+          <span *ngIf="rachaActual >= 7">🔥 En racha</span>
+          <span *ngIf="rachaActual >= 3 && rachaActual < 7">💪 Constante</span>
+        </div>
+      </div>
+
+      <!-- Comparativas -->
+      <div class="section-block">
+        <div class="section-header">
+          <h3>Comparativa de desempeño</h3>
+          <span class="badge-gray">Periodo actual vs anterior ({{ periodoDias }} días)</span>
+        </div>
+        <div class="comparativa-grid">
+          <div class="comp-card" *ngFor="let c of comparativas">
+            <p class="comp-label">{{ c.label }}</p>
+            <h4 class="comp-actual">
+              <ng-container *ngIf="c.label.includes('Ventas'); else plainNum">
+                ${{ c.actual | number:'1.2-2' }}
               </ng-container>
-              <ng-template #plainAnt>{{ c.anterior | number:'1.0-0' }}</ng-template>
-            </span>
-            <span class="variacion" [class.up]="c.variacion > 0" [class.down]="c.variacion < 0"
-              [class.flat]="c.variacion === 0">
-              <svg *ngIf="c.variacion > 0" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
-                fill="none" stroke="currentColor" stroke-width="3">
-                <polyline points="18 15 12 9 6 15"></polyline>
-              </svg>
-              <svg *ngIf="c.variacion < 0" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
-                fill="none" stroke="currentColor" stroke-width="3">
-                <polyline points="6 9 12 15 18 9"></polyline>
-              </svg>
-              {{ c.variacion > 0 ? '+' : '' }}{{ c.variacion }}%
-            </span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Gráfico de barras + heatmap -->
-    <div class="content-grid-2">
-      <div class="card">
-        <div class="card-header">
-          <h3>Ventas diarias</h3>
-          <span class="badge-gray">Últimos {{ serieDiaria.length }} días</span>
-        </div>
-        <div class="card-body">
-          <div class="bar-chart" *ngIf="serieDiaria.length > 0; else sinSerie">
-            <div class="bar-col" *ngFor="let d of serieDiaria" [title]="'$' + (d.total | number:'1.2-2')">
-              <div class="bar-value">${{ d.total | number:'1.0-0' }}</div>
-              <div class="bar-fill" [style.height.%]="d.altura"></div>
-              <div class="bar-label">{{ d.label }}</div>
+              <ng-template #plainNum>{{ c.actual | number:'1.0-0' }}</ng-template>
+            </h4>
+            <div class="comp-footer">
+              <span class="comp-anterior">
+                Antes:
+                <ng-container *ngIf="c.label.includes('Ventas'); else plainAnt">
+                  ${{ c.anterior | number:'1.2-2' }}
+                </ng-container>
+                <ng-template #plainAnt>{{ c.anterior | number:'1.0-0' }}</ng-template>
+              </span>
+              <span class="variacion" [class.up]="c.variacion > 0" [class.down]="c.variacion < 0" [class.flat]="c.variacion === 0">
+                <svg *ngIf="c.variacion > 0" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                  <polyline points="18 15 12 9 6 15"></polyline>
+                </svg>
+                <svg *ngIf="c.variacion < 0" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+                {{ c.variacion > 0 ? '+' : '' }}{{ c.variacion }}%
+              </span>
             </div>
           </div>
-          <ng-template #sinSerie>
-            <div class="empty-mini">No hay ventas en este periodo.</div>
-          </ng-template>
         </div>
       </div>
 
-      <div class="card">
-        <div class="card-header">
-          <h3>Zona de calor · Calendario</h3>
-          <span class="badge-gray">Intensidad de ventas por día</span>
-        </div>
-        <div class="card-body">
-          <div class="heatmap-grid" *ngIf="heatmapDias.length > 0; else sinHeat">
-            <div class="heat-cell" *ngFor="let d of heatmapDias" [style.background]="colorCalor(d.intensidad)"
-              [style.color]="colorTextoCalor(d.intensidad)"
-              [title]="d.diaSemana + ' ' + d.label + ': $' + (d.total | number:'1.2-2') + ' (' + d.cantidad + ' facturas)'">
-              <span class="heat-day">{{ d.label.split('/')[0] }}</span>
-            </div>
+      <!-- Gráfico de barras + heatmap -->
+      <div class="content-grid-2">
+        <div class="card">
+          <div class="card-header">
+            <h3>Ventas diarias</h3>
+            <span class="badge-gray">Últimos {{ serieDiaria.length }} días</span>
           </div>
-          <div class="heat-legend">
-            <span>Menos</span>
-            <span class="leg-box" style="background:#f1f5f9"></span>
-            <span class="leg-box" style="background:#ffedd5"></span>
-            <span class="leg-box" style="background:#fed7aa"></span>
-            <span class="leg-box" style="background:#fb923c"></span>
-            <span class="leg-box" style="background:#ea580c"></span>
-            <span>Más</span>
-          </div>
-          <ng-template #sinHeat>
-            <div class="empty-mini">Sin datos para el mapa de calor.</div>
-          </ng-template>
-        </div>
-      </div>
-    </div>
-
-    <!-- Día de semana + hora -->
-    <div class="content-grid-2">
-      <div class="card">
-        <div class="card-header">
-          <h3>Demanda por día de la semana</h3>
-        </div>
-        <div class="card-body">
-          <div class="weekday-bars">
-            <div class="weekday-row" *ngFor="let d of calorPorDiaSemana">
-              <span class="wd-name">{{ d.nombre }}</span>
-              <div class="wd-track">
-                <div class="wd-fill" [style.width.%]="d.intensidad * 100"
-                  [style.background]="colorCalor(d.intensidad || 0.05)"></div>
+          <div class="card-body">
+            <div class="bar-chart" *ngIf="serieDiaria.length > 0; else sinSerie">
+              <div class="bar-col" *ngFor="let d of serieDiaria" [title]="'$' + (d.total | number:'1.2-2')">
+                <div class="bar-value">${{ d.total | number:'1.0-0' }}</div>
+                <div class="bar-fill" [style.height.%]="d.altura"></div>
+                <div class="bar-label">{{ d.label }}</div>
               </div>
-              <span class="wd-val">${{ d.total | number:'1.0-0' }}</span>
             </div>
+            <ng-template #sinSerie>
+              <div class="empty-mini">No hay ventas en este periodo.</div>
+            </ng-template>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h3>Zona de calor · Calendario</h3>
+            <span class="badge-gray">Intensidad de ventas por día</span>
+          </div>
+          <div class="card-body">
+            <div class="heatmap-grid" *ngIf="heatmapDias.length > 0; else sinHeat">
+              <div class="heat-cell" *ngFor="let d of heatmapDias" [style.background]="colorCalor(d.intensidad)"
+                [style.color]="colorTextoCalor(d.intensidad)"
+                [title]="d.diaSemana + ' ' + d.label + ': $' + (d.total | number:'1.2-2') + ' (' + d.cantidad + ' facturas)'">
+                <span class="heat-day">{{ d.label.split('/')[0] }}</span>
+              </div>
+            </div>
+            <div class="heat-legend">
+              <span>Menos</span>
+              <span class="leg-box" style="background:#f1f5f9"></span>
+              <span class="leg-box" style="background:#ffedd5"></span>
+              <span class="leg-box" style="background:#fed7aa"></span>
+              <span class="leg-box" style="background:#fb923c"></span>
+              <span class="leg-box" style="background:#ea580c"></span>
+              <span>Más</span>
+            </div>
+            <ng-template #sinHeat>
+              <div class="empty-mini">Sin datos para el mapa de calor.</div>
+            </ng-template>
           </div>
         </div>
       </div>
 
-      <div class="card">
-        <div class="card-header">
-          <h3>Zona de calor · Horarios</h3>
-          <span class="badge-gray">Horas con mayor facturación</span>
-        </div>
-        <div class="card-body">
-          <div class="hour-heat">
-            <div class="hour-cell" *ngFor="let h of calorPorHora" [style.background]="colorCalor(h.intensidad)"
-              [style.color]="colorTextoCalor(h.intensidad)" [title]="h.hora + ': $' + (h.total | number:'1.2-2')">
-              {{ h.hora.substring(0, 2) }}
+      <!-- Día de semana + hora -->
+      <div class="content-grid-2">
+        <div class="card">
+          <div class="card-header">
+            <h3>Demanda por día de la semana</h3>
+          </div>
+          <div class="card-body">
+            <div class="weekday-bars">
+              <div class="weekday-row" *ngFor="let d of calorPorDiaSemana">
+                <span class="wd-name">{{ d.nombre }}</span>
+                <div class="wd-track">
+                  <div class="wd-fill" [style.width.%]="d.intensidad * 100" [style.background]="colorCalor(d.intensidad || 0.05)"></div>
+                </div>
+                <span class="wd-val">${{ d.total | number:'1.0-0' }}</span>
+              </div>
             </div>
           </div>
-          <p class="hint-text">Pasa el cursor sobre cada hora para ver el monto exacto.</p>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h3>Zona de calor · Horarios</h3>
+            <span class="badge-gray">Horas con mayor facturación</span>
+          </div>
+          <div class="card-body">
+            <div class="hour-heat">
+              <div class="hour-cell" *ngFor="let h of calorPorHora" [style.background]="colorCalor(h.intensidad)"
+                [style.color]="colorTextoCalor(h.intensidad)" [title]="h.hora + ': $' + (h.total | number:'1.2-2')">
+                {{ h.hora.substring(0, 2) }}
+              </div>
+            </div>
+            <p class="hint-text">Pasa el cursor sobre cada hora para ver el monto exacto.</p>
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- Top productos + clientes + forma pago -->
-    <div class="content-grid-3">
-      <div class="card">
-        <div class="card-header">
-          <h3>Productos con mayor demanda</h3>
+      <!-- Top productos + clientes + forma pago -->
+      <div class="content-grid-3">
+        <div class="card">
+          <div class="card-header">
+            <h3>Productos con mayor demanda</h3>
+          </div>
+          <div class="card-body ranking-body">
+            <div class="empty-mini" *ngIf="topProductos.length === 0">Sin detalle de productos en las facturas del periodo.</div>
+            <div class="rank-item" *ngFor="let p of topProductos; let i = index">
+              <span class="rank-num" [class.top3]="i < 3">{{ i + 1 }}</span>
+              <div class="rank-info">
+                <h4>{{ p.nombre }}</h4>
+                <p>{{ p.unidades }} uds. · ${{ p.ingresos | number:'1.2-2' }}</p>
+                <div class="progress-bg">
+                  <div class="progress-fill orange" [style.width.%]="p.porcentaje"></div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-        <div class="card-body ranking-body">
-          <div class="empty-mini" *ngIf="topProductos.length === 0">Sin detalle de productos en las facturas del
-            periodo.</div>
-          <div class="rank-item" *ngFor="let p of topProductos; let i = index">
-            <span class="rank-num" [class.top3]="i < 3">{{ i + 1 }}</span>
-            <div class="rank-info">
-              <h4>{{ p.nombre }}</h4>
-              <p>{{ p.unidades }} uds. · ${{ p.ingresos | number:'1.2-2' }}</p>
+
+        <div class="card">
+          <div class="card-header">
+            <h3>Clientes top</h3>
+          </div>
+          <div class="card-body ranking-body">
+            <div class="empty-mini" *ngIf="topClientes.length === 0">Aún no hay clientes con compras en este periodo.</div>
+            <div class="rank-item rank-clickable" *ngFor="let c of topClientes; let i = index"
+              (click)="tabPrincipal = 'clientes'; busquedaClienteReporte = c.nombre; aplicarFiltroClientes()" title="Ver historial completo">
+              <span class="rank-num" [class.top3]="i < 3">{{ i + 1 }}</span>
+              <div class="rank-info">
+                <h4>{{ c.nombre }}</h4>
+                <p>{{ c.facturas }} factura{{ c.facturas === 1 ? '' : 's' }} · ${{ c.total | number:'1.2-2' }}</p>
+                <div class="progress-bg">
+                  <div class="progress-fill blue" [style.width.%]="c.porcentaje"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h3>Formas de pago</h3>
+          </div>
+          <div class="card-body ranking-body">
+            <div class="empty-mini" *ngIf="porFormaPago.length === 0">Sin datos de formas de pago.</div>
+            <div class="pago-item" *ngFor="let p of porFormaPago">
+              <div class="pago-row">
+                <span class="pago-name">{{ p.nombre }}</span>
+                <span class="pago-pct">{{ p.porcentaje }}%</span>
+              </div>
               <div class="progress-bg">
-                <div class="progress-fill orange" [style.width.%]="p.porcentaje"></div>
+                <div class="progress-fill green" [style.width.%]="p.porcentaje"></div>
               </div>
+              <p class="pago-total">${{ p.total | number:'1.2-2' }}</p>
             </div>
           </div>
         </div>
       </div>
 
-      <div class="card">
-        <div class="card-header">
-          <h3>Clientes top</h3>
-        </div>
-        <div class="card-body ranking-body">
-          <div class="empty-mini" *ngIf="topClientes.length === 0">Aún no hay clientes con compras en este periodo.
-          </div>
-          <div class="rank-item rank-clickable" *ngFor="let c of topClientes; let i = index"
-            (click)="abrirDetalleCliente(c)" title="Ver detalle del cliente">
-            <span class="rank-num" [class.top3]="i < 3">{{ i + 1 }}</span>
-            <div class="rank-info">
-              <h4>{{ c.nombre }}</h4>
-              <p>{{ c.facturas }} factura{{ c.facturas === 1 ? '' : 's' }} · ${{ c.total | number:'1.2-2' }}</p>
-              <div class="progress-bg">
-                <div class="progress-fill blue" [style.width.%]="c.porcentaje"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-header">
-          <h3>Formas de pago</h3>
-        </div>
-        <div class="card-body ranking-body">
-          <div class="empty-mini" *ngIf="porFormaPago.length === 0">Sin datos de formas de pago.</div>
-          <div class="pago-item" *ngFor="let p of porFormaPago">
-            <div class="pago-row">
-              <span class="pago-name">{{ p.nombre }}</span>
-              <span class="pago-pct">{{ p.porcentaje }}%</span>
-            </div>
-            <div class="progress-bg">
-              <div class="progress-fill green" [style.width.%]="p.porcentaje"></div>
-            </div>
-            <p class="pago-total">${{ p.total | number:'1.2-2' }}</p>
-          </div>
-        </div>
-      </div>
     </div>
 
-    <!-- ============ REPORTE CLIENTES + CRÉDITO ============ -->
-    <div class="card mt-4 clientes-reporte-card">
-      <div class="card-header clientes-header">
-        <div class="clientes-title-block">
-          <div class="clientes-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
-              stroke="currentColor" stroke-width="2">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-              <circle cx="9" cy="7" r="4"></circle>
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-            </svg>
+    <!-- ============================================== -->
+    <!-- PESTAÑA: REPORTE DE CLIENTES                   -->
+    <!-- ============================================== -->
+    <div *ngIf="tabPrincipal === 'clientes'" class="fade-in">
+      <div class="card clientes-reporte-card" style="margin-top: 0 !important;">
+        <div class="card-header clientes-header">
+          <div class="clientes-title-block">
+            <div class="clientes-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+              </svg>
+            </div>
+            <div>
+              <h3>Directorio de Clientes</h3>
+              <p>Facturas y saldo a crédito · Toca un cliente para ver el detalle</p>
+            </div>
           </div>
-          <div>
-            <h3>Reporte de clientes</h3>
-            <p>Facturas y saldo a crédito · toca un cliente para ver el detalle</p>
+          <div class="clientes-kpi">
+            <div class="kpi-pill">
+              <span>Clientes</span>
+              <strong>{{ reporteClientes.length }}</strong>
+            </div>
+            <div class="kpi-pill debt">
+              <span>Con deuda</span>
+              <strong>{{ clientesConDeuda }}</strong>
+            </div>
+            <div class="kpi-pill debt">
+              <span>Por cobrar</span>
+              <strong>${{ totalCreditoClientes | number:'1.2-2' }}</strong>
+            </div>
           </div>
         </div>
-        <div class="clientes-kpi">
-          <div class="kpi-pill">
-            <span>Clientes</span>
-            <strong>{{ reporteClientes.length }}</strong>
+        <div class="card-body">
+          <div class="clientes-filters">
+            <div class="search-wrap">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <input type="text" class="search-input" placeholder="Buscar por nombre o cédula/RUC..."
+                [(ngModel)]="busquedaClienteReporte" (input)="aplicarFiltroClientes()">
+            </div>
+            <label class="chk-deuda">
+              <input type="checkbox" [(ngModel)]="filtroSoloDeuda" (change)="aplicarFiltroClientes()">
+              Solo con deuda de crédito
+            </label>
           </div>
-          <div class="kpi-pill debt">
-            <span>Con deuda</span>
-            <strong>{{ clientesConDeuda }}</strong>
-          </div>
-          <div class="kpi-pill debt">
-            <span>Por cobrar</span>
-            <strong>${{ totalCreditoClientes | number:'1.2-2' }}</strong>
-          </div>
-        </div>
-      </div>
-      <div class="card-body">
-        <div class="clientes-filters">
-          <div class="search-wrap">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-              stroke="#94a3b8" stroke-width="2">
-              <circle cx="11" cy="11" r="8"></circle>
-              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
-            <input type="text" class="search-input" placeholder="Buscar por nombre de cliente..."
-              [(ngModel)]="busquedaClienteReporte" (input)="aplicarFiltroClientes()">
-          </div>
-          <label class="chk-deuda">
-            <input type="checkbox" [(ngModel)]="filtroSoloDeuda" (change)="aplicarFiltroClientes()">
-            Solo con deuda de crédito
-          </label>
-        </div>
 
-        <div class="table-responsive clientes-table-wrap">
-          <table class="data-table clientes-table">
-            <thead>
-              <tr>
-                <th>Cliente</th>
-                <th class="num">Facturas</th>
-                <th class="num">Total facturado</th>
-                <th class="num">Cuentas crédito</th>
-                <th class="num">Saldo pendiente</th>
-                <th class="center">Acción</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngIf="reporteClientesFiltrado.length === 0">
-                <td colspan="6" class="empty-row">
-                  <div class="empty-mini">No hay clientes para mostrar con estos filtros.</div>
-                </td>
-              </tr>
-              <tr *ngFor="let c of reporteClientesFiltrado" class="row-clickable" (click)="abrirDetalleCliente(c)">
-                <td>
-                  <div class="cli-cell">
-                    <div class="cli-avatar">{{ (c.nombre || '?').charAt(0).toUpperCase() }}</div>
-                    <div>
-                      <strong class="cli-name">{{ c.nombre }}</strong>
-                      <span *ngIf="c.saldoPendiente > 0" class="badge-deuda">Debe</span>
+          <div class="table-responsive clientes-table-wrap">
+            <table class="data-table clientes-table">
+              <thead>
+                <tr>
+                  <th>Cliente</th>
+                  <th class="num">Facturas</th>
+                  <th class="num">Total facturado</th>
+                  <th class="num">Cuentas crédito</th>
+                  <th class="num">Saldo pendiente</th>
+                  <th class="center">Acción</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngIf="reporteClientesFiltrado.length === 0">
+                  <td colspan="6" class="empty-row">
+                    <div class="empty-mini">No hay clientes para mostrar con estos filtros.</div>
+                  </td>
+                </tr>
+                <tr *ngFor="let c of reporteClientesFiltrado" class="row-clickable" (click)="abrirDetalleCliente(c)">
+                  <td>
+                    <div class="cli-cell">
+                      <div class="cli-avatar">{{ (c.nombre || '?').charAt(0).toUpperCase() }}</div>
+                      <div>
+                        <strong class="cli-name">{{ c.nombre }}</strong>
+                        <div class="cli-id-info" *ngIf="c.identificacion">CI/RUC: {{ c.identificacion }}</div>
+                        <span *ngIf="c.saldoPendiente > 0" class="badge-deuda">Debe</span>
+                      </div>
                     </div>
-                  </div>
-                </td>
-                <td class="num">{{ c.numFacturas }}</td>
-                <td class="num money">${{ c.totalFacturado | number:'1.2-2' }}</td>
-                <td class="num">{{ c.numCuentasCredito }}</td>
-                <td class="num money" [class.debt-val]="c.saldoPendiente > 0" [class.ok-val]="!(c.saldoPendiente > 0)">
-                  ${{ c.saldoPendiente | number:'1.2-2' }}
-                </td>
-                <td class="center">
-                  <button type="button" class="btn-ver" (click)="abrirDetalleCliente(c); $event.stopPropagation()">
-                    Ver detalle
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+                  </td>
+                  <td class="num">{{ c.numFacturas }}</td>
+                  <td class="num money">${{ c.totalFacturado | number:'1.2-2' }}</td>
+                  <td class="num">{{ c.numCuentasCredito }}</td>
+                  <td class="num money" [class.debt-val]="c.saldoPendiente > 0" [class.ok-val]="!(c.saldoPendiente > 0)">
+                    ${{ c.saldoPendiente | number:'1.2-2' }}
+                  </td>
+                  <td class="center">
+                    <button type="button" class="btn-ver" (click)="abrirDetalleCliente(c); $event.stopPropagation()">
+                      Ver detalle
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
@@ -414,6 +418,9 @@
             <div class="cli-avatar lg">{{ (clienteDetalle?.nombre || '?').charAt(0).toUpperCase() }}</div>
             <div class="modal-cli-text">
               <h3>{{ clienteDetalle?.nombre }}</h3>
+              <p class="modal-sub" style="color: #64748b; font-weight: 600; margin-top: 2px;" *ngIf="clienteDetalle?.identificacion">
+                CI/RUC: {{ clienteDetalle?.identificacion }}
+              </p>
               <p class="modal-sub" *ngIf="(clienteDetalle?.saldoPendiente || 0) > 0">
                 <span class="pill-debe">Debe ${{ clienteDetalle?.saldoPendiente | number:'1.2-2' }}</span>
               </p>
@@ -423,8 +430,7 @@
             </div>
           </div>
           <button type="button" class="close-x" (click)="cerrarDetalleCliente()" aria-label="Cerrar">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
-              stroke="currentColor" stroke-width="2.2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
               <line x1="18" y1="6" x2="6" y2="18"></line>
               <line x1="6" y1="6" x2="18" y2="18"></line>
             </svg>
@@ -447,13 +453,11 @@
         </div>
 
         <div class="modal-tabs">
-          <button type="button" class="modal-tab" [class.active]="modalTabCliente === 'facturas'"
-            (click)="modalTabCliente = 'facturas'">
+          <button type="button" class="modal-tab" [class.active]="modalTabCliente === 'facturas'" (click)="modalTabCliente = 'facturas'">
             Facturas
             <span class="tab-count">{{ clienteDetalle?.facturas?.length || 0 }}</span>
           </button>
-          <button type="button" class="modal-tab" [class.active]="modalTabCliente === 'credito'"
-            (click)="modalTabCliente = 'credito'">
+          <button type="button" class="modal-tab" [class.active]="modalTabCliente === 'credito'" (click)="modalTabCliente = 'credito'">
             Crédito
             <span class="tab-count" [class.tab-debt]="(clienteDetalle?.saldoPendiente || 0) > 0">
               {{ clienteDetalle?.creditos?.length || 0 }}
@@ -512,12 +516,10 @@
                     <td><strong>{{ cr.factura }}</strong></td>
                     <td class="muted-cell">{{ cr.fechaVencimiento }}</td>
                     <td>
-                      <span class="badge-estado" [class.pagada]="cr.saldoPendiente <= 0"
-                        [class.debe]="cr.saldoPendiente > 0">{{ cr.estado }}</span>
+                      <span class="badge-estado" [class.pagada]="cr.saldoPendiente <= 0" [class.debe]="cr.saldoPendiente > 0">{{ cr.estado }}</span>
                     </td>
                     <td class="num">${{ cr.montoTotal | number:'1.2-2' }}</td>
-                    <td class="num money" [class.debt-val]="cr.saldoPendiente > 0"
-                      [class.ok-val]="!(cr.saldoPendiente > 0)">
+                    <td class="num money" [class.debt-val]="cr.saldoPendiente > 0" [class.ok-val]="!(cr.saldoPendiente > 0)">
                       ${{ cr.saldoPendiente | number:'1.2-2' }}
                     </td>
                   </tr>

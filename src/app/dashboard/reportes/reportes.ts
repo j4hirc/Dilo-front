@@ -51,6 +51,7 @@ interface CreditoClienteResumen {
 interface ClienteReporte {
   key: string;
   clienteId: any;
+  identificacion: string | null; // <--- NUEVA PROPIEDAD
   nombre: string;
   totalFacturado: number;
   numFacturas: number;
@@ -79,6 +80,8 @@ export class Reportes implements OnInit {
   private apiUrl = 'https://dilo-backend-mxlu.onrender.com/api/v1';
 
   periodoDias: number = 30;
+
+  tabPrincipal: 'general' | 'clientes' = 'general'; // Pestaña activa por defecto
 
   ventasPeriodo = 0;
   facturasPeriodo = 0;
@@ -838,6 +841,7 @@ export class Reportes implements OnInit {
         row = {
           key: nameKey,
           clienteId: clienteId ?? null,
+          identificacion: dni, // Guardamos la identificación
           nombre: display,
           totalFacturado: 0,
           numFacturas: 0,
@@ -848,7 +852,7 @@ export class Reportes implements OnInit {
           creditos: [],
         };
       } else {
-        // Preferir nombre sin cédula y más corto/limpio
+        if (!row.identificacion && dni) row.identificacion = dni; // Actualizamos si no tenía
         const actualLimpio = this.nombreDisplay(row.nombre);
         if (display && (!actualLimpio || display.length <= actualLimpio.length || /\d{7,}/.test(row.nombre))) {
           if (!/\d{7,}/.test(display)) {
@@ -862,7 +866,8 @@ export class Reportes implements OnInit {
       return row;
     };
 
-    // Facturas
+    // --- El resto de tu lógica original de facturas y créditos se mantiene igual ---
+    // (Solo cópialo de tu código actual desde "this.facturasRaw.forEach..." hasta "...this.aplicarFiltroClientes();")
     this.facturasRaw.forEach((f) => {
       const d = this.parseFecha(f.fechaEmision || f.fecha || f.createdAt || f.fechaCreacion);
       const nombre = this.nombreClienteDeFactura(f);
@@ -884,7 +889,6 @@ export class Reportes implements OnInit {
       });
     });
 
-    // Totales de facturación (todas las facturas del cliente)
     const recalcularFacturas = (row: ClienteReporte) => {
       row.facturas.sort((a, b) => {
         const da = this.parseFecha(a.fecha)?.getTime() || 0;
@@ -895,16 +899,10 @@ export class Reportes implements OnInit {
       row.numFacturas = row.facturas.length;
     };
 
-    // Crédito
     this.cuentasRaw.forEach((c) => {
       const nombre = this.nombreClienteDeCuenta(c);
       const cid = c.clienteId ?? c.cliente?.id ?? null;
-      const ident =
-        c.clienteIdentificacion ||
-        c.clienteDni ||
-        c.dni ||
-        c.cliente?.dni ||
-        this.extraerIdentificacionDeTexto(nombre);
+      const ident = c.clienteIdentificacion || c.clienteDni || c.dni || c.cliente?.dni || this.extraerIdentificacionDeTexto(nombre);
       const row = ensure(nombre, cid, ident);
       const saldo = Number(c.saldoPendiente ?? 0);
       const monto = Number(c.montoTotal ?? c.monto ?? 0);
@@ -923,7 +921,6 @@ export class Reportes implements OnInit {
       });
     });
 
-    // Lista única
     const seen = new Set<ClienteReporte>();
     const lista: ClienteReporte[] = [];
     const pushUnique = (row: ClienteReporte) => {
@@ -936,17 +933,13 @@ export class Reportes implements OnInit {
     byDni.forEach(pushUnique);
     byName.forEach(pushUnique);
 
-    // Segunda pasada: fusionar residuales con mismo nameKey (por si quedaron separados)
     const merged = new Map<string, ClienteReporte>();
     for (const row of lista) {
       const nk = this.normalizarNombreCliente(row.nombre);
       if (merged.has(nk)) {
         const base = merged.get(nk)!;
-        // fusionar facturas
         row.facturas.forEach((f) => {
-          if (!base.facturas.some((x) => x.id === f.id || x.numero === f.numero)) {
-            base.facturas.push(f);
-          }
+          if (!base.facturas.some((x) => x.id === f.id || x.numero === f.numero)) base.facturas.push(f);
         });
         row.creditos.forEach((cr) => {
           if (!base.creditos.some((x) => x.id === cr.id)) {
@@ -957,9 +950,8 @@ export class Reportes implements OnInit {
           }
         });
         if (row.clienteId != null && base.clienteId == null) base.clienteId = row.clienteId;
-        if (!/\d{7,}/.test(row.nombre) && /\d{7,}/.test(base.nombre)) {
-          base.nombre = this.nombreDisplay(row.nombre);
-        }
+        if (row.identificacion && !base.identificacion) base.identificacion = row.identificacion;
+        if (!/\d{7,}/.test(row.nombre) && /\d{7,}/.test(base.nombre)) base.nombre = this.nombreDisplay(row.nombre);
         recalcularFacturas(base);
       } else {
         merged.set(nk, row);
@@ -981,12 +973,12 @@ export class Reportes implements OnInit {
     this.aplicarFiltroClientes();
   }
 
-  aplicarFiltroClientes() {
+ aplicarFiltroClientes() {
     const term = this.busquedaClienteReporte.trim().toLowerCase();
     this.reporteClientesFiltrado = this.reporteClientes.filter((c) => {
       if (this.filtroSoloDeuda && !(c.saldoPendiente > 0)) return false;
       if (!term) return true;
-      return c.nombre.toLowerCase().includes(term);
+      return c.nombre.toLowerCase().includes(term) || (c.identificacion && c.identificacion.toLowerCase().includes(term));
     });
   }
 
@@ -1002,6 +994,7 @@ export class Reportes implements OnInit {
       : {
           key,
           clienteId: (cli as any).clienteId ?? null,
+          identificacion: (cli as any).identificacion ?? null,
           nombre: cli.nombre,
           totalFacturado: (cli as any).total || 0,
           numFacturas: (cli as any).facturas || 0,

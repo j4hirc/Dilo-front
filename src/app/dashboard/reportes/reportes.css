@@ -1149,3 +1149,76 @@
 .btn-ver:hover {
   background: linear-gradient(135deg, #ea580c, #f97316);
 }
+
+.main-tabs-container {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+  border-bottom: 2px solid var(--border-color);
+  padding-bottom: 0;
+  overflow-x: auto; /* Permite scroll horizontal en móviles */
+}
+
+.main-tab {
+  background: transparent;
+  border: none;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  padding: 12px 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px; /* Superpone el borde sobre la línea gris */
+  transition: all 0.2s ease;
+  white-space: nowrap; /* Evita que el texto salte de línea */
+}
+
+.main-tab:hover {
+  color: var(--text-main);
+  background: rgba(241, 245, 249, 0.6);
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
+}
+
+.main-tab.active {
+  color: var(--primary-orange);
+  border-bottom-color: var(--primary-orange);
+}
+
+.main-tab svg {
+  transition: transform 0.2s;
+}
+
+.main-tab.active svg {
+  transform: scale(1.1);
+}
+
+/* =========================================
+   🔥 IDENTIFICACIÓN (CÉDULA/RUC) DEL CLIENTE
+   ========================================= */
+.cli-id-info {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+}
+
+/* Añade un pequeño icono a la cédula opcionalmente (puedes dejarlo solo en texto si prefieres) */
+.cli-id-info::before {
+  content: '🆔';
+  font-size: 0.7rem;
+  margin-right: 4px;
+  filter: grayscale(1) opacity(0.6);
+}
+
+/* Modificamos el margen para que cuadre bien la tarjeta de clientes al usar tabs */
+.mt-4.clientes-reporte-card {
+  margin-top: 0 !important; /* Quitamos el margen superior extra porque ya están separados por las pestañas */
+  border-top-left-radius: 0; /* Opcional: hace que parezca que la tarjeta nace directamente de la pestaña */
+}
