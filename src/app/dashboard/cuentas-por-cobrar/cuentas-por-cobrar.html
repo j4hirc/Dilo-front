@@ -578,6 +578,17 @@
                     <div
                         style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; width: 100%; max-width: 300px; margin-left: auto;">
 
+
+
+
+                    <!-- Descuento (Solo si existe) -->
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.85rem; color: #dc2626;"
+                            *ngIf="facturaCompleta.totalDescuento > 0">
+                            <span>Descuento:</span>
+                            <strong>-${{ facturaCompleta.totalDescuento | number:'1.2-2' }}</strong>
+                        </div>
+                    
+
                         <!-- Subtotal con IVA (Calculado automáticamente) -->
                         <div
                             style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.85rem; color: #475569;">
@@ -585,12 +596,7 @@
                             <strong>${{ facturaCompleta.subtotalIvaAplicado | number:'1.2-2' }}</strong>
                         </div>
 
-                        <!-- Descuento (Solo si existe) -->
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.85rem; color: #dc2626;"
-                            *ngIf="facturaCompleta.totalDescuento > 0">
-                            <span>Descuento:</span>
-                            <strong>-${{ facturaCompleta.totalDescuento | number:'1.2-2' }}</strong>
-                        </div>
+                        
 
                         <div
                             style="display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 0.85rem; color: #475569;">
