@@ -50,9 +50,8 @@ export class CuentasPorCobrar implements OnInit {
   facturaCompleta: any = null; 
   pagoRecienRealizado = false; 
 
-  // 🔥 VARIABLES CORREGIDAS PARA EL BANNER Y FILA DESTACADA
   cuentaDestacadaId: number | null = null;
-  bannerNotificacion: { titulo: string; mensaje: string } | null = null;
+  mensajeExitoTop: string | null = null;
   private animacionTimeout: any; 
 
   totalPorCobrar = 0;
@@ -79,7 +78,6 @@ export class CuentasPorCobrar implements OnInit {
 
   cambiarTabPrincipal(tab: 'general' | 'clientes') {
     this.tabPrincipal = tab;
-    // Limpiamos el resaltado SOLO cuando cambiamos de pestaña manualmente
     this.cuentaDestacadaId = null; 
   }
 
@@ -93,7 +91,7 @@ export class CuentasPorCobrar implements OnInit {
     }).subscribe({
       next: (data) => {
         setTimeout(() => {
-          this.cuentasBase = Array.isArray(data)
+          let mapeadas = Array.isArray(data)
             ? data.map(c => {
               const nombre = this.obtenerNombreCliente(c);
               const identificacion = c.clienteIdentificacion || c.cliente?.dni || c.dni || '';
@@ -106,6 +104,11 @@ export class CuentasPorCobrar implements OnInit {
             })
             : [];
             
+          // 🔥 MAGIA: Filtramos y ELIMINAMOS a los "Consumidor Final" para siempre
+          this.cuentasBase = mapeadas.filter(c => 
+            c.clienteNombre.toLowerCase().indexOf('consumidor final') === -1
+          );
+
           this.calcularEstadisticas();
           this.agruparClientes(); 
           this.aplicarFiltros();
@@ -333,7 +336,6 @@ export class CuentasPorCobrar implements OnInit {
     }
   }
 
-  // 🔥 MAGIA: Obtiene las cuotas pendientes y las ordena para que la más próxima a vencer salga de primera
   getCuotasPendientes() {
     if (!this.cuentaSeleccionada || !this.cuentaSeleccionada.cuotas) return [];
     
@@ -342,7 +344,7 @@ export class CuentasPorCobrar implements OnInit {
         .sort((a: any, b: any) => {
             const dateA = a.fechaVencimiento ? new Date(a.fechaVencimiento).getTime() : 0;
             const dateB = b.fechaVencimiento ? new Date(b.fechaVencimiento).getTime() : 0;
-            return dateA - dateB; // Orden ascendente (la fecha menor/más cercana arriba)
+            return dateA - dateB; 
         });
   }
 
@@ -433,24 +435,18 @@ export class CuentasPorCobrar implements OnInit {
         this.cerrarModal();
         if (this.showModalCliente) this.cerrarModalCliente(); 
 
-        // 🔥 Asignamos la fila a destacar permanentemente (hasta que cambie de tab)
         this.cuentaDestacadaId = idPagado;
 
-        // Configuramos el Banner Toast 
-        this.bannerNotificacion = {
-            titulo: '¡Abono Registrado!',
-            mensaje: `Has abonado $${montoPagado.toFixed(2)} a la Factura #${numFacturaPagada} de ${clientePagado}.`
-        };
+        this.mensajeExitoTop = `¡Se registró un abono de $${montoPagado.toFixed(2)} a la Factura #${numFacturaPagada} de ${clientePagado}!`;
 
-        // Recargamos datos sin pantalla de carga blanca
         this.cargarCuentas(this.negocioId!, true);
 
-        // 🔥 Solo desaparece el Banner flotante de arriba a los 10 segundos. LA FILA VERDE SE QUEDA.
         if (this.animacionTimeout) {
             clearTimeout(this.animacionTimeout);
         }
+        
         this.animacionTimeout = setTimeout(() => {
-            this.bannerNotificacion = null; 
+            this.mensajeExitoTop = null;
             this.cdr.detectChanges();
         }, 10000); 
       },
