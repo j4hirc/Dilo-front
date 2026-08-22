@@ -27,7 +27,13 @@
             ],
             "styles": ["src/styles.css"],
             "allowedCommonJsDependencies": [
-              "sweetalert2"
+              "sweetalert2",
+              "canvg",
+              "html2canvas",
+              "raf",
+              "rgbcolor",
+              "jspdf",
+              "core-js"
             ]
           },
           "configurations": {
@@ -35,13 +41,13 @@
               "budgets": [
                 {
                   "type": "initial",
-                  "maximumWarning": "500kB",
-                  "maximumError": "1MB"
+                  "maximumWarning": "1MB",
+                  "maximumError": "2MB"
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "15kB",
-                  "maximumError": "30kB"
+                  "maximumWarning": "50kB",
+                  "maximumError": "100kB"
                 }
               ],
               "outputHashing": "all"
