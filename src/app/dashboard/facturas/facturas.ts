@@ -717,36 +717,42 @@ export class Facturas implements OnInit, OnDestroy {
 
   /** Solo voces de mujer en español. Nunca masculinas. */
   private seleccionarVozFemenina(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null {
-    const masculinas = /pablo|jorge|diego|carlos|juan|pedro|antonio|male|hombre|david|raul|raúl|jorge|enrique|andres|andrés|fernando|miguel|manuel|jose|josé|luis|alvaro|álvaro|francisco|javier/i;
-    const femeninas = /female|mujer|femenin|sabina|paulina|m[oó]nica|luc[ií]a|mar[ií]a|elena|mia|m[ií]a|carmen|isabel|sof[ií]a|ana|laura|patricia|silvia|conchita|esperanza|paloma|dalia|nuria|ines|inés|rosa|beatriz|helena|zira|sara|google.*espa/i;
+    const vocesEspañol = (voices || []).filter(v =>
+      v.lang && v.lang.toLowerCase().startsWith('es') &&
+      !/pablo|jorge|diego|carlos|juan|pedro|antonio|male|hombre|david|boy/i.test(v.name)
+    );
 
-    const es = (voices || []).filter(v => v.lang && v.lang.toLowerCase().startsWith('es'));
-    // Excluir explícitamente masculinas
-    const soloMujer = es.filter(v => !masculinas.test(v.name));
-    const pool = soloMujer.length ? soloMujer : es.filter(v => !/male|hombre/i.test(v.name));
+    if (!vocesEspañol.length) {
+      return (voices || []).find(v => /female|mujer|woman/i.test(v.name) || !/male|hombre|boy/i.test(v.name)) || voices[0] || null;
+    }
 
-    if (!pool.length) return null;
+    // PRIORIDAD 1: Voces Neurales/Naturales (Edge, Windows 11). Son las más humanas.
+    const vozNeural = vocesEspañol.find(v =>
+      (/natural|neural|online/i.test(v.name)) &&
+      /mia|elvira|dalia|paloma|elena|camila|lucrecia|salome|ximena/i.test(v.name)
+    );
+    if (vozNeural) return vozNeural;
 
-    // Prioridad: nombres femeninos conocidos → natural → google sin male → cualquiera del pool
-    const score = (v: SpeechSynthesisVoice): number => {
-      const n = v.name.toLowerCase();
-      let s = 0;
-      if (femeninas.test(v.name)) s += 50;
-      if (n.includes('natural')) s += 20;
-      if (n.includes('mia') || n.includes('mía')) s += 25;
-      if (n.includes('elena')) s += 22;
-      if (n.includes('sabina') || n.includes('paulina')) s += 22;
-      if (n.includes('google')) s += 10;
-      if (v.lang && /es-?(ec|mx|es|us)/i.test(v.lang)) s += 5;
-      if (masculinas.test(v.name)) s -= 100;
-      return s;
-    };
+    // PRIORIDAD 2: Voces de Apple/iOS (Premium o de alta calidad nativa)
+    const vozApple = vocesEspañol.find(v =>
+      (/premium|enhanced/i.test(v.name)) ||
+      /m[oó]nica|paulina|luc[ií]a|mar[ií]a|isabel|sofia|laura|victoria/i.test(v.name)
+    );
+    if (vozApple) return vozApple;
 
-    const ranked = [...pool].sort((a, b) => score(b) - score(a));
-    return ranked[0] || null;
+    // PRIORIDAD 3: Voces de Google (Chrome)
+    const vozGoogle = vocesEspañol.find(v => v.name.toLowerCase().includes('google'));
+    if (vozGoogle) return vozGoogle;
+
+    // PRIORIDAD 4: Genéricas
+    const vozFemeninaGenerica = vocesEspañol.find(v => /female|mujer/i.test(v.name));
+    if (vozFemeninaGenerica) return vozFemeninaGenerica;
+
+    // FALLBACK
+    return vocesEspañol[0];
   }
 
-  /** Aplica voz de mujer a cualquier utterance (forzado). */
+  /** Aplica voz de mujer a cualquier utterance (forzado) y corrige el tono. */
   private aplicarVozMujer(utterance: SpeechSynthesisUtterance): void {
     const voices = window.speechSynthesis.getVoices() || [];
     const female = this.seleccionarVozFemenina(voices);
@@ -756,8 +762,8 @@ export class Facturas implements OnInit, OnDestroy {
     } else {
       utterance.lang = 'es-EC';
     }
-    // Pitch un poco más alto refuerza timbre femenino si el SO no tiene voz de mujer
-    utterance.pitch = Math.max(utterance.pitch || 1, 1.15);
+    // DEBE SER 1.0. Si lo subes, las voces naturales se rompen y suenan robóticas.
+    utterance.pitch = 1.0;
   }
 
   /** ¿El transcript parece eco de lo que Zoe acaba de decir? */
@@ -862,12 +868,11 @@ export class Facturas implements OnInit, OnDestroy {
       this.cdr.detectChanges();
 
       const utterance = new SpeechSynthesisUtterance(texto);
-      utterance.rate = 1.22;
-      utterance.pitch = 1.15;
-      // Volumen un poco más bajo → menos eco en el mic del PC
+      utterance.rate = 1.05;
+      utterance.pitch = 1.0;
       utterance.volume = 0.82;
-      this.aplicarVozMujer(utterance);
 
+      this.aplicarVozMujer(utterance);
       utterance.onend = fin;
       utterance.onerror = fin;
 
@@ -1035,7 +1040,7 @@ export class Facturas implements OnInit, OnDestroy {
     try {
       window.speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance('Emitiendo.');
-      u.rate = 1.3;
+      u.rate = 1.05;
       u.volume = 0.8;
       this.aplicarVozMujer(u);
       window.speechSynthesis.speak(u);
@@ -2021,7 +2026,7 @@ export class Facturas implements OnInit, OnDestroy {
         try {
           window.speechSynthesis.cancel();
           const u = new SpeechSynthesisUtterance('Emitiendo.');
-          u.rate = 1.3;
+          u.rate = 1.05;
           u.volume = 0.8;
           this.aplicarVozMujer(u);
           window.speechSynthesis.speak(u);
