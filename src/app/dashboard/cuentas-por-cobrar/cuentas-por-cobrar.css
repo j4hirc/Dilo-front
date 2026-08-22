@@ -306,3 +306,60 @@
         margin-left: 0;
     }
 }
+
+.btn-pay-cuota {
+    background: #f0fdf4;
+    color: #16a34a;
+    border: 1px solid #bbf7d0;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 800;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    transition: all 0.2s;
+    text-transform: uppercase;
+}
+
+.btn-pay-cuota:hover {
+    background: #16a34a;
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(22, 163, 74, 0.2);
+}
+
+/* Contenedor de botones rápidos en el modal */
+.quick-amounts-container {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.quick-label {
+    font-size: 0.75rem;
+    color: #64748b;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.chip-quick-amount {
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    color: #475569;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.chip-quick-amount:hover {
+    background: #eff6ff;
+    border-color: #93c5fd;
+    color: #1e3a8a;
+    transform: translateY(-1px);
+}

@@ -50,6 +50,7 @@ export class Equipo implements OnInit {
   }
 
   cargarEquipo(id: number) {
+    if (!id) return;
     this.isLoading = true;
     const rawToken = localStorage.getItem('dilo_token') || '';
     const cleanToken = rawToken.replace(/['"]+/g, '');
@@ -222,6 +223,42 @@ export class Equipo implements OnInit {
             Swal.fire('Oops...', 'Hubo un error al cambiar el rol.', 'error');
           }
         });
+      }
+    });
+  }
+
+
+  regenerarCodigo() {
+    if (!this.negocioId) return;
+
+    Swal.fire({
+      title: '¿Generar nuevo código?',
+      text: "El código actual dejará de funcionar inmediatamente.",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ea580c',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Sí, generar'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        const rawToken = localStorage.getItem('dilo_token') || '';
+        const cleanToken = rawToken.replace(/['"]+/g, '');
+        const headers = new HttpHeaders().set('Authorization', `Bearer ${cleanToken}`);
+
+        Swal.fire({ title: 'Generando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+        this.http.put<any>(`${this.apiUrl}/negocios/${this.negocioId}/codigo/regenerar`, {}, { headers })
+          .subscribe({
+            next: (res) => {
+              this.codigoInvitacion = res.codigoInvitacion || res.codigo;
+              Swal.fire('¡Actualizado!', 'Se ha generado un nuevo código de acceso.', 'success');
+              this.cdr.detectChanges();
+            },
+            error: (err) => {
+              console.error(err);
+              Swal.fire('Error', 'No se pudo generar el nuevo código.', 'error');
+            }
+          });
       }
     });
   }

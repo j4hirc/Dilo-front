@@ -251,9 +251,9 @@ export class CuentasPorCobrar implements OnInit {
     cuenta.showCuotas = !cuenta.showCuotas;
   }
 
-  abrirModalPago(cuenta: any) {
+  abrirModalPago(cuenta: any, montoSugerido?: number) {
     this.cuentaSeleccionada = cuenta;
-    this.montoAbono = null;
+    this.montoAbono = montoSugerido !== undefined ? montoSugerido : null;
     this.showModalPago = true;
   }
 

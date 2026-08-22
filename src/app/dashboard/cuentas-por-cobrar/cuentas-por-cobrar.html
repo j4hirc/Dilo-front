@@ -197,30 +197,44 @@
                                         style="margin: 0 0 10px 0; font-size: 0.9rem; color: #475569; text-transform: uppercase; font-weight: 800;">
                                         Desglose de Cuotas</h4>
                                     <table class="sub-table">
-                                        <thead>
-                                            <tr>
-                                                <th>Nº Cuota</th>
-                                                <th>Vencimiento</th>
-                                                <th>Monto Cuota</th>
-                                                <th>Saldo Pendiente</th>
-                                                <th>Estado</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <tr *ngFor="let cuota of c.cuotas">
-                                                <td>Cuota #{{ cuota.numeroCuota }}</td>
-                                                <td>{{ cuota.fechaVencimiento | date:'dd/MM/yyyy' }}</td>
-                                                <td>${{ cuota.montoCuota | number:'1.2-2' }}</td>
-                                                <td>${{ cuota.saldoPendienteCuota | number:'1.2-2' }}</td>
-                                                <td>
-                                                    <span class="status-modern" [ngClass]="{
-                                                        's-yellow': cuota.estado === 'PENDIENTE',
-                                                        's-green': cuota.estado === 'PAGADA'
-                                                    }">{{ cuota.estado }}</span>
-                                                </td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
+    <thead>
+        <tr>
+            <th>Nº Cuota</th>
+            <th>Vencimiento</th>
+            <th>Monto Cuota</th>
+            <th>Saldo Pendiente</th>
+            <th>Estado</th>
+            <th style="text-align: center;">Acción</th> <!-- NUEVA COLUMNA -->
+        </tr>
+    </thead>
+    <tbody>
+        <tr *ngFor="let cuota of c.cuotas">
+            <td>Cuota #{{ cuota.numeroCuota }}</td>
+            <td>{{ cuota.fechaVencimiento | date:'dd/MM/yyyy' }}</td>
+            <td>${{ cuota.montoCuota | number:'1.2-2' }}</td>
+            <td>${{ cuota.saldoPendienteCuota | number:'1.2-2' }}</td>
+            <td>
+                <span class="status-modern" [ngClass]="{
+                    's-yellow': cuota.estado === 'PENDIENTE',
+                    's-green': cuota.estado === 'PAGADA'
+                }">{{ cuota.estado }}</span>
+            </td>
+            <!-- NUEVO BOTÓN DE PAGO DIRECTO -->
+            <td style="text-align: center;">
+                <button class="btn-pay-cuota" *ngIf="cuota.saldoPendienteCuota > 0"
+                    (click)="abrirModalPago(c, cuota.saldoPendienteCuota)"
+                    title="Abonar esta cuota exacta">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;">
+                        <line x1="12" y1="1" x2="12" y2="23"></line>
+                        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                    </svg>
+                    Abonar
+                </button>
+                <span *ngIf="cuota.saldoPendienteCuota <= 0" style="color: #94a3b8; font-size: 0.75rem; font-weight: 700;">Completada</span>
+            </td>
+        </tr>
+    </tbody>
+</table>
                                 </div>
                             </td>
                         </tr>
@@ -262,11 +276,23 @@
                 </div>
             </div>
 
-            <div class="form-group">
-                <label>Monto a Abonar ($) <span class="required">*</span></label>
-                <input type="number" class="modern-input amount-input" [(ngModel)]="montoAbono" min="0.01"
-                    [max]="cuentaSeleccionada?.saldoPendiente" placeholder="0.00">
-            </div>
+           <div class="form-group">
+    <label>Monto a Abonar ($) <span class="required">*</span></label>
+    <input type="number" class="modern-input amount-input" [(ngModel)]="montoAbono" min="0.01"
+        [max]="cuentaSeleccionada?.saldoPendiente" placeholder="0.00">
+    
+    <!-- NUEVOS BOTONES DE ACCESO RÁPIDO -->
+    <div class="quick-amounts-container mt-2" *ngIf="cuentaSeleccionada">
+        <span class="quick-label">Autocompletar:</span>
+        <button class="chip-quick-amount" (click)="montoAbono = cuentaSeleccionada.saldoPendiente" title="Pagar toda la deuda">
+            Saldo Total (${{ cuentaSeleccionada.saldoPendiente | number:'1.2-2' }})
+        </button>
+        <!-- Opciones rápidas sugeridas si el saldo es suficientemente alto -->
+        <button class="chip-quick-amount" (click)="montoAbono = 20" *ngIf="cuentaSeleccionada.saldoPendiente >= 20">$20</button>
+        <button class="chip-quick-amount" (click)="montoAbono = 50" *ngIf="cuentaSeleccionada.saldoPendiente >= 50">$50</button>
+        <button class="chip-quick-amount" (click)="montoAbono = 100" *ngIf="cuentaSeleccionada.saldoPendiente >= 100">$100</button>
+    </div>
+</div>
 
             <div class="balance-preview mt-3"
                 *ngIf="montoAbono && montoAbono > 0 && montoAbono <= cuentaSeleccionada?.saldoPendiente">

@@ -236,4 +236,199 @@ export class Compras implements OnInit {
     const cleanToken = rawToken.replace(/['"]+/g, '');
     return new HttpHeaders().set('Authorization', `Bearer ${cleanToken}`);
   }
+
+ crearBodegaRapida() {
+    Swal.fire({
+      title: 'Nueva Bodega',
+      html: `
+        <div style="display:flex; flex-direction:column; gap:15px; text-align:left;">
+            <input id="swal-bod-nombre" class="swal2-input" placeholder="Nombre de la bodega *" style="margin:0; width:100%; box-sizing:border-box;">
+            <input id="swal-bod-dir" class="swal2-input" placeholder="Dirección (Opcional)" style="margin:0; width:100%; box-sizing:border-box;">
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonColor: '#ea580c',
+      confirmButtonText: 'Guardar',
+      cancelButtonText: 'Cancelar',
+      preConfirm: () => {
+        const nombre = (document.getElementById('swal-bod-nombre') as HTMLInputElement).value.trim();
+        const direccion = (document.getElementById('swal-bod-dir') as HTMLInputElement).value.trim();
+        if (!nombre) {
+          Swal.showValidationMessage('El nombre es obligatorio');
+          return false;
+        }
+        return { nombre, direccion: direccion || 'S/D' };
+      }
+    }).then((result) => {
+      if (result.isConfirmed && this.negocioId) {
+        const headers = this.getHeaders();
+        Swal.fire({ title: 'Guardando...', didOpen: () => Swal.showLoading() });
+        this.http.post<any>(`${this.apiUrl}/negocios/${this.negocioId}/bodegas`, result.value, { headers }).subscribe({
+          next: (nuevaBodega) => {
+            Swal.close();
+            this.http.get<any[]>(`${this.apiUrl}/negocios/${this.negocioId}/bodegas`, { headers }).subscribe(res => {
+              this.bodegas = res;
+              this.compraForm.bodegaIngresoId = nuevaBodega?.id || res[res.length - 1]?.id;
+              this.cdr.detectChanges();
+            });
+          },
+          error: (err) => {
+            const msg = err.error?.message || err.error || 'Error desconocido';
+            Swal.fire('No se pudo crear', msg, 'error');
+          }
+        });
+      }
+    });
+  }
+
+  crearProveedorRapido() {
+    Swal.fire({
+      title: 'Nuevo Proveedor',
+      html: 
+        '<div style="display:flex; flex-direction:column; gap:10px; text-align:left;">' +
+            '<input id="swal-prov-nombre" class="swal2-input" placeholder="Nombre / Razón Social *" style="margin:0; width:100%; box-sizing:border-box;">' +
+            '<input id="swal-prov-dni" class="swal2-input" placeholder="RUC / DNI *" style="margin:0; width:100%; box-sizing:border-box;">' +
+            '<input id="swal-prov-tel" class="swal2-input" placeholder="Teléfono" style="margin:0; width:100%; box-sizing:border-box;">' +
+        '</div>',
+      showCancelButton: true,
+      confirmButtonColor: '#ea580c',
+      confirmButtonText: 'Guardar',
+      cancelButtonText: 'Cancelar',
+      preConfirm: () => {
+        const nombre = (document.getElementById('swal-prov-nombre') as HTMLInputElement).value.trim();
+        const dni = (document.getElementById('swal-prov-dni') as HTMLInputElement).value.trim();
+        const telefono = (document.getElementById('swal-prov-tel') as HTMLInputElement).value.trim();
+        
+        if (!nombre || !dni) {
+          Swal.showValidationMessage('Nombre y RUC/DNI son obligatorios');
+          return false;
+        }
+        
+        // Exactamente el payload que espera tu API de Proveedores
+        return { 
+          nombre: nombre, 
+          dni: dni, 
+          telefono: telefono || 'S/T', 
+          estado: true,
+          categoriasIds: [] // Enviamos el array vacío que exige el backend
+        };
+      }
+    }).then((result) => {
+      if (result.isConfirmed && this.negocioId) {
+        const headers = this.getHeaders();
+        Swal.fire({ title: 'Guardando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+        
+        this.http.post<any>(`${this.apiUrl}/negocios/${this.negocioId}/proveedores`, result.value, { headers }).subscribe({
+          next: (nuevoProv) => {
+            Swal.close();
+            this.http.get<any[]>(`${this.apiUrl}/negocios/${this.negocioId}/proveedores`, { headers }).subscribe(res => {
+              this.proveedores = res.filter((p: any) => p.estado);
+              this.compraForm.proveedorId = nuevoProv?.id || this.proveedores[this.proveedores.length - 1]?.id;
+              this.cdr.detectChanges();
+            });
+          },
+          error: (err) => {
+            console.error('Error 400 al crear proveedor:', err);
+            const msg = err.error?.message || err.error || 'El DNI ya existe o los datos son inválidos.';
+            Swal.fire('No se pudo crear', msg, 'error');
+          }
+        });
+      }
+    });
+  }
+
+  crearProductoRapido() {
+    let opcionesCategorias = '<option value="">-- Selecciona una categoría --</option>';
+    
+    const headers = this.getHeaders();
+    Swal.fire({ title: 'Preparando...', didOpen: () => Swal.showLoading() });
+    
+    this.http.get<any[]>(`${this.apiUrl}/negocios/${this.negocioId}/categorias`, { headers }).subscribe({
+      next: (categorias) => {
+        categorias.forEach(cat => {
+            opcionesCategorias += `<option value="${cat.id}">${cat.nombre}</option>`;
+        });
+
+        Swal.fire({
+          title: 'Producto Express',
+          html: `
+            <div style="display:flex; flex-direction:column; gap:10px; text-align:left; font-size: 0.9rem;">
+                <input id="swal-prod-cod" class="swal2-input" placeholder="Código (Dejar vacío para S/C)" style="margin:0; width:100%; box-sizing:border-box;">
+                <input id="swal-prod-nom" class="swal2-input" placeholder="Nombre del Producto *" style="margin:0; width:100%; box-sizing:border-box;">
+                <select id="swal-prod-cat" class="swal2-select" style="margin:0; width:100%; box-sizing:border-box;">
+                    ${opcionesCategorias}
+                </select>
+                <div style="display:flex; justify-content:space-between; margin-top:10px;">
+                    <label style="display:flex; align-items:center; gap:5px;"><input type="checkbox" id="swal-prod-iva"> Graba IVA</label>
+                    <label style="display:flex; align-items:center; gap:5px;"><input type="checkbox" id="swal-prod-cad"> Tiene Caducidad</label>
+                </div>
+            </div>
+          `,
+          showCancelButton: true,
+          confirmButtonColor: '#ea580c',
+          confirmButtonText: 'Crear y Seleccionar',
+          cancelButtonText: 'Cancelar',
+          preConfirm: () => {
+            const codigoRaw = (document.getElementById('swal-prod-cod') as HTMLInputElement).value.trim();
+            const nombre = (document.getElementById('swal-prod-nom') as HTMLInputElement).value.trim();
+            const categoriaVal = (document.getElementById('swal-prod-cat') as HTMLSelectElement).value;
+            const grabaIva = (document.getElementById('swal-prod-iva') as HTMLInputElement).checked;
+            const tieneCaducidad = (document.getElementById('swal-prod-cad') as HTMLInputElement).checked;
+            
+            if (!nombre || !categoriaVal) {
+              Swal.showValidationMessage('Nombre y Categoría son obligatorios');
+              return false;
+            }
+
+            // Evitamos enviar campos vacíos que rompen la API
+            const codigoFinal = codigoRaw || 'S/C';
+
+            return {
+              codigo: codigoFinal, 
+              codigoPrincipal: codigoFinal, 
+              nombre: nombre, 
+              marca: 'Sin marca', // Evita error 400
+              precio: 0, 
+              precioUnitario: 0, 
+              categoriaId: Number(categoriaVal),
+              grabaIva: grabaIva, 
+              unidadMedida: 'UNIDADES', 
+              tieneCaducidad: tieneCaducidad
+            };
+          }
+        }).then((result) => {
+          if (result.isConfirmed && this.negocioId) {
+            Swal.fire({ title: 'Creando producto...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+            
+            const formData = new FormData();
+            formData.append('datos', new Blob([JSON.stringify(result.value)], { type: 'application/json' }));
+            
+            this.http.post<any>(`${this.apiUrl}/negocios/${this.negocioId}/productos`, formData, { headers }).subscribe({
+              next: () => {
+                Swal.close();
+                this.http.get<any[]>(`${this.apiUrl}/negocios/${this.negocioId}/productos`, { headers }).subscribe(res => {
+                  this.productos = res;
+                  if(res.length > 0) {
+                      const recienCreado = res[res.length - 1];
+                      this.detalleTemp.productoId = recienCreado.id;
+                      this.onProductoChange();
+                  }
+                  this.cdr.detectChanges();
+                });
+              },
+              error: (err) => {
+                // Ahora si falla, te dirá el motivo exacto del backend
+                console.error('Detalle del error 400:', err);
+                const msg = err.error?.message || err.error || 'Revisa los datos ingresados.';
+                Swal.fire('No se pudo crear', msg, 'error');
+              }
+            });
+          }
+        });
+      },
+      error: () => {
+        Swal.fire('Error', 'No se pudieron cargar las categorías', 'error');
+      }
+    });
+  }
 }
