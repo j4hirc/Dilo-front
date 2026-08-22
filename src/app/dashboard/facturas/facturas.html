@@ -667,16 +667,17 @@
                 <div style="margin-top:16px;display:flex;justify-content:flex-end;">
                     <div
                         style="min-width:260px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;">
-                        <div
-                            style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:0.9rem;color:#475569;">
-                            <span>Subtotal</span>
-                            <strong style="color:#0f172a;">${{ previewSubtotal | number:'1.2-2' }}</strong>
-                        </div>
                         <div *ngIf="(facturaPreview?.descuentoGlobal || 0) > 0"
                             style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:0.9rem;color:#ea580c;">
                             <span>Descuento</span>
                             <strong>-${{ facturaPreview.descuentoGlobal | number:'1.2-2' }}</strong>
                         </div>
+                        <div
+                            style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:0.9rem;color:#475569;">
+                            <span>Subtotal</span>
+                            <strong style="color:#0f172a;">${{ previewSubtotal - (facturaPreview?.descuentoGlobal || 0) | number:'1.2-2' }}</strong>
+                        </div>
+                        
                         <div
                             style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:0.9rem;color:#475569;">
                             <span>IVA</span>

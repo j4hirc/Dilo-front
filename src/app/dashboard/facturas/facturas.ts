@@ -3198,11 +3198,11 @@ export class Facturas implements OnInit, OnDestroy {
 
               <div class="totals-wrapper">
                   <div class="totals-box">
+                  ${htmlDescuento}
                       <div class="total-row">
                           <span>Subtotal (Sin IVA)</span>
                           <span class="font-bold">$${subtotal.toFixed(2).replace('.', ',')}</span>
                       </div>
-                      ${htmlDescuento}
                       <div class="total-row">
                           <span>IVA (${porcentajeIvaMostrar}%)</span>
                           <span class="font-bold">$${iva.toFixed(2).replace('.', ',')}</span>
