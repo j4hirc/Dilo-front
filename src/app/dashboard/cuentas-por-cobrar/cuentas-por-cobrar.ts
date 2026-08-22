@@ -17,6 +17,8 @@ export class CuentasPorCobrar implements OnInit {
 
   cuentas: any[] = [];
   cuentasBase: any[] = [];
+  metodoPagoAbono: string = 'EFECTIVO';
+  referenciaAbono: string = '';
 
   terminoBusqueda: string = '';
   filtroEstado: string = 'TODAS';
@@ -259,41 +261,43 @@ export class CuentasPorCobrar implements OnInit {
 
   cerrarModal() {
     this.showModalPago = false;
-    this.cuentaSeleccionada = null;
     this.montoAbono = null;
-  }
+    this.metodoPagoAbono = 'EFECTIVO'; 
+    this.referenciaAbono = ''; 
+    this.cuentaSeleccionada = null;
+  } 
+   
 
-  registrarPago() {
+ registrarPago() {
     if (!this.montoAbono || this.montoAbono <= 0) {
-      Swal.fire('Error', 'Ingresa un monto válido mayor a 0.', 'warning');
+      Swal.fire('Error', 'Ingresa un monto válido.', 'warning');
       return;
     }
-
     if (this.montoAbono > this.cuentaSeleccionada.saldoPendiente) {
-      Swal.fire('Error', 'El abono no puede ser mayor al saldo pendiente.', 'warning');
+      Swal.fire('Error', 'El abono es mayor a la deuda.', 'warning');
       return;
     }
 
     this.isSaving = true;
-    const payload = { montoPago: this.montoAbono };
+    
+    // ENVIAMOS EL MÉTODO DE PAGO Y LA REFERENCIA AL BACKEND
+    const payload = { 
+      montoPago: this.montoAbono,
+      metodoPago: this.metodoPagoAbono,
+      referencia: this.referenciaAbono
+    };
 
-    this.http.post(
-      `${this.apiUrl}/cuentas-por-cobrar/${this.cuentaSeleccionada.id}/pagar`,
-      payload,
-      {
-        headers: this.getAuthHeaders(),
-        responseType: 'text'
-      }
-    ).subscribe({
+    this.http.post(`${this.apiUrl}/cuentas-por-cobrar/${this.cuentaSeleccionada.id}/pagar`, payload, {
+      headers: this.getAuthHeaders(), responseType: 'text'
+    }).subscribe({
       next: () => {
         this.isSaving = false;
         this.cerrarModal();
-        Swal.fire('¡Pago Registrado!', 'El abono se aplicó correctamente.', 'success');
+        Swal.fire('¡Pago Registrado!', 'El abono se aplicó y se guardó el recibo.', 'success');
         this.cargarCuentas(this.negocioId!);
       },
       error: (err) => {
         this.isSaving = false;
-        console.error(err);
         Swal.fire('Error', 'No se pudo registrar el pago.', 'error');
       }
     });
