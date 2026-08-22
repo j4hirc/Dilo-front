@@ -8,16 +8,16 @@
     </div>
     <div class="header-actions">
       <div class="periodo-selector">
-        <button type="button" class="chip" [class.active]="periodoDias === 7" (click)="cambiarPeriodo(7)">7 días</button>
-        <button type="button" class="chip" [class.active]="periodoDias === 30" (click)="cambiarPeriodo(30)">30 días</button>
-        <button type="button" class="chip" [class.active]="periodoDias === 90" (click)="cambiarPeriodo(90)">90 días</button>
+        <button type="button" class="chip" [class.active]="periodoDias === 7" (click)="cambiarPeriodo(7)">7
+          días</button>
+        <button type="button" class="chip" [class.active]="periodoDias === 30" (click)="cambiarPeriodo(30)">30
+          días</button>
+        <button type="button" class="chip" [class.active]="periodoDias === 90" (click)="cambiarPeriodo(90)">90
+          días</button>
       </div>
-      <button
-        type="button"
-        class="btn-pdf"
-        (click)="exportarPdf()"
-        [disabled]="isLoading || exportandoPdf">
-        <svg *ngIf="!exportandoPdf" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <button type="button" class="btn-pdf" (click)="exportarPdf()" [disabled]="isLoading || exportandoPdf">
+        <svg *ngIf="!exportandoPdf" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+          fill="none" stroke="currentColor" stroke-width="2">
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
           <polyline points="14 2 14 8 20 8"></polyline>
           <line x1="16" y1="13" x2="8" y2="13"></line>
@@ -42,7 +42,11 @@
     <div class="stats-grid">
       <div class="stat-card orange-card">
         <div class="stat-icon-wrapper bg-orange">
-          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
+            stroke="#ea580c" stroke-width="2">
+            <line x1="12" y1="1" x2="12" y2="23"></line>
+            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+          </svg>
         </div>
         <div class="stat-info">
           <h3 class="text-orange">${{ ventasPeriodo | number:'1.2-2' }}</h3>
@@ -52,7 +56,11 @@
 
       <div class="stat-card blue-card">
         <div class="stat-icon-wrapper bg-blue">
-          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
+            stroke="#3b82f6" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+          </svg>
         </div>
         <div class="stat-info">
           <h3 class="text-blue">{{ facturasPeriodo }}</h3>
@@ -62,7 +70,13 @@
 
       <div class="stat-card purple-card">
         <div class="stat-icon-wrapper bg-purple">
-          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
+            stroke="#8b5cf6" stroke-width="2">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="16" y1="2" x2="16" y2="6"></line>
+            <line x1="8" y1="2" x2="8" y2="6"></line>
+            <line x1="3" y1="10" x2="21" y2="10"></line>
+          </svg>
         </div>
         <div class="stat-info">
           <h3 class="text-purple">{{ diasConVenta }}</h3>
@@ -74,8 +88,11 @@
     <!-- Racha de ventas -->
     <div class="racha-banner" [class.racha-activa]="rachaActual > 0">
       <div class="racha-flame">
-        <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"></path>
+        <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2">
+          <path
+            d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z">
+          </path>
         </svg>
       </div>
       <div class="racha-content">
@@ -86,12 +103,14 @@
           <ng-template #sinRacha>Sin racha activa</ng-template>
         </h3>
         <p *ngIf="rachaActual > 0">
-          {{ rachaActivaHoy ? 'Hoy ya registraste al menos una factura. ¡Sigue así!' : 'Ayer cerraste con ventas. Emite una factura hoy para no romper la racha.' }}
+          {{ rachaActivaHoy ? 'Hoy ya registraste al menos una factura. ¡Sigue así!' : 'Ayer cerraste con ventas. Emite
+          una factura hoy para no romper la racha.' }}
           Mejor racha del periodo: <strong>{{ mejorRacha }} día{{ mejorRacha === 1 ? '' : 's' }}</strong>.
         </p>
         <p *ngIf="rachaActual === 0">
           Emite una factura hoy para empezar una nueva racha.
-          <span *ngIf="mejorRacha > 0"> Tu mejor racha en este periodo fue de <strong>{{ mejorRacha }} día{{ mejorRacha === 1 ? '' : 's' }}</strong>.</span>
+          <span *ngIf="mejorRacha > 0"> Tu mejor racha en este periodo fue de <strong>{{ mejorRacha }} día{{ mejorRacha
+              === 1 ? '' : 's' }}</strong>.</span>
         </p>
       </div>
       <div class="racha-badge" *ngIf="rachaActual >= 3">
@@ -123,9 +142,16 @@
               </ng-container>
               <ng-template #plainAnt>{{ c.anterior | number:'1.0-0' }}</ng-template>
             </span>
-            <span class="variacion" [class.up]="c.variacion > 0" [class.down]="c.variacion < 0" [class.flat]="c.variacion === 0">
-              <svg *ngIf="c.variacion > 0" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="18 15 12 9 6 15"></polyline></svg>
-              <svg *ngIf="c.variacion < 0" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            <span class="variacion" [class.up]="c.variacion > 0" [class.down]="c.variacion < 0"
+              [class.flat]="c.variacion === 0">
+              <svg *ngIf="c.variacion > 0" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                fill="none" stroke="currentColor" stroke-width="3">
+                <polyline points="18 15 12 9 6 15"></polyline>
+              </svg>
+              <svg *ngIf="c.variacion < 0" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                fill="none" stroke="currentColor" stroke-width="3">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
               {{ c.variacion > 0 ? '+' : '' }}{{ c.variacion }}%
             </span>
           </div>
@@ -161,10 +187,7 @@
         </div>
         <div class="card-body">
           <div class="heatmap-grid" *ngIf="heatmapDias.length > 0; else sinHeat">
-            <div
-              class="heat-cell"
-              *ngFor="let d of heatmapDias"
-              [style.background]="colorCalor(d.intensidad)"
+            <div class="heat-cell" *ngFor="let d of heatmapDias" [style.background]="colorCalor(d.intensidad)"
               [style.color]="colorTextoCalor(d.intensidad)"
               [title]="d.diaSemana + ' ' + d.label + ': $' + (d.total | number:'1.2-2') + ' (' + d.cantidad + ' facturas)'">
               <span class="heat-day">{{ d.label.split('/')[0] }}</span>
@@ -197,7 +220,8 @@
             <div class="weekday-row" *ngFor="let d of calorPorDiaSemana">
               <span class="wd-name">{{ d.nombre }}</span>
               <div class="wd-track">
-                <div class="wd-fill" [style.width.%]="d.intensidad * 100" [style.background]="colorCalor(d.intensidad || 0.05)"></div>
+                <div class="wd-fill" [style.width.%]="d.intensidad * 100"
+                  [style.background]="colorCalor(d.intensidad || 0.05)"></div>
               </div>
               <span class="wd-val">${{ d.total | number:'1.0-0' }}</span>
             </div>
@@ -212,12 +236,8 @@
         </div>
         <div class="card-body">
           <div class="hour-heat">
-            <div
-              class="hour-cell"
-              *ngFor="let h of calorPorHora"
-              [style.background]="colorCalor(h.intensidad)"
-              [style.color]="colorTextoCalor(h.intensidad)"
-              [title]="h.hora + ': $' + (h.total | number:'1.2-2')">
+            <div class="hour-cell" *ngFor="let h of calorPorHora" [style.background]="colorCalor(h.intensidad)"
+              [style.color]="colorTextoCalor(h.intensidad)" [title]="h.hora + ': $' + (h.total | number:'1.2-2')">
               {{ h.hora.substring(0, 2) }}
             </div>
           </div>
@@ -233,13 +253,16 @@
           <h3>Productos con mayor demanda</h3>
         </div>
         <div class="card-body ranking-body">
-          <div class="empty-mini" *ngIf="topProductos.length === 0">Sin detalle de productos en las facturas del periodo.</div>
+          <div class="empty-mini" *ngIf="topProductos.length === 0">Sin detalle de productos en las facturas del
+            periodo.</div>
           <div class="rank-item" *ngFor="let p of topProductos; let i = index">
             <span class="rank-num" [class.top3]="i < 3">{{ i + 1 }}</span>
             <div class="rank-info">
               <h4>{{ p.nombre }}</h4>
               <p>{{ p.unidades }} uds. · ${{ p.ingresos | number:'1.2-2' }}</p>
-              <div class="progress-bg"><div class="progress-fill orange" [style.width.%]="p.porcentaje"></div></div>
+              <div class="progress-bg">
+                <div class="progress-fill orange" [style.width.%]="p.porcentaje"></div>
+              </div>
             </div>
           </div>
         </div>
@@ -250,14 +273,17 @@
           <h3>Clientes top</h3>
         </div>
         <div class="card-body ranking-body">
-          <div class="empty-mini" *ngIf="topClientes.length === 0">Aún no hay clientes con compras en este periodo.</div>
+          <div class="empty-mini" *ngIf="topClientes.length === 0">Aún no hay clientes con compras en este periodo.
+          </div>
           <div class="rank-item rank-clickable" *ngFor="let c of topClientes; let i = index"
-               (click)="abrirDetalleCliente(c)" title="Ver detalle del cliente">
+            (click)="abrirDetalleCliente(c)" title="Ver detalle del cliente">
             <span class="rank-num" [class.top3]="i < 3">{{ i + 1 }}</span>
             <div class="rank-info">
               <h4>{{ c.nombre }}</h4>
               <p>{{ c.facturas }} factura{{ c.facturas === 1 ? '' : 's' }} · ${{ c.total | number:'1.2-2' }}</p>
-              <div class="progress-bg"><div class="progress-fill blue" [style.width.%]="c.porcentaje"></div></div>
+              <div class="progress-bg">
+                <div class="progress-fill blue" [style.width.%]="c.porcentaje"></div>
+              </div>
             </div>
           </div>
         </div>
@@ -274,7 +300,9 @@
               <span class="pago-name">{{ p.nombre }}</span>
               <span class="pago-pct">{{ p.porcentaje }}%</span>
             </div>
-            <div class="progress-bg"><div class="progress-fill green" [style.width.%]="p.porcentaje"></div></div>
+            <div class="progress-bg">
+              <div class="progress-fill green" [style.width.%]="p.porcentaje"></div>
+            </div>
             <p class="pago-total">${{ p.total | number:'1.2-2' }}</p>
           </div>
         </div>
@@ -286,7 +314,8 @@
       <div class="card-header clientes-header">
         <div class="clientes-title-block">
           <div class="clientes-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2">
               <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
               <circle cx="9" cy="7" r="4"></circle>
               <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
@@ -316,12 +345,13 @@
       <div class="card-body">
         <div class="clientes-filters">
           <div class="search-wrap">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+              stroke="#94a3b8" stroke-width="2">
               <circle cx="11" cy="11" r="8"></circle>
               <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
             </svg>
             <input type="text" class="search-input" placeholder="Buscar por nombre de cliente..."
-                   [(ngModel)]="busquedaClienteReporte" (input)="aplicarFiltroClientes()">
+              [(ngModel)]="busquedaClienteReporte" (input)="aplicarFiltroClientes()">
           </div>
           <label class="chk-deuda">
             <input type="checkbox" [(ngModel)]="filtroSoloDeuda" (change)="aplicarFiltroClientes()">
@@ -375,7 +405,7 @@
       </div>
     </div>
 
-        <!-- Modal detalle cliente -->
+    <!-- Modal detalle cliente -->
     <div class="modal-overlay-rep" *ngIf="showDetalleCliente" (click)="cerrarDetalleCliente()">
       <div class="modal-cliente" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
 
@@ -393,7 +423,8 @@
             </div>
           </div>
           <button type="button" class="close-x" (click)="cerrarDetalleCliente()" aria-label="Cerrar">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2.2">
               <line x1="18" y1="6" x2="6" y2="18"></line>
               <line x1="6" y1="6" x2="18" y2="18"></line>
             </svg>
@@ -416,17 +447,13 @@
         </div>
 
         <div class="modal-tabs">
-          <button type="button"
-                  class="modal-tab"
-                  [class.active]="modalTabCliente === 'facturas'"
-                  (click)="modalTabCliente = 'facturas'">
+          <button type="button" class="modal-tab" [class.active]="modalTabCliente === 'facturas'"
+            (click)="modalTabCliente = 'facturas'">
             Facturas
             <span class="tab-count">{{ clienteDetalle?.facturas?.length || 0 }}</span>
           </button>
-          <button type="button"
-                  class="modal-tab"
-                  [class.active]="modalTabCliente === 'credito'"
-                  (click)="modalTabCliente = 'credito'">
+          <button type="button" class="modal-tab" [class.active]="modalTabCliente === 'credito'"
+            (click)="modalTabCliente = 'credito'">
             Crédito
             <span class="tab-count" [class.tab-debt]="(clienteDetalle?.saldoPendiente || 0) > 0">
               {{ clienteDetalle?.creditos?.length || 0 }}
@@ -452,7 +479,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr *ngFor="let f of clienteDetalle.facturas">
+                  <tr *ngFor="let f of clienteDetalle?.facturas">
                     <td><strong class="fac-num">{{ f.numero }}</strong></td>
                     <td class="muted-cell">{{ f.fecha }}</td>
                     <td><span class="tag-pago">{{ f.tipo }}</span></td>
@@ -481,18 +508,16 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr *ngFor="let cr of clienteDetalle.creditos">
+                  <tr *ngFor="let cr of clienteDetalle?.creditos">
                     <td><strong>{{ cr.factura }}</strong></td>
                     <td class="muted-cell">{{ cr.fechaVencimiento }}</td>
                     <td>
-                      <span class="badge-estado"
-                            [class.pagada]="cr.saldoPendiente <= 0"
-                            [class.debe]="cr.saldoPendiente > 0">{{ cr.estado }}</span>
+                      <span class="badge-estado" [class.pagada]="cr.saldoPendiente <= 0"
+                        [class.debe]="cr.saldoPendiente > 0">{{ cr.estado }}</span>
                     </td>
                     <td class="num">${{ cr.montoTotal | number:'1.2-2' }}</td>
-                    <td class="num money"
-                        [class.debt-val]="cr.saldoPendiente > 0"
-                        [class.ok-val]="!(cr.saldoPendiente > 0)">
+                    <td class="num money" [class.debt-val]="cr.saldoPendiente > 0"
+                      [class.ok-val]="!(cr.saldoPendiente > 0)">
                       ${{ cr.saldoPendiente | number:'1.2-2' }}
                     </td>
                   </tr>

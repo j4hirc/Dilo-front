@@ -219,34 +219,35 @@
             </div>
 
             <!-- Contenido: Movimientos Kardex -->
-            <div *ngIf="tabActiva === 'movimientos'" class="detail-table-container">
+           <div *ngIf="tabActiva === 'movimientos'" class="detail-table-container">
                 <table class="detail-table">
                     <thead>
                         <tr>
-                            <th style="width: 14%;">Fecha</th>
+                            <th style="width: 13%;">Fecha y Hora</th>
                             <th style="width: 12%;">Tipo</th>
-                            <th style="text-align: center; width: 10%;">Cant.</th>
-                            <th style="text-align: right; width: 12%;">Costo U.</th>
-                            <th style="text-align: right; width: 12%;">Total</th>
-                            <th style="width: 20%;">Ubicación</th>
-                            <th style="width: 20%;">Motivo / Resp.</th>
+                            <th style="width: 17%;">Ref. / Lote</th>
+                            <th style="text-align: center; width: 8%;">Cant.</th>
+                            <th style="text-align: right; width: 10%;">Costo U.</th>
+                            <th style="text-align: right; width: 10%;">Total</th>
+                            <th style="width: 15%;">Ubicación</th>
+                            <th style="width: 15%;">Motivo / Resp.</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr *ngIf="isLoadingMovimientos">
-                            <td colspan="7" style="text-align: center; padding: 40px;">
+                            <td colspan="8" style="text-align: center; padding: 40px;">
                                 <div class="spinner" style="margin: 0 auto;"></div>
                             </td>
                         </tr>
                         <tr *ngIf="!isLoadingMovimientos && movimientosProducto.length === 0">
-                            <td colspan="7" style="text-align: center; color: #94a3b8; padding: 30px;">
-                                No hay movimientos registrados para este producto.
+                            <td colspan="8" style="text-align: center; color: #94a3b8; padding: 30px;">
+                                No hay movimientos de Kardex registrados para este producto en esta bodega.
                             </td>
                         </tr>
                         <tr *ngFor="let kx of movimientosProducto">
                             <td>
                                 <div style="font-weight: 700; color: #0f172a; font-size: 0.9rem;">{{ kx.fechaTransaccion | date:'dd/MM/yyyy' }}</div>
-                                <div style="font-size: 0.75rem; color: #64748b;">{{ kx.fechaTransaccion | date:'HH:mm' }}</div>
+                                <div style="font-size: 0.75rem; color: #64748b;">{{ kx.fechaTransaccion | date:'HH:mm:ss' }}</div>
                             </td>
                             <td>
                                 <span class="status"
@@ -254,33 +255,46 @@
                                     {{ kx.tipo }}
                                 </span>
                             </td>
-                            <td style="font-weight: 900; font-size: 1.1rem; text-align: center;"
+                            <td>
+                                <div style="font-size: 0.75rem; color: #64748b;" *ngIf="kx.numeroLote || kx.documentoReferencia">
+                                    <span *ngIf="kx.numeroLote" class="tag-gray" style="padding: 2px 6px; font-size: 0.7rem; margin-bottom: 4px; display: inline-block;">Lote #{{ kx.numeroLote }} </span>
+                                    <br *ngIf="kx.numeroLote && kx.documentoReferencia">
+                                    <span *ngIf="kx.documentoReferencia" style="font-weight: 600; color: #0f172a;">Doc: {{ kx.documentoReferencia }}</span>
+                                </div>
+                                <div *ngIf="!kx.numeroLote && !kx.documentoReferencia" style="color: #cbd5e1;">-</div>
+                            </td>
+                            <td style="font-weight: 900; font-size: 1.15rem; text-align: center;"
                                 [ngClass]="{'text-green': kx.tipo === 'INGRESO', 'text-red': kx.tipo === 'EGRESO', 'text-blue': kx.tipo === 'TRANSFERENCIA'}">
                                 {{ kx.tipo === 'EGRESO' ? '-' : '+' }}{{ kx.cantidad }}
                             </td>
                             <td style="text-align: right; font-weight: 600; color: #475569;">
                                 {{ kx.costoUnitario != null ? ('$' + formatCosto(kx.costoUnitario)) : '-' }}
                             </td>
-                            <td style="text-align: right; font-weight: 800; color: #0f172a;">
-                                {{ kx.costoTotal != null ? ('$' + (kx.costoTotal | number:'1.2-2')) : '-' }}
+                            <td style="text-align: right;">
+                                <div style="font-weight: 800; color: #0f172a;">{{ kx.costoTotal != null ? ('$' + (kx.costoTotal | number:'1.2-2')) : '-' }}</div>
+                                <div style="font-size: 0.7rem; color: #94a3b8; font-weight: 700;" *ngIf="kx.metodoAplicado">{{ kx.metodoAplicado }}</div>
                             </td>
                             <td style="font-size: 0.85rem; color: #475569; line-height: 1.4;">
-                                <div *ngIf="kx.tipo === 'INGRESO'">Hacia: <strong>{{ kx.bodegaDestinoNombre }}</strong></div>
-                                <div *ngIf="kx.tipo === 'EGRESO'">Desde: <strong>{{ kx.bodegaOrigenNombre }}</strong></div>
+                                <div *ngIf="kx.tipo === 'INGRESO'">Hacia: <strong style="color: #0f172a;">{{ kx.bodegaDestinoNombre }}</strong></div>
+                                <div *ngIf="kx.tipo === 'EGRESO'">Desde: <strong style="color: #0f172a;">{{ kx.bodegaOrigenNombre }}</strong></div>
                                 <div *ngIf="kx.tipo === 'TRANSFERENCIA'">
                                     De: <strong>{{ kx.bodegaOrigenNombre }}</strong><br>➔ A: <strong>{{ kx.bodegaDestinoNombre }}</strong>
                                 </div>
-                                <div *ngIf="kx.numeroLote" style="font-size: 0.7rem; color: #64748b; margin-top: 2px;">Lote #{{ kx.numeroLote }}</div>
                             </td>
                             <td>
-                                <div style="font-weight: 600; color: #0f172a; font-size: 0.85rem;">{{ kx.motivo }}</div>
-                                <div style="font-size: 0.75rem; color: #64748b; margin-top: 2px;">{{ kx.usuarioResponsableNombre }}</div>
+                                <div style="font-weight: 600; color: #0f172a; font-size: 0.85rem; line-height: 1.3;">{{ kx.motivo }}</div>
+                                <div style="font-size: 0.75rem; color: #64748b; margin-top: 4px; display: flex; align-items: center; gap: 4px;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                        <circle cx="12" cy="7" r="4"></circle>
+                                    </svg>
+                                    {{ kx.usuarioResponsableNombre }}
+                                </div>
                             </td>
                         </tr>
                     </tbody>
                 </table>
             </div>
-        </div>
 
         <div class="modal-footer" style="justify-content: center; background: white;">
             <button class="btn-primary" (click)="cerrarModalLotes()">Aceptar y Cerrar</button>

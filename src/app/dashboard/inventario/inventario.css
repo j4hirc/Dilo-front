@@ -306,3 +306,65 @@
         margin-top: 2px;
     }
 }
+
+/* Limitar la altura del cuerpo del modal para que no desborde la pantalla */
+.modal-body {
+    max-height: 70vh; /* Máximo el 70% de la altura de la pantalla */
+    overflow-y: auto; /* Scroll interno general si es necesario */
+}
+
+/* Contenedor de las tablas dentro del modal */
+.detail-table-container {
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: white;
+    
+    /* MAGIA AQUÍ: Altura controlada y scroll interno sedoso */
+    max-height: 400px; /* Altura máxima fija para la tabla */
+    overflow-y: auto; /* Scroll vertical */
+    overflow-x: auto; /* Scroll horizontal si es necesario en móviles */
+    
+    /* Estilo para que el scrollbar se vea bonito (Webkit) */
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+    
+    /* Animación de entrada suave al cambiar de pestaña */
+    animation: fadeInTab 0.3s ease-in-out;
+}
+
+/* Hacer que el encabezado de la tabla se quede fijo arriba (Sticky) al hacer scroll */
+.detail-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 10; /* Para que el texto de las filas pase por debajo */
+    background: #f1f5f9; /* Mismo color de tu diseño original */
+    box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1); /* Sombra sutil para separar el header del contenido */
+}
+
+/* Animación de desvanecimiento suave */
+@keyframes fadeInTab {
+    from {
+        opacity: 0;
+        transform: translateY(5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Darle estilo a la barra de scroll (para navegadores basados en Chrome/Edge/Safari) */
+.detail-table-container::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+.detail-table-container::-webkit-scrollbar-track {
+    background: transparent;
+}
+.detail-table-container::-webkit-scrollbar-thumb {
+    background-color: #cbd5e1;
+    border-radius: 10px;
+}
+.detail-table-container::-webkit-scrollbar-thumb:hover {
+    background-color: #94a3b8;
+}

@@ -252,30 +252,52 @@ export class Inventario implements OnInit {
     this.movimientosProducto = [];
 
     const headers = this.getAuthHeaders();
-    const productoId = this.productoLotesActivo.productoId;
-    const productoNombre = (this.productoLotesActivo.productoNombre || '').toLowerCase();
+    
+    // Capturamos los datos base del producto en el modal
+    const pId = this.productoLotesActivo.productoId;
+    const pNombre = (this.productoLotesActivo.productoNombre || '').toLowerCase().trim();
+    const bNombre = (this.productoLotesActivo.bodegaNombre || '').toLowerCase().trim();
 
     this.http.get<any[]>(`${this.apiUrl}/negocios/${this.negocioId}/kardex`, { headers }).subscribe({
       next: (data) => {
         const lista = Array.isArray(data) ? data : [];
+        
         this.movimientosProducto = lista
           .filter((k: any) => {
-            if (productoId != null && (k.productoId === productoId || k.producto?.id === productoId)) {
-              return true;
+            // 1. MATCH DE PRODUCTO (Buscamos por ID, y si el backend no lo trae, buscamos por Nombre)
+            let matchProducto = false;
+            if (pId != null && (k.productoId == pId || k.producto?.id == pId)) {
+                matchProducto = true;
+            } else {
+                const kNombreProd = (k.productoNombre || k.producto?.nombre || '').toLowerCase().trim();
+                if (kNombreProd && pNombre && kNombreProd === pNombre) {
+                    matchProducto = true;
+                }
             }
-            const nombre = (k.productoNombre || k.producto?.nombre || '').toLowerCase();
-            return nombre && productoNombre && nombre === productoNombre;
+
+            // 2. MATCH DE BODEGA (Debe coincidir con la bodega origen o destino)
+            let matchBodega = false;
+            const kOrigen = (k.bodegaOrigenNombre || '').toLowerCase().trim();
+            const kDestino = (k.bodegaDestinoNombre || '').toLowerCase().trim();
+            
+            if (bNombre && (kOrigen === bNombre || kDestino === bNombre)) {
+                matchBodega = true;
+            }
+
+            // SOLO mostrar si es el mismo producto Y se movió en la bodega analizada
+            return matchProducto && matchBodega;
           })
           .sort((a: any, b: any) => {
             const fa = new Date(a.fechaTransaccion || 0).getTime();
             const fb = new Date(b.fechaTransaccion || 0).getTime();
-            return fb - fa;
+            return fb - fa; // El más reciente arriba
           });
+
         this.isLoadingMovimientos = false;
         this.cdr.detectChanges();
       },
       error: (err) => {
-        console.error('Error al cargar movimientos del producto:', err);
+        console.error('Error al cargar movimientos:', err);
         this.isLoadingMovimientos = false;
         this.cdr.detectChanges();
       }
