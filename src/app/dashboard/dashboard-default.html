@@ -72,7 +72,7 @@
 
             <a *ngIf="tieneRol(['PROPIETARIO', 'VENDEDOR'])" routerLink="/dashboard/reportes" routerLinkActive="active" class="menu-item" (click)="isSidebarOpen = false">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10"></path><path d="M12 20V4"></path><path d="M6 20v-6"></path></svg>
-                Rendimiento
+                Rendimiento/Reportes
             </a>
             
             <p *ngIf="tieneRol(['PROPIETARIO'])" class="menu-label mt-4">ADMINISTRACIÓN</p>
