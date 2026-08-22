@@ -89,7 +89,7 @@
                             <span class="status-modern" [ngClass]="{
                                 's-yellow': fac.estado === 'PENDIENTE' || fac.estado === 'CREADA',
                                 's-green': fac.estado === 'AUTORIZADA',
-                                's-red': fac.estado === 'ANULADA' || fac.estado === 'ERROR_SRI' 
+                                's-red': fac.estado === 'ANULADA' || fac.estado === 'ERROR_SRI'
                             }">{{ fac.estado }}</span>
                         </td>
                         <td class="action-cells" style="display:flex;gap:6px;justify-content:center;align-items:center;">
@@ -243,10 +243,15 @@
                         <div class="form-group w-50" *ngIf="nuevaFactura.metodoPago === 'TARJETA_CREDITO'">
                             <label>Meses (Cuotas) *</label>
                             <input type="number" [(ngModel)]="nuevaFactura.numeroCuotas" min="1" max="48"
-                                class="modern-input" placeholder="Ej. 3" required>
+                                class="modern-input" placeholder="Ej. 3, 6, 12..." required
+                                [class.input-error]="!cuotasTarjetaValidas">
                             <small *ngIf="!cuotasTarjetaValidas"
                                 style="color:#dc2626;font-size:0.75rem;display:block;margin-top:4px;">
                                 Obligatorias para emitir con tarjeta.
+                            </small>
+                            <small *ngIf="cuotasTarjetaValidas && nuevaFactura.numeroCuotas >= 1"
+                                style="color:#059669;font-size:0.75rem;display:block;margin-top:4px;">
+                                {{ nuevaFactura.numeroCuotas }} cuota(s) · Zoe entiende “3 cuotas”, “6 meses”, etc.
                             </small>
                         </div>
                     </div>
@@ -356,6 +361,9 @@
                     <div class="cart-items-container">
                         <div class="empty-cart-premium" *ngIf="nuevaFactura.detalles.length === 0">
                             <p>Ticket Vacío</p>
+                            <small *ngIf="voiceState !== 'OFF'" style="color:#94a3b8;font-size:0.8rem;">
+                                Di varios productos seguidos: “un mouse, dos teclados y una pantalla”
+                            </small>
                         </div>
 
                         <div class="cart-item-ticket fade-in" *ngFor="let d of nuevaFactura.detalles; let i = index">
@@ -383,12 +391,19 @@
                     </div>
 
                     <div class="cart-footer">
-                        <!-- 🔥 SE MUESTRA LA TARJETA VISUALMENTE -->
+                        <!-- Tarjeta + cuotas visibles en el ticket -->
                         <div *ngIf="nuevaFactura.metodoPago === 'TARJETA_CREDITO'"
-                            style="margin-bottom: 10px; font-size: 0.8rem; color: #64748b; font-weight: 600;">
-                            💳 Pago con Tarjeta
-                            <span *ngIf="nuevaFactura.tarjetaNumero"> (**** {{ nuevaFactura.tarjetaNumero | slice:-4
-                                }})</span>
+                            style="margin-bottom: 10px; font-size: 0.8rem; color: #64748b; font-weight: 600; display:flex; flex-wrap:wrap; gap:6px; align-items:center;">
+                            <span>💳 Pago con Tarjeta</span>
+                            <span *ngIf="nuevaFactura.tarjetaNumero"> (**** {{ nuevaFactura.tarjetaNumero | slice:-4 }})</span>
+                            <span *ngIf="cuotasTarjetaValidas"
+                                style="background:#ecfdf5;color:#059669;padding:2px 8px;border-radius:999px;font-size:0.72rem;font-weight:700;">
+                                {{ nuevaFactura.numeroCuotas }} cuota(s)
+                            </span>
+                            <span *ngIf="!cuotasTarjetaValidas"
+                                style="background:#fef2f2;color:#dc2626;padding:2px 8px;border-radius:999px;font-size:0.72rem;font-weight:700;">
+                                Faltan cuotas
+                            </span>
                         </div>
 
                         <div class="discount-box"
@@ -438,6 +453,7 @@
             </div>
         </div>
 
+        <!-- PANEL ZOE: estados más claros, opciones táctiles, hint de cuotas / productos en fila -->
         <div class="zoe-side-panel fade-in" *ngIf="voiceState !== 'OFF'">
             <div class="zoe-widget">
 
@@ -450,7 +466,12 @@
                 </button>
 
                 <div class="zoe-header">
-                    <div class="mic-container-small" [ngClass]="{'is-listening': isListening}">
+                    <div class="mic-container-small"
+                        [ngClass]="{
+                            'is-listening': isListening,
+                            'is-thinking': isThinking,
+                            'is-confirm': voiceState === 'CONFIRMAR'
+                        }">
                         <div class="mic-ring-small" *ngIf="isListening"></div>
                         <div class="mic-icon-small">
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
@@ -462,40 +483,110 @@
                             </svg>
                         </div>
                     </div>
-                    <div>
+                    <div style="flex:1;min-width:0;">
                         <h4 style="margin: 0; font-size: 1rem; color: #0f172a;">Zoe Activa ✨</h4>
-                        <span class="listening-indicator" *ngIf="isListening" style="font-size: 0.75rem;">Te
-                            escucho...</span>
+                        <span class="listening-indicator" *ngIf="isListening && !isThinking" style="font-size: 0.75rem;">
+                            Te escucho…
+                        </span>
                         <span class="thinking-indicator" *ngIf="isThinking"
-                            style="font-size: 0.75rem; color: #f59e0b;">Pensando...</span>
+                            style="font-size: 0.75rem; color: #f59e0b;">Pensando…</span>
+                        <span *ngIf="voiceState === 'ELEGIR_OPCION' && !isThinking && !isListening"
+                            style="font-size: 0.75rem; color: #6366f1;">Elige una opción</span>
+                        <span *ngIf="voiceState === 'CONFIRMAR' && !isThinking"
+                            style="font-size: 0.75rem; color: #ed8936; font-weight: 600;">¿Emitimos? Di sí o no</span>
                     </div>
                 </div>
 
+                <!-- Chip de estado rápido: cliente / método / cuotas / items -->
+                <div class="zoe-status-chips"
+                    style="display:flex;flex-wrap:wrap;gap:6px;padding:0 14px 8px;font-size:0.7rem;">
+                    <span *ngIf="clienteSeleccionadoInfo || esConsumidorFinal"
+                        style="background:#f1f5f9;color:#334155;padding:2px 8px;border-radius:999px;font-weight:600;">
+                        👤 {{ esConsumidorFinal ? 'Consumidor Final' : (clienteSeleccionadoInfo?.nombreCompleto || clienteSeleccionadoInfo?.primerNombre || 'Cliente') }}
+                    </span>
+                    <span *ngIf="metodoPagoConfirmado || nuevaFactura.metodoPago"
+                        style="background:#f1f5f9;color:#334155;padding:2px 8px;border-radius:999px;font-weight:600;">
+                        {{ nuevaFactura.metodoPago === 'TARJETA_CREDITO' ? '💳 Tarjeta' :
+                           nuevaFactura.metodoPago === 'TRANSFERENCIA' ? '🏦 Transfer' : '💵 Efectivo' }}
+                    </span>
+                    <span *ngIf="nuevaFactura.metodoPago === 'TARJETA_CREDITO' && cuotasTarjetaValidas"
+                        style="background:#ecfdf5;color:#059669;padding:2px 8px;border-radius:999px;font-weight:700;">
+                        {{ nuevaFactura.numeroCuotas }} cuota(s)
+                    </span>
+                    <span *ngIf="nuevaFactura.detalles.length > 0"
+                        style="background:#fff7ed;color:#c2410c;padding:2px 8px;border-radius:999px;font-weight:700;">
+                        {{ nuevaFactura.detalles.length }} item(s) · ${{ totalCarrito | number:'1.2-2' }}
+                    </span>
+                </div>
+
                 <div class="zoe-body">
-                    <div class="bot-message" *ngIf="voiceMessage">
+                    <div class="bot-message" *ngIf="voiceMessage"
+                        [ngClass]="{'confirm-msg': voiceState === 'CONFIRMAR'}">
                         <p>{{ voiceMessage }}</p>
                     </div>
 
+                    <!-- Confirmación rápida con botones (además de voz) -->
+                    <div class="zoe-confirm-actions fade-in" *ngIf="voiceState === 'CONFIRMAR'"
+                        style="display:flex;gap:8px;margin:8px 0 12px;">
+                        <button type="button" class="btn-primary"
+                            style="flex:1;height:40px;border-radius:10px;font-weight:700;"
+                            (click)="confirmarEmisionVoz()">
+                            Sí, emitir
+                        </button>
+                        <button type="button" class="btn-outline-secondary"
+                            style="flex:1;height:40px;border-radius:10px;"
+                            (click)="cancelarEmisionVoz()">
+                            No aún
+                        </button>
+                    </div>
+
                     <div class="voice-options-list fade-in" *ngIf="opcionesVoz.length > 0">
-                        <p class="voice-options-title">Di el número:</p>
+                        <p class="voice-options-title" style="margin-bottom:8px;">
+                            {{ tipoOpciones === 'CLIENTE' ? 'Elige el cliente' :
+                               tipoOpciones === 'PRODUCTO' ? 'Elige el producto' : 'Elige una opción' }}
+                            <span style="font-weight:400;color:#94a3b8;"> · di el número o toca</span>
+                        </p>
                         <div class="voice-option-item" *ngFor="let opt of opcionesVoz; let i = index"
                             (click)="seleccionarOpcionVozManual(i)"
-                            style="cursor: pointer; transition: background 0.2s;"
-                            onmouseover="this.style.background='#f1f5f9'"
-                            onmouseout="this.style.background='transparent'"> <span class="voice-opt-number">{{ i + 1
-                                }}</span>
-                            <span class="voice-opt-text" *ngIf="tipoOpciones === 'CLIENTE'">
-                                {{ opt.nombreCompleto || opt.primerNombre }} <span
-                                    style="color:#64748b; font-size:0.8rem;">(CI: {{ opt.dni || opt.identificacion ||
-                                    'N/A' }})</span>
+                            style="cursor: pointer; transition: background 0.15s, transform 0.1s; border-radius: 10px; padding: 10px 12px; margin-bottom: 4px; border: 1px solid transparent;"
+                            onmouseover="this.style.background='#f1f5f9'; this.style.borderColor='#e2e8f0';"
+                            onmouseout="this.style.background='transparent'; this.style.borderColor='transparent';">
+                            <span class="voice-opt-number"
+                                style="display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:28px;border-radius:8px;background:#0f172a;color:#fff;font-weight:700;font-size:0.85rem;margin-right:10px;">
+                                {{ i + 1 }}
+                            </span>
+                            <span class="voice-opt-text" *ngIf="tipoOpciones === 'CLIENTE'" style="flex:1;">
+                                <strong style="color:#0f172a;">{{ opt.nombreCompleto || opt.primerNombre }}</strong>
+                                <span style="display:block;color:#64748b; font-size:0.78rem;margin-top:2px;">
+                                    CI: {{ opt.dni || opt.identificacion || 'N/A' }}
+                                </span>
                             </span>
                             <span class="voice-opt-text" *ngIf="tipoOpciones === 'BODEGA'">{{ opt.nombre }}</span>
-                            <span class="voice-opt-text" *ngIf="tipoOpciones === 'PRODUCTO'">{{ opt.nombre }}</span>
+                            <span class="voice-opt-text" *ngIf="tipoOpciones === 'PRODUCTO'" style="flex:1;">
+                                <strong style="color:#0f172a;">{{ opt.nombre }}</strong>
+                                <span *ngIf="opt.codigoPrincipal"
+                                    style="display:block;color:#64748b;font-size:0.78rem;margin-top:2px;">
+                                    {{ opt.codigoPrincipal }}
+                                    <span *ngIf="(opt.precioFactura ?? opt.costoPromedioActual ?? opt.precioUnitario) != null"
+                                        style="color:#16a34a;font-weight:700;margin-left:6px;">
+                                        ${{ (opt.precioFactura ?? opt.costoPromedioActual ?? opt.precioUnitario) | number:'1.2-2' }}
+                                    </span>
+                                </span>
+                            </span>
                         </div>
                     </div>
 
                     <div class="user-message" *ngIf="userTranscript && opcionesVoz.length === 0">
                         <p>"{{ userTranscript }}"</p>
+                    </div>
+
+                    <!-- Tips cortos según estado (solo cuando no hay opciones ni confirmación) -->
+                    <div *ngIf="voiceState === 'ESCUCHA_LIBRE' && !isThinking && opcionesVoz.length === 0 && !userTranscript"
+                        style="margin-top:10px;padding:10px 12px;background:#f8fafc;border-radius:10px;border:1px dashed #e2e8f0;font-size:0.75rem;color:#64748b;line-height:1.45;">
+                        <div style="font-weight:700;color:#475569;margin-bottom:4px;">Puedes decir, por ejemplo:</div>
+                        <div>• “Cliente Juan, un mouse y dos teclados, efectivo”</div>
+                        <div>• “Tarjeta a 6 cuotas” o “cambia a 3 meses”</div>
+                        <div>• “Emite” / “Cobra ya” cuando esté listo</div>
                     </div>
                 </div>
             </div>

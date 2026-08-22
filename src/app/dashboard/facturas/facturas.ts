@@ -558,14 +558,17 @@ get cuotasTarjetaValidas(): boolean {
       this.cdr.detectChanges();
 
       clearTimeout(this.silenceTimer);
-      // En desambiguación responde más rápido (2.2s); en libre 4.5s
-      const espera = this.voiceState === VoiceStep.ELEGIR_OPCION ? 2200 : 4500;
+      // Más rápido: desambiguación ~1.1s; libre ~1.9s
+      const espera = this.voiceState === VoiceStep.ELEGIR_OPCION ? 1100 : 1900;
       this.silenceTimer = setTimeout(() => {
         if (this.bloqueoEscucha || this.seleccionEnCurso || this.isThinking) return;
         try { this.recognition.stop(); } catch (e) { }
         if (this.userTranscript) {
           this.isListening = false;
-          this.procesarComandoVoz(this.userTranscript);
+          const txt = this.userTranscript.trim();
+          const palabras = txt.split(/\s+/);
+          const fraseUtil = palabras.length > 28 ? palabras.slice(-28).join(' ') : txt;
+          this.procesarComandoVoz(fraseUtil);
         } else if (!this.bloqueoEscucha) {
           this.escuchar();
         }
@@ -645,28 +648,49 @@ get cuotasTarjetaValidas(): boolean {
     this.cdr.detectChanges();
   }
 
+  /** Solo voces de mujer en español. Nunca masculinas. */
   private seleccionarVozFemenina(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null {
-    const es = voices.filter(v => v.lang && v.lang.toLowerCase().startsWith('es'));
-    if (!es.length) return null;
+    const masculinas = /pablo|jorge|diego|carlos|juan|pedro|antonio|male|hombre|david|raul|raúl|jorge|enrique|andres|andrés|fernando|miguel|manuel|jose|josé|luis|alvaro|álvaro|francisco|javier/i;
+    const femeninas = /female|mujer|femenin|sabina|paulina|m[oó]nica|luc[ií]a|mar[ií]a|elena|mia|m[ií]a|carmen|isabel|sof[ií]a|ana|laura|patricia|silvia|conchita|esperanza|paloma|dalia|nuria|ines|inés|rosa|beatriz|helena|zira|sara|google.*espa/i;
 
-    let vozPremium = es.find(v => v.name.toLowerCase().includes('natural') && v.name.toLowerCase().includes('mia')); 
-    if (!vozPremium) vozPremium = es.find(v => v.name.toLowerCase().includes('natural') && v.name.toLowerCase().includes('elena'));
-    if (!vozPremium) vozPremium = es.find(v => v.name.toLowerCase().includes('natural')); 
+    const es = (voices || []).filter(v => v.lang && v.lang.toLowerCase().startsWith('es'));
+    // Excluir explícitamente masculinas
+    const soloMujer = es.filter(v => !masculinas.test(v.name));
+    const pool = soloMujer.length ? soloMujer : es.filter(v => !/male|hombre/i.test(v.name));
 
-    if (!vozPremium) vozPremium = es.find(v => v.name.toLowerCase().includes('google') && !v.name.toLowerCase().includes('masculino') && !v.name.toLowerCase().includes('male'));
+    if (!pool.length) return null;
 
-    const preferidas = [/microsoft sabina/i, /microsoft paulina/i, /m[oó]nica/i, /luc[ií]a/i, /mar[ií]a/i];
-    if (!vozPremium) {
-      for (const re of preferidas) {
-        vozPremium = es.find(v => re.test(v.name));
-        if (vozPremium) break;
-      }
+    // Prioridad: nombres femeninos conocidos → natural → google sin male → cualquiera del pool
+    const score = (v: SpeechSynthesisVoice): number => {
+      const n = v.name.toLowerCase();
+      let s = 0;
+      if (femeninas.test(v.name)) s += 50;
+      if (n.includes('natural')) s += 20;
+      if (n.includes('mia') || n.includes('mía')) s += 25;
+      if (n.includes('elena')) s += 22;
+      if (n.includes('sabina') || n.includes('paulina')) s += 22;
+      if (n.includes('google')) s += 10;
+      if (v.lang && /es-?(ec|mx|es|us)/i.test(v.lang)) s += 5;
+      if (masculinas.test(v.name)) s -= 100;
+      return s;
+    };
+
+    const ranked = [...pool].sort((a, b) => score(b) - score(a));
+    return ranked[0] || null;
+  }
+
+  /** Aplica voz de mujer a cualquier utterance (forzado). */
+  private aplicarVozMujer(utterance: SpeechSynthesisUtterance): void {
+    const voices = window.speechSynthesis.getVoices() || [];
+    const female = this.seleccionarVozFemenina(voices);
+    if (female) {
+      utterance.voice = female;
+      utterance.lang = female.lang || 'es-EC';
+    } else {
+      utterance.lang = 'es-EC';
     }
-
-    const masculinas = /pablo|jorge|diego|carlos|juan|pedro|antonio|male|hombre|david/i;
-    const noMale = es.find(v => !masculinas.test(v.name));
-
-    return vozPremium || noMale || es[0];
+    // Pitch un poco más alto refuerza timbre femenino si el SO no tiene voz de mujer
+    utterance.pitch = Math.max(utterance.pitch || 1, 1.15);
   }
 
   private hablar(texto: string, callback?: () => void) {
@@ -689,21 +713,11 @@ get cuotasTarjetaValidas(): boolean {
       this.userTranscript = '';
       this.cdr.detectChanges();
 
-     const utterance = new SpeechSynthesisUtterance(texto);
-      
-      let voices = window.speechSynthesis.getVoices();
-      let femaleVoice = this.seleccionarVozFemenina(voices);
-
-      if (femaleVoice) {
-        utterance.voice = femaleVoice;
-        utterance.lang = femaleVoice.lang;
-      } else {
-        utterance.lang = 'es-EC';
-      }
-      
-      utterance.rate = 1.15; 
-      utterance.pitch = 1.1; 
+      const utterance = new SpeechSynthesisUtterance(texto);
+      utterance.rate = 1.28;
+      utterance.pitch = 1.15;
       utterance.volume = 1;
+      this.aplicarVozMujer(utterance);
 
       const fin = () => {
         this.isThinking = false;
@@ -734,55 +748,153 @@ get cuotasTarjetaValidas(): boolean {
     try { this.recognition.start(); } catch (e) { }
   }
 
-  private procesarComandoVoz(transcript: string) {
+  /** Público: botones del panel Zoe y reconocimiento de voz */
+  procesarComandoVoz(transcript: string) {
     this.transcriptAcumulado = '';
-    // Normalizar: minúsculas, sin acentos, sin puntuación al final
     const transcriptLimpio = this.limpiarTexto(transcript).replace(/[.,;:!?¡¿]+/g, ' ').replace(/\s+/g, ' ').trim();
+    if (!transcriptLimpio) {
+      this.escuchar();
+      return;
+    }
 
-    const comandosLimpiar = ['borra todo', 'borrar todo', 'limpiar carrito', 'reiniciar', 'vaciar ticket', 'cancela todo'];
+    const comandosLimpiar = ['borra todo', 'borrar todo', 'limpiar carrito', 'reiniciar', 'vaciar ticket', 'cancela todo', 'limpia todo', 'empezar de cero'];
     if (comandosLimpiar.some(cmd => transcriptLimpio.includes(cmd))) {
       this.nuevaFactura.detalles = [];
       this.limpiarClienteSeleccionado();
       this.nuevaFactura.descuentoGlobal = 0;
       this.nuevaFactura.descuentoGlobalPorcentaje = 0;
       this.nuevaFactura.detallesTarjeta = '';
-      this.hablar("He vaciado el ticket por completo. Empecemos de cero.", () => this.escuchar());
+      this.nuevaFactura.numeroCuotas = 0;
+      this.metodoPagoConfirmado = false;
+      this.hablar("Ticket vacío. Empecemos de cero.", () => this.escuchar());
       return;
     }
 
-    // 🔥 Desambiguación por número/clic: NO mandar a Groq
+    // Desambiguación por número/clic: NO mandar a Groq
     if (this.voiceState === VoiceStep.ELEGIR_OPCION) {
       this.manejarDesambiguacion(transcriptLimpio);
       return;
     }
 
-    // 🔥 Confirmación de emisión: sí / no sin pasar por la IA
+    // Confirmación de emisión: sí / no / emite
     if (this.voiceState === VoiceStep.CONFIRMAR) {
-      if (this.esRespuestaAfirmativa(transcriptLimpio)) {
-        this.voiceState = VoiceStep.OFF;
-        this.hablar("¡Listo! Emitiendo la factura.");
-        const errT = this.validarTarjetaAntesDeEmitir();
-        if (errT) {
-          this.voiceState = VoiceStep.ESCUCHA_LIBRE;
-          this.hablar(errT + ' ¿Cuántas cuotas?', () => this.escuchar());
-        } else {
-          setTimeout(() => { this.guardarFactura(); }, 800);
-        }
+      if (this.esRespuestaAfirmativa(transcriptLimpio) || this.esComandoEmitirFuerte(transcriptLimpio)) {
+        this.emitirFacturaPorVoz();
         return;
       }
       if (this.esRespuestaNegativa(transcriptLimpio)) {
         this.voiceState = VoiceStep.ESCUCHA_LIBRE;
-        this.hablar("De acuerdo, no emitimos aún. ¿Qué deseas cambiar o agregar?", () => this.escuchar());
+        this.hablar("Ok, no emitimos. ¿Qué más?", () => this.escuchar());
         return;
       }
-      // Si no es sí/no claro, puede estar pidiendo más productos o un descuento → analizar
-      // pero no forzamos emisión
+      // No es sí/no: puede estar cambiando algo → salir de confirmar y analizar
+      this.voiceState = VoiceStep.ESCUCHA_LIBRE;
     }
 
-    const comandosEmitir = ['emite', 'emitir', 'factura ya', 'cobrar ya', 'guarda la factura', 'guardar factura', 'todo bien', 'listo', 'cobra', 'cobrar'];
-    const quiereEmitir = comandosEmitir.some(cmd => transcriptLimpio.includes(cmd));
+    // Emitir DIRECTO sin pasar por Groq si el comando es solo emitir
+    if (this.esSoloEmitirCorto(transcriptLimpio) || (
+      this.esComandoEmitirFuerte(transcriptLimpio)
+      && !this.fraseMencionaProducto(transcriptLimpio)
+      && !/\b(cliente|consumidor|tarjeta|cuotas?|meses?|transferencia|efectivo|descuento|agrega|pon)\b/.test(transcriptLimpio)
+    )) {
+      this.emitirFacturaPorVoz();
+      return;
+    }
+
+    const quiereEmitir = this.esComandoEmitirFuerte(transcriptLimpio)
+      || ['todo bien', 'listo', 'ya esta', 'ya está', 'terminamos', 'finalizar', 'confirma', 'confirmar'].some(cmd => transcriptLimpio.includes(cmd));
 
     this.analizarConGroq(transcriptLimpio, quiereEmitir);
+  }
+
+  /** Frases cortas o casi solo emitir (tolerante a ruido del reconocimiento) */
+  private esSoloEmitirCorto(texto: string): boolean {
+    const t = (texto || '').trim();
+    if (!t) return false;
+    const exactas = [
+      'emite', 'emitir', 'cobra', 'cobrar', 'emite ya', 'emitir ya', 'cobra ya', 'cobrar ya',
+      'factura ya', 'guarda', 'guardar', 'listo emite', 'listo emitir', 'si emite', 'si emitir',
+      'adelante', 'de una', 'de una vez', 'hazlo', 'genera', 'generar', 'listo', 'ya',
+      'emite por favor', 'emitir por favor', 'cobra por favor', 'si por favor'
+    ];
+    if (exactas.some(e => t === e || t === e + ' por favor' || t === e + ' gracias')) return true;
+    // Frases cortas centradas en emitir (≤ 6 palabras)
+    const palabras = t.split(/\s+/);
+    if (palabras.length <= 6) {
+      const tieneEmit = /\b(emite|emitir|cobra|cobrar|guarda|guardar|genera|generar)\b/.test(t);
+      const tieneExtra = /\b(agrega|agregar|pon|poner|cliente|mouse|producto|tarjeta|cuotas?|descuento)\b/.test(t);
+      if (tieneEmit && !tieneExtra) return true;
+    }
+    return false;
+  }
+
+  /** Emite la factura por voz con validaciones mínimas (sin pedir confirmación extra) */
+  private emitirFacturaPorVoz() {
+    // Evitar doble emisión
+    if (this.isSaving) return;
+
+    const faltaCliente = !this.nuevaFactura.clienteId && !this.esConsumidorFinal;
+    const faltaItems = this.nuevaFactura.detalles.length === 0;
+
+    if (faltaCliente) {
+      this.voiceState = VoiceStep.ESCUCHA_LIBRE;
+      this.hablar("Falta el cliente. ¿A quién le facturamos?", () => this.escuchar());
+      return;
+    }
+    if (faltaItems) {
+      this.voiceState = VoiceStep.ESCUCHA_LIBRE;
+      this.hablar("El ticket está vacío. ¿Qué productos agregamos?", () => this.escuchar());
+      return;
+    }
+
+    const errT = this.validarTarjetaAntesDeEmitir();
+    if (errT) {
+      this.voiceState = VoiceStep.ESCUCHA_LIBRE;
+      this.hablar(errT + ' ¿Cuántas cuotas?', () => this.escuchar());
+      return;
+    }
+
+    this.voiceState = VoiceStep.OFF;
+    this.bloqueoEscucha = true;
+    this.isListening = false;
+    this.isThinking = false;
+    clearTimeout(this.silenceTimer);
+    if (this.recognition) {
+      try { this.recognition.abort(); } catch (e) { }
+    }
+    // Emitir ya (mensaje corto, sin esperar a que termine de hablar si se puede)
+    this.voiceMessage = 'Emitiendo.';
+    this.cdr.detectChanges();
+    try {
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance('Emitiendo.');
+      u.rate = 1.3;
+      this.aplicarVozMujer(u);
+      window.speechSynthesis.speak(u);
+    } catch (e) { }
+    setTimeout(() => { this.guardarFactura(); }, 300);
+  }
+
+  /** Botones del panel Zoe (Sí / No) */
+  confirmarEmisionVoz() {
+    this.emitirFacturaPorVoz();
+  }
+
+  cancelarEmisionVoz() {
+    this.voiceState = VoiceStep.ESCUCHA_LIBRE;
+    this.hablar("Ok, no emitimos. ¿Qué más?", () => this.escuchar());
+  }
+
+  /** Comandos claros de emitir/cobrar */
+  private esComandoEmitirFuerte(texto: string): boolean {
+    const t = texto || '';
+    const fuertes = [
+      'emite', 'emitir', 'factura ya', 'cobrar ya', 'guarda la factura', 'guardar factura',
+      'cobra', 'cobrar', 'emite ya', 'emitir ya', 'cobra ya', 'cobrar ya',
+      'genera la factura', 'generar factura', 'cierra la factura', 'cerrar factura',
+      'saca la factura', 'haz la factura'
+    ];
+    return fuertes.some(cmd => t.includes(cmd));
   }
 
   /** Detecta afirmaciones de voz (sí, dale, ok, confirmo, etc.) */
@@ -821,20 +933,19 @@ get cuotasTarjetaValidas(): boolean {
       'Content-Type': 'application/json'
     });
 
-    const instruccionCliente = (this.nuevaFactura.clienteId || this.esConsumidorFinal)
-      ? `"cliente": null,`
-      : `"cliente": "Extrae el nombre, cédula, o pon 'CONSUMIDOR_FINAL'",`;
+    // Siempre permitir cambiar cliente por voz (null si no lo mencionó)
+    const instruccionCliente = `"cliente": "Extrae el nombre/cédula si lo dijo, o 'CONSUMIDOR_FINAL' si dijo consumidor final; si NO habló de cliente → null",`;
 
-    const listaNombresCli = this.clientesList.map(c => c.nombreCompleto || c.primerNombre).join(', ').substring(0, 600);
-    const listaNombresProd = this.productosList.map(p => p.nombre).join(', ').substring(0, 600);
+    const listaNombresCli = this.clientesList.map(c => c.nombreCompleto || c.primerNombre).join(', ').substring(0, 800);
+    const listaNombresProd = this.productosList.map(p => p.nombre).join(', ').substring(0, 900);
 
     const promptSystem = `
-      Eres la IA de un POS. Extrae SOLO lo que el usuario dijo explícitamente. JSON puro, sin texto extra.
-      🚨 REGLA DE ORO: LOS NOMBRES DE LOS CAMPOS DEL JSON Y LOS VALORES DEBEN ESTAR EN ESPAÑOL 🚨
-      Clientes: [${listaNombresCli}]
-      Productos: [${listaNombresProd}]
+      Eres la IA de un POS en Ecuador. Extrae SOLO lo que el usuario dijo. JSON puro, sin markdown ni texto extra.
+      Campos y valores en español.
+      Clientes disponibles: [${listaNombresCli}]
+      Productos disponibles: [${listaNombresProd}]
 
-      Formato:
+      Formato exacto:
       {
          ${instruccionCliente}
          "metodoPago": "EFECTIVO" | "TRANSFERENCIA" | "TARJETA_CREDITO" | null,
@@ -848,15 +959,18 @@ get cuotasTarjetaValidas(): boolean {
          "emitirFactura": false
       }
 
-      REGLAS ESTRICTAS (no inventes NADA):
-      1. metodoPago: SOLO si dijo "efectivo", "transferencia/depósito" o "tarjeta/crédito". Si NO habló de pago → null.
-      2. cuotas: número si dijo "N cuotas", "N meses", "cambia a N cuotas", "pon N cuotas". Puede ir SOLO (sin repetir tarjeta).
-      3. items: SOLO productos a AGREGAR que el usuario nombró. Si solo cambia cantidad o quita → items: [].
-      4. eliminarProducto: nombre del producto a quitar si dijo quita/borra/elimina/saca. Si no → null.
-      5. modificarCantidad: {"producto":"nombre","cantidad":N} si dijo "cambia cantidad", "pon N de X", "deja N X". Si no → null.
-      6. emitirFactura: true SOLO si pide emitir/cobrar/guardar de forma clara.
-      7. cliente "CONSUMIDOR_FINAL" solo si dijo consumidor final / sin datos.
-      8. descuentos: SOLO si los mencionó.
+      REGLAS (no inventes nada):
+      1. metodoPago: SOLO si dijo efectivo/contado, transferencia/depósito, o tarjeta/crédito/visa/mastercard. Si no habló de pago → null.
+      2. cuotas: número entero si dijo "N cuotas", "N meses", "en N", "a N cuotas", "cambia a N", "pon N cuotas". Puede ir solo (sin repetir tarjeta). Rango 1-48.
+      3. items: TODOS los productos a AGREGAR que nombró, en el orden dicho. Si dice varios seguidos ("un mouse, dos teclados y una pantalla") → varios objetos en items, cada uno con su cantidad. Si solo cambia cantidad o quita → items: [].
+         - Cantidades en palabras: un/una=1, dos=2, tres=3, cuatro=4, cinco=5, media docena=6, docena=12.
+         - Si no indica cantidad de un producto → cantidad 1.
+      4. eliminarProducto: nombre si dijo quita/borra/elimina/saca. Si no → null.
+      5. modificarCantidad: {"producto":"nombre","cantidad":N} si dijo cambia cantidad / pon N de X / deja N X. Si no → null.
+      6. emitirFactura: true SOLO si pide emitir/cobrar/guardar/finalizar de forma clara.
+      7. cliente "CONSUMIDOR_FINAL" solo si dijo consumidor final / sin datos / público en general.
+      8. descuentos: SOLO si los mencionó (porcentaje o monto).
+      9. Si la frase es larga, extrae TODO lo útil (cliente + pago + varios productos + cuotas) en un solo JSON.
     `;
 
     const payload = {
@@ -866,7 +980,7 @@ get cuotasTarjetaValidas(): boolean {
         { role: 'user', content: fraseUsuario }
       ],
       temperature: 0.0,
-      max_tokens: 450
+      max_tokens: 600
     };
 
     this.bloqueoEscucha = true;
@@ -912,17 +1026,34 @@ get cuotasTarjetaValidas(): boolean {
 
   private extraerCuotasDeFrase(frase: string): number | null {
     const f = this.limpiarTexto(frase || '');
+    // Números en palabras → dígito
+    const mapa: Record<string, number> = {
+      una: 1, un: 1, dos: 2, tres: 3, cuatro: 4, cinco: 5,
+      seis: 6, siete: 7, ocho: 8, nueve: 9, diez: 10,
+      once: 11, doce: 12, quince: 15, dieciocho: 18, veinte: 20,
+      veinticuatro: 24, treinta: 30, treintaiseis: 36, treintayseis: 36
+    };
     const patterns = [
       /\b(\d{1,2})\s*(cuotas?|meses?|mes)\b/,
       /\ben\s+(\d{1,2})\s*(cuotas?|meses?)?\b/,
+      /\ba\s+(\d{1,2})\s*(cuotas?|meses?)?\b/,
       /\b(cuotas?|meses?)\s*(de\s*)?(\d{1,2})\b/,
+      /\b(cambia|cambiar|pon|poner|deja|dejar|actualiza|actualizar)\s+(?:a\s+)?(\d{1,2})\s*(cuotas?|meses?)?\b/,
+      /\b(\d{1,2})\s*(pagos?)\b/,
     ];
     for (const re of patterns) {
       const m = f.match(re);
       if (m) {
-        const n = parseInt(m[1] || m[3], 10);
-        if (n >= 1 && n <= 48) return n;
+        const n = parseInt(m[1] || m[2] || m[3], 10);
+        if (!isNaN(n) && n >= 1 && n <= 48) return n;
       }
+    }
+    // "tres cuotas", "seis meses", etc.
+    for (const [palabra, num] of Object.entries(mapa)) {
+      const rePal = new RegExp(`\\b${palabra}\\s*(cuotas?|meses?|mes|pagos?)\\b`);
+      if (rePal.test(f)) return num;
+      const rePal2 = new RegExp(`\\b(en|a|de)\\s+${palabra}\\s*(cuotas?|meses?)?\\b`);
+      if (rePal2.test(f)) return num;
     }
     return null;
   }
@@ -961,9 +1092,15 @@ get cuotasTarjetaValidas(): boolean {
       (out as any)._tarjetaBloqueadaConsumidor = true;
     }
 
-    if (!diceTarjeta || seraConsumidorFinal) {
+    // No borrar cuotas si el usuario ya está en tarjeta y solo ajusta cuotas
+    const yaEnTarjeta = this.nuevaFactura.metodoPago === 'TARJETA_CREDITO' && this.permiteTarjetaCredito;
+    if (seraConsumidorFinal) {
       out.detallesTarjeta = null;
       out.cuotas = null;
+    } else if (!diceTarjeta && !yaEnTarjeta) {
+      out.detallesTarjeta = null;
+      // Solo anular cuotas si no las dijo en la frase
+      if (!this.extraerCuotasDeFrase(f)) out.cuotas = null;
     }
 
     const diceDesc = /\b(descuento|rebaja|por\s*ciento|porcentaje)\b/.test(f);
@@ -976,20 +1113,34 @@ get cuotasTarjetaValidas(): boolean {
     if (!Array.isArray(out.items)) out.items = [];
     out.items = out.items.filter((it: any) => it && it.producto && String(it.producto).toLowerCase() !== 'null');
 
-    // Vaciar solo si la frase es claramente SOLO pago/cliente, sin productos
+    // Vaciar solo si la frase es claramente SOLO pago/cliente/cuotas, sin productos
     const pideProducto =
       /\b(agrega|agregue|agregar|añade|añadir|pon|poner|quiero|dame|producto|un|una|unos|unas|dos|tres|cuatro|cinco|\d+)\b/.test(f)
       || this.fraseMencionaProducto(f);
 
     const soloPagoOCliente =
       !pideProducto &&
-      (diceTarjeta || diceTransfer || diceEfectivo || /\b(consumidor\s*final|cliente)\b/.test(f));
+      (diceTarjeta || diceTransfer || diceEfectivo
+        || /\b(consumidor\s*final|cliente|cuotas?|meses?)\b/.test(f));
 
     if (soloPagoOCliente) {
       out.items = [];
     } else if (out.items.length === 0 && this.fraseMencionaProducto(f)) {
-      // Fallback: la IA no trajo items pero sí hay productos en la frase
+      // Fallback: la IA no trajo items pero sí hay productos en la frase (varios seguidos)
       out.items = this.extraerItemsDesdeFrase(f);
+    } else if (out.items.length > 0 && this.fraseMencionaProducto(f)) {
+      // Si la IA trajo pocos items pero la frase menciona más productos → complementar
+      const fallback = this.extraerItemsDesdeFrase(f);
+      if (fallback.length > out.items.length) {
+        const yaNombres = new Set<string>(out.items.map((it: any) => this.limpiarTexto(String(it.producto))));
+        for (const fb of fallback) {
+          const n = this.limpiarTexto(String(fb.producto));
+          if (![...yaNombres].some(y => y.includes(n) || n.includes(y))) {
+            out.items.push(fb);
+            yaNombres.add(n);
+          }
+        }
+      }
     }
     // Si la IA trajo items, se respetan (aunque el nombre no coincida letra por letra con el audio)
 
@@ -1067,7 +1218,8 @@ get cuotasTarjetaValidas(): boolean {
       'agrega', 'agregue', 'agregar', 'añade', 'añadir', 'pon', 'poner', 'quiero', 'dame',
       'factura', 'favor', 'porfa', 'descuento', 'cliente', 'consumidor', 'final',
       'efectivo', 'tarjeta', 'credito', 'transferencia', 'emitir', 'cobrar', 'listo',
-      'con', 'del', 'los', 'las', 'por', 'para', 'que'
+      'con', 'del', 'los', 'las', 'por', 'para', 'que', 'tambien', 'también', 'mas', 'más',
+      'cuotas', 'meses', 'pago', 'pagar'
     ]);
     return tokens.some(t =>
       !stop.has(t) &&
@@ -1075,38 +1227,121 @@ get cuotasTarjetaValidas(): boolean {
     );
   }
 
-  /** Arma items desde tokens de la frase que matchean el catálogo */
+  private parseCantidadToken(tok: string): number | null {
+    const mapa: Record<string, number> = {
+      un: 1, una: 1, uno: 1, unos: 1, unas: 1,
+      dos: 2, tres: 3, cuatro: 4, cinco: 5,
+      seis: 6, siete: 7, ocho: 8, nueve: 9, diez: 10,
+      once: 11, doce: 12, media: 6, docena: 12
+    };
+    if (mapa[tok] != null) return mapa[tok];
+    const n = parseInt(tok, 10);
+    return (!isNaN(n) && n >= 1 && n <= 999) ? n : null;
+  }
+
+  /**
+   * Extrae varios productos en secuencia desde la frase.
+   * Ej: "un mouse dos teclados y una pantalla" → 3 items con sus cantidades.
+   */
   private extraerItemsDesdeFrase(frase: string): any[] {
-    const tokens = this.limpiarTexto(frase).split(/\s+/).filter(t => t.length >= 3);
+    const f = this.limpiarTexto(frase || '');
     const stop = new Set([
       'agrega', 'agregue', 'agregar', 'añade', 'añadir', 'pon', 'poner', 'quiero', 'dame',
       'factura', 'favor', 'porfa', 'descuento', 'cliente', 'consumidor', 'final',
       'efectivo', 'tarjeta', 'credito', 'transferencia', 'con', 'del', 'los', 'las',
-      'una', 'uno', 'unos', 'unas', 'por', 'para', 'que'
+      'por', 'para', 'que', 'tambien', 'también', 'mas', 'más', 'y', 'e', 'o',
+      'cuotas', 'meses', 'pago', 'pagar', 'emite', 'emitir', 'cobra', 'cobrar',
+      'listo', 'gracias', 'bodega', 'central', 'principal', 'tal', 'producto', 'productos',
+      'cualquier', 'varios', 'unas', 'unos'
     ]);
-    let cant = 1;
-    const mCant = this.limpiarTexto(frase).match(/\b(\d+|un|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez)\b/);
-    if (mCant) {
-      const mapa: Record<string, number> = {
-        un: 1, una: 1, dos: 2, tres: 3, cuatro: 4, cinco: 5,
-        seis: 6, siete: 7, ocho: 8, nueve: 9, diez: 10
-      };
-      cant = mapa[mCant[1]] || parseInt(mCant[1], 10) || 1;
+
+    // 1) Segmentos: comas, "y", "además", "también", "un/una" como separador suave
+    const segmentos = f
+      .split(/\s*(?:,| y | e | ademas | además | tambien | también | mas | más )\s*/)
+      .map(s => s.trim())
+      .filter(s => s.length >= 2 && !/^(bodega|central|principal|de la|de el)$/.test(s));
+
+    const items: any[] = [];
+    const productosUsados = new Set<number>(); // ids ya agregados en este pase
+
+    const intentarMatch = (texto: string, cantForzada: number | null): boolean => {
+      const tokens = texto.split(/\s+/).filter(t => t.length >= 2 && !stop.has(t));
+      if (!tokens.length) return false;
+
+      // Cantidad al inicio del segmento: "dos teclados", "3 mouse"
+      let cant = cantForzada;
+      let resto = tokens;
+      if (cant == null && tokens.length >= 2) {
+        const c0 = this.parseCantidadToken(tokens[0]);
+        if (c0 != null) {
+          cant = c0;
+          resto = tokens.slice(1);
+        }
+      }
+      if (cant == null) cant = 1;
+
+      // Buscar el producto más específico (token más largo que matchee)
+      const candidatos = resto
+        .filter(t => t.length >= 3)
+        .sort((a, b) => b.length - a.length);
+
+      for (const t of candidatos) {
+        const hits = this.dedupProductos(
+          this.productosList.filter(p => this.limpiarTexto(p.nombre).includes(t))
+        );
+        if (hits.length === 0) continue;
+        // Preferir el más corto (más específico) que no esté ya usado
+        const elegible = hits.find(h => !productosUsados.has(h.id)) || hits[0];
+        if (!elegible) continue;
+        productosUsados.add(elegible.id);
+        items.push({
+          producto: elegible.nombre,
+          cantidad: cant,
+          descuento: 0,
+          descuentoPorcentaje: 0
+        });
+        return true;
+      }
+      return false;
+    };
+
+    for (const seg of segmentos) {
+      intentarMatch(seg, null);
     }
 
-    const usados = new Set<string>();
-    const items: any[] = [];
-    // Preferir tokens más largos primero (más específicos)
-    const ordenados = [...tokens].filter(t => !stop.has(t)).sort((a, b) => b.length - a.length);
-    for (const t of ordenados) {
-      const hits = this.productosList.filter(p => this.limpiarTexto(p.nombre).includes(t));
-      if (hits.length === 0) continue;
-      if (usados.has(t)) continue;
-      // Evitar tokens cortos contenidos en uno ya usado
-      if ([...usados].some(u => u.includes(t) || t.includes(u))) continue;
-      usados.add(t);
-      items.push({ producto: t, cantidad: cant, descuento: 0, descuentoPorcentaje: 0 });
+    // 2) Si no hubo segmentos útiles, fallback por tokens largos de toda la frase
+    if (items.length === 0) {
+      const tokens = f.split(/\s+/).filter(t => t.length >= 3 && !stop.has(t));
+      let cantActual = 1;
+      const usadosTok = new Set<string>();
+      const ordenados = [...tokens].sort((a, b) => b.length - a.length);
+      for (const t of tokens) {
+        const c = this.parseCantidadToken(t);
+        if (c != null) {
+          cantActual = c;
+          continue;
+        }
+        if (usadosTok.has(t)) continue;
+        if ([...usadosTok].some(u => u.includes(t) || t.includes(u))) continue;
+        const hits = this.productosList.filter(p => this.limpiarTexto(p.nombre).includes(t));
+        if (hits.length === 0) continue;
+        usadosTok.add(t);
+        items.push({ producto: t, cantidad: cantActual, descuento: 0, descuentoPorcentaje: 0 });
+        cantActual = 1; // reset tras cada producto
+      }
+      // Si el sort no respetó orden, al menos no devolvemos vacío
+      if (items.length === 0) {
+        for (const t of ordenados) {
+          if (this.parseCantidadToken(t) != null) continue;
+          if (usadosTok.has(t)) continue;
+          const hits = this.productosList.filter(p => this.limpiarTexto(p.nombre).includes(t));
+          if (hits.length === 0) continue;
+          usadosTok.add(t);
+          items.push({ producto: t, cantidad: 1, descuento: 0, descuentoPorcentaje: 0 });
+        }
+      }
     }
+
     return items;
   }
 
@@ -1145,15 +1380,17 @@ get cuotasTarjetaValidas(): boolean {
       }
     }
 
-    // ── 1) CLIENTE PRIMERO (para que tarjeta no se invalide por orden) ──
+    // ── 1) CLIENTE (permite cambiar aunque ya haya uno) ──
     let requiereDesambiguacionCli = null;
-    if (datos.cliente && datos.cliente !== 'null' && !this.nuevaFactura.clienteId && !this.esConsumidorFinal) {
+    if (datos.cliente && datos.cliente !== 'null') {
       if (datos.cliente === 'CONSUMIDOR_FINAL' || String(datos.cliente).toLowerCase().includes('consumidor')) {
         this.setConsumidorFinal();
+        algoAgregado = true;
       } else {
         const matchesCli = this.buscarClientesUniversales(datos.cliente);
         if (matchesCli.length === 1) {
           this.seleccionarCliente(matchesCli[0]);
+          algoAgregado = true;
         } else if (matchesCli.length > 1) {
           requiereDesambiguacionCli = matchesCli;
         } else {
@@ -1171,7 +1408,7 @@ get cuotasTarjetaValidas(): boolean {
         items: Array.isArray(datos.items) ? datos.items : []
       };
       this.itemsVozPendientes = Array.isArray(datos.items) ? [...datos.items] : [];
-      this.iniciarDesambiguacion('CLIENTE', requiereDesambiguacionCli, "Encontré varios clientes parecidos. Di el número o haz clic en la pantalla.");
+      this.iniciarDesambiguacion('CLIENTE', requiereDesambiguacionCli, "Varios clientes parecidos. Di el número o toca en pantalla.");
       return;
     }
 
@@ -1244,16 +1481,17 @@ get cuotasTarjetaValidas(): boolean {
     let descPctTemp = 0;
     const itemsRestantes: any[] = [];
 
+    // Agregar todos los que tengan match claro; solo pausar en el primer ambiguo
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
-      // Cruza lo que dijo el usuario + lo que devolvió la IA → si hay varias máscaras, lista opciones
-      const matchesProd = this.resolverMatchesProductoVoz(String(item.producto), this.ultimaFraseUsuario);
+      // Resolver SOLO por el nombre del ítem (no toda la frase)
+      const matchesProd = this.resolverMatchesProductoVoz(String(item.producto), String(item.producto));
 
       if (matchesProd.length === 1) {
         const ok = this.intentarAgregarProductoVoz(matchesProd[0], item, mensajesAlerta);
         if (ok) algoAgregado = true;
       } else if (matchesProd.length > 1) {
-        // Siempre pedir opción si hay más de uno (nunca elegir al azar)
+        // Ambiguo: guardar el resto y pedir opción solo para este
         requiereDesambiguacionProd = matchesProd;
         cantTemp = Number(item.cantidad);
         if (isNaN(cantTemp) || cantTemp <= 0) cantTemp = 1;
@@ -1275,13 +1513,13 @@ get cuotasTarjetaValidas(): boolean {
       this.itemTemp.descuento = descTemp;
       this.itemTemp.descuentoPorcentaje = descPctTemp > 0 ? descPctTemp : null;
       const totalOps = requiereDesambiguacionProd.length;
-      const muestra = requiereDesambiguacionProd.slice(0, 8);
+      const muestra = requiereDesambiguacionProd.slice(0, 6);
       const nombres = muestra.map((p, idx) => `${idx + 1}) ${p.nombre}`).join('. ');
-      const extra = totalOps > 8 ? ` Hay ${totalOps} en total; te muestro las primeras 8.` : '';
+      const extra = totalOps > 6 ? ` (${totalOps} en total)` : '';
       this.iniciarDesambiguacion(
         'PRODUCTO',
         requiereDesambiguacionProd,
-        `Encontré ${totalOps} productos parecidos. ${nombres}.${extra} Di el número o toca el correcto.`
+        `${totalOps} opciones${extra}: ${nombres}. Di el número o toca.`
       );
       return;
     }
@@ -1301,41 +1539,58 @@ get cuotasTarjetaValidas(): boolean {
       this.hablar(`${prefijoAviso}El ticket está vacío. ¿Qué le agregamos?`, () => this.escuchar());
     }
     else if (quiereEmitir) {
-      // Tarjeta sin cuotas → no emitir aún
+      // Tarjeta sin cuotas → pedir cuotas
       if (this.nuevaFactura.metodoPago === 'TARJETA_CREDITO' && !this.cuotasTarjetaValidas) {
         this.voiceState = VoiceStep.ESCUCHA_LIBRE;
         this.hablar(
-          `${prefijoAviso}Pagamos con tarjeta. ¿En cuántas cuotas? Di por ejemplo: 3 cuotas o 6 meses.`,
+          `${prefijoAviso}Tarjeta: ¿cuántas cuotas? Ejemplo: 3 cuotas o 6 meses.`,
           () => this.escuchar()
         );
       } else if (this.nuevaFactura.metodoPago === 'TARJETA_CREDITO' && !this.permiteTarjetaCredito) {
         this.voiceState = VoiceStep.ESCUCHA_LIBRE;
         this.hablar(
-          `${prefijoAviso}Tarjeta solo con cliente registrado. Elige un cliente o cambia a efectivo.`,
+          `${prefijoAviso}Tarjeta solo con cliente registrado. Elige cliente o cambia a efectivo.`,
           () => this.escuchar()
         );
       } else {
-        this.voiceState = VoiceStep.CONFIRMAR;
+        // Emitir directo — no depender solo del callback de speech (a veces no dispara)
+        this.voiceState = VoiceStep.OFF;
+        this.bloqueoEscucha = true;
+        this.isListening = false;
+        this.isThinking = false;
+        clearTimeout(this.silenceTimer);
+        if (this.recognition) {
+          try { this.recognition.abort(); } catch (e) { }
+        }
         const cuotasTxt = this.nuevaFactura.metodoPago === 'TARJETA_CREDITO'
           ? ` en ${this.nuevaFactura.numeroCuotas} cuota(s)`
           : '';
-        const msj = `${prefijoAviso}Total a pagar $${this.totalCarrito.toFixed(2)}${cuotasTxt}. ¿Confirmas que emitimos la factura? Di sí o no.`;
-        this.hablar(msj, () => this.escuchar());
+        this.voiceMessage = `${prefijoAviso}Total $${this.totalCarrito.toFixed(2)}${cuotasTxt}. Emitiendo.`;
+        this.cdr.detectChanges();
+        try {
+          window.speechSynthesis.cancel();
+          const u = new SpeechSynthesisUtterance('Emitiendo.');
+          u.rate = 1.3;
+          this.aplicarVozMujer(u);
+          window.speechSynthesis.speak(u);
+        } catch (e) { }
+        setTimeout(() => { this.guardarFactura(); }, 350);
       }
     } else if (algoAgregado) {
       this.voiceState = VoiceStep.ESCUCHA_LIBRE;
       const extraCuotas = (datos as any)._cuotasActualizadas
-        ? ` Quedó en ${(datos as any)._cuotasActualizadas} cuota(s).`
+        ? ` ${ (datos as any)._cuotasActualizadas } cuota(s).`
         : (this.nuevaFactura.metodoPago === 'TARJETA_CREDITO' && this.cuotasTarjetaValidas
           ? ` Tarjeta a ${this.nuevaFactura.numeroCuotas} cuota(s).`
           : '');
+      // Mensajes más cortos → menos demora y menos confusión en sesiones largas
       this.hablar(
-        `${prefijoAviso}Listo.${extraCuotas} Total $${this.totalCarrito.toFixed(2)}. ¿Algo más o emitimos?`,
+        `${prefijoAviso}Listo.${extraCuotas} Total $${this.totalCarrito.toFixed(2)}. ¿Más o emitimos?`,
         () => this.escuchar()
       );
     } else {
       this.voiceState = VoiceStep.ESCUCHA_LIBRE;
-      this.hablar(`${prefijoAviso}¿Algo más o emitimos?`, () => this.escuchar());
+      this.hablar(`${prefijoAviso}¿Más o emitimos?`, () => this.escuchar());
     }
   }
 
@@ -1391,84 +1646,134 @@ get cuotasTarjetaValidas(): boolean {
   }
 
   /**
-   * Resuelve productos por voz SIN auto-elegir cuando hay iguales/parecidos.
-   * Regla de oro: si hay 2+ candidatos → SIEMPRE opciones.
+   * Resuelve UN producto por su nombre (nombreIa).
+   * - Si hay varios con el MISMO nombre exacto → siempre opciones.
+   * - Si hay varios "iguales" (misma palabra principal / muy parecidos) → opciones.
+   * - Solo auto-elige cuando hay un ganador claro y único.
    */
-  private resolverMatchesProductoVoz(nombreIa: string, fraseUsuario: string): any[] {
+  private resolverMatchesProductoVoz(nombreIa: string, _fraseUsuario: string): any[] {
+    const txt = this.limpiarTexto(nombreIa || '');
+    if (!txt) return [];
+
     const stop = new Set([
       'agrega', 'agregue', 'agregar', 'añade', 'añadir', 'pon', 'poner', 'quiero', 'dame',
       'uno', 'una', 'unos', 'unas', 'dos', 'tres', 'cuatro', 'cinco', 'seis', 'siete',
       'ocho', 'nueve', 'diez', 'del', 'de', 'la', 'el', 'los', 'las', 'un', 'al', 'con',
       'por', 'para', 'y', 'o', 'que', 'me', 'te', 'le', 'se', 'producto', 'productos',
-      'factura', 'favor', 'porfa', 'descuento', 'porcentaje', 'dolares', 'dolar', 'centavos'
+      'factura', 'favor', 'porfa', 'descuento', 'bodega', 'central', 'principal'
     ]);
 
-    const tokensUsuario = this.limpiarTexto(fraseUsuario)
-      .split(/\s+/)
-      .filter(t => t.length >= 3 && !stop.has(t) && !/^\d+$/.test(t));
+    // 1) Nombre exacto idéntico (varias presentaciones / ids distintos)
+    const exactos = this.dedupProductos(
+      this.productosList.filter(p => this.limpiarTexto(p.nombre) === txt)
+    );
+    if (exactos.length === 1) return exactos;
+    if (exactos.length > 1) return exactos.slice(0, 10); // iguales → opciones
 
-    // 1) Tokens del usuario: si "mascara" matchea varios → opciones forzadas
-    let mejorMulti: any[] = [];
-    for (const tok of tokensUsuario) {
-      const hits = this.dedupProductos(
-        this.productosList.filter(p => this.limpiarTexto(p.nombre).includes(tok))
+    // 2) Iguales por palabra principal del nombre dicho (ej. varios "Mouse …")
+    const tokens = txt.split(/\s+/).filter(t => t.length >= 3 && !stop.has(t));
+    const tokenPrincipal = [...tokens].sort((a, b) => b.length - a.length)[0] || txt;
+
+    if (tokenPrincipal.length >= 3) {
+      // Coincidencia de palabra completa (límites de palabra)
+      const rePalabra = new RegExp(`(?:^|\\s)${tokenPrincipal.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:\\s|$)`);
+      const porPalabra = this.dedupProductos(
+        this.productosList.filter(p => rePalabra.test(this.limpiarTexto(p.nombre)))
       );
-      if (hits.length > mejorMulti.length) mejorMulti = hits;
-    }
-    if (mejorMulti.length > 1) return mejorMulti;
-
-    // 2) Búsqueda normal por lo que dijo la IA
-    const porIa = this.buscarProductos(nombreIa);
-
-    // 3) Aunque la IA devolvió 1, si ese nombre tiene "hermanos" (misma raíz) → opciones
-    if (porIa.length === 1) {
-      const hermanos = this.buscarHermanosProducto(porIa[0]);
-      if (hermanos.length > 1) return hermanos;
-      return porIa;
-    }
-    if (porIa.length > 1) return porIa;
-
-    // 4) Tokens del nombre IA
-    const tokensIa = this.limpiarTexto(nombreIa).split(/\s+/).filter(t => t.length >= 3 && !stop.has(t));
-    for (const tok of tokensIa) {
-      const hits = this.dedupProductos(
-        this.productosList.filter(p => this.limpiarTexto(p.nombre).includes(tok))
-      );
-      if (hits.length > 1) return hits;
-      if (hits.length === 1) {
-        const hermanos = this.buscarHermanosProducto(hits[0]);
-        return hermanos.length > 1 ? hermanos : hits;
+      if (porPalabra.length > 1) {
+        // Si todos empiezan igual o el token es el nombre completo → opciones sí o sí
+        const todosMuyParecidos = porPalabra.every(p => {
+          const n = this.limpiarTexto(p.nombre);
+          return n === tokenPrincipal || n.startsWith(tokenPrincipal) || n.includes(tokenPrincipal);
+        });
+        if (todosMuyParecidos) return porPalabra.slice(0, 10);
       }
+      if (porPalabra.length === 1) return porPalabra;
     }
 
-    return mejorMulti.length === 1 ? mejorMulti : [];
+    // 3) buscarProductos clásico
+    const porNombre = this.buscarProductos(txt);
+    if (porNombre.length === 1) {
+      // Si ese único tiene clones de nombre exacto → opciones
+      const clones = this.buscarHermanosProducto(porNombre[0]);
+      return clones.length > 1 ? clones.slice(0, 10) : porNombre;
+    }
+    if (porNombre.length > 1) {
+      // Rankear; si empate fuerte → opciones
+      const scored = this.puntuarCandidatosProducto(porNombre, txt, tokens);
+      return this.decidirMatchOpciones(scored);
+    }
+
+    // 4) Fallback por includes de tokens
+    let candidatos: any[] = [];
+    if (tokens.length > 0) {
+      const pool: any[] = [];
+      for (const t of tokens) {
+        for (const p of this.productosList) {
+          if (this.limpiarTexto(p.nombre).includes(t)) pool.push(p);
+        }
+      }
+      candidatos = this.dedupProductos(pool);
+    }
+    if (candidatos.length === 0) return [];
+    if (candidatos.length === 1) return candidatos;
+
+    const scored = this.puntuarCandidatosProducto(candidatos, txt, tokens);
+    return this.decidirMatchOpciones(scored);
   }
 
-  /** Productos con el mismo nombre exacto o que comparten la palabra raíz principal */
+  private puntuarCandidatosProducto(candidatos: any[], txt: string, tokens: string[]): { p: any; score: number; nom: string }[] {
+    return candidatos.map(p => {
+      const nom = this.limpiarTexto(p.nombre);
+      let score = 0;
+      if (nom === txt) score += 100;
+      if (nom.startsWith(txt)) score += 40;
+      if (txt.startsWith(nom) && nom.length >= 4) score += 25;
+      if (nom.includes(txt)) score += 20;
+      for (const t of tokens) {
+        if (nom === t) score += 30;
+        else if (nom.startsWith(t)) score += 15;
+        else if (nom.includes(t)) score += 8;
+      }
+      score -= Math.min(nom.length, 40) * 0.05;
+      return { p, score, nom };
+    }).sort((a, b) => b.score - a.score);
+  }
+
+  /** Si hay empate o varios con score casi igual → opciones; si no, el ganador. */
+  private decidirMatchOpciones(scored: { p: any; score: number; nom: string }[]): any[] {
+    if (!scored.length) return [];
+    const top = scored[0];
+    const segundo = scored[1];
+    // Varios con el mismo nombre limpio → siempre opciones
+    const mismoNombre = scored.filter(s => s.nom === top.nom);
+    if (mismoNombre.length > 1) {
+      return this.dedupProductos(mismoNombre.map(s => s.p)).slice(0, 10);
+    }
+    // Empate cercano (diferencia < 8) → opciones
+    if (segundo && (top.score - segundo.score) < 8) {
+      const empateMin = top.score - 6;
+      return this.dedupProductos(
+        scored.filter(s => s.score >= empateMin).map(s => s.p)
+      ).slice(0, 10);
+    }
+    // Ganador claro
+    if (top.score >= 15) return [top.p];
+    // Scores bajos pero varios → opciones por si acaso
+    if (scored.length > 1 && top.score >= 8) {
+      return this.dedupProductos(scored.slice(0, 6).map(s => s.p));
+    }
+    return [top.p];
+  }
+
+  /** Productos con el mismo nombre exacto (presentaciones / ids distintos). */
   private buscarHermanosProducto(producto: any): any[] {
     if (!producto) return [];
     const nom = this.limpiarTexto(producto.nombre);
-    // Mismo nombre exacto (distintos ids / presentaciones)
     const exactos = this.dedupProductos(
       this.productosList.filter(p => this.limpiarTexto(p.nombre) === nom)
     );
-    if (exactos.length > 1) return exactos;
-
-    const palabras = nom.split(/\s+/).filter(p => p.length >= 3);
-    const raiz = [...palabras].sort((a, b) => b.length - a.length)[0];
-    if (!raiz || raiz.length < 4) return [producto];
-
-    const hermanos = this.dedupProductos(
-      this.productosList.filter(p => this.limpiarTexto(p.nombre).includes(raiz))
-    );
-    if (hermanos.length > 12 && palabras.length >= 2) {
-      const estrechos = hermanos.filter(p => {
-        const n = this.limpiarTexto(p.nombre);
-        return palabras.filter(w => n.includes(w)).length >= Math.min(2, palabras.length);
-      });
-      if (estrechos.length > 1) return estrechos;
-    }
-    return hermanos.length > 1 ? hermanos : [producto];
+    return exactos.length > 0 ? exactos : [producto];
   }
 
 
@@ -1557,15 +1862,15 @@ get cuotasTarjetaValidas(): boolean {
     const seleccionado = this.opcionesVoz[index];
     setTimeout(() => {
       this.procesarSeleccionDesambiguacion(seleccionado);
-    }, 120);
+    }, 60);
   }
 
   private manejarDesambiguacion(transcript: string) {
     if (this.seleccionEnCurso) return;
 
     const t = (transcript || '').trim();
-    if (t.length > 45) {
-      this.hablar("Di solo el número de la opción, por ejemplo: uno, dos o tres.", () => {
+    if (t.length > 50) {
+      this.hablar("Solo el número: uno, dos o tres.", () => {
         this.bloqueoEscucha = false;
         this.isThinking = false;
         this.escuchar();
