@@ -91,6 +91,15 @@ export class Facturas implements OnInit, OnDestroy {
   private ultimaFraseUsuario: string = '';
   private bloqueoEscucha = false;
   private seleccionEnCurso = false;
+  /** Producto esperando que el usuario elija bodega */
+  private productoPendienteBodega: any = null;
+  private itemPendienteBodega: any = null;
+  private esperandoBodega = false;
+  /** Hasta este timestamp (ms) se ignora el mic: evita eco de la propia voz de Zoe */
+  private silencioPostHablaUntil = 0;
+  private ultimoTextoHablado = '';
+  /** Bodega dicha en la frase → se reutiliza para todos los productos de ese comando */
+  private bodegaPreferidaVoz: any = null;
 
   private precioParaFactura(producto: any): number {
     const costo = Number(producto?.costoPromedioActual ?? producto?.costoPromedio ?? 0);
@@ -279,6 +288,12 @@ export class Facturas implements OnInit, OnDestroy {
     this.ultimaFraseUsuario = '';
     this.bloqueoEscucha = false;
     this.seleccionEnCurso = false;
+    this.productoPendienteBodega = null;
+    this.itemPendienteBodega = null;
+    this.esperandoBodega = false;
+    this.silencioPostHablaUntil = 0;
+    this.ultimoTextoHablado = '';
+    this.bodegaPreferidaVoz = null;
 
     if (porVoz) {
       window.speechSynthesis.resume();
@@ -561,8 +576,17 @@ get cuotasTarjetaValidas(): boolean {
     this.recognition.interimResults = true;
 
     this.recognition.onresult = (event: any) => {
-      // Ignorar audio mientras se procesa un clic o la IA está pensando
-      if (this.bloqueoEscucha || this.seleccionEnCurso || this.isThinking) return;
+      // Ignorar 100% mientras habla, piensa, elige o en cooldown anti-eco
+      if (this.bloqueoEscucha || this.seleccionEnCurso || this.isThinking || !this.isListening) {
+        this.transcriptAcumulado = '';
+        this.userTranscript = '';
+        return;
+      }
+      if (Date.now() < this.silencioPostHablaUntil) {
+        this.transcriptAcumulado = '';
+        this.userTranscript = '';
+        return;
+      }
 
       let interim = '';
       let final = '';
@@ -583,14 +607,20 @@ get cuotasTarjetaValidas(): boolean {
       this.cdr.detectChanges();
 
       clearTimeout(this.silenceTimer);
-      // Más rápido: desambiguación ~1.1s; libre ~1.9s
-      const espera = this.voiceState === VoiceStep.ELEGIR_OPCION ? 1100 : 1900;
+      const espera = this.voiceState === VoiceStep.ELEGIR_OPCION ? 1400 : 2800;
       this.silenceTimer = setTimeout(() => {
-        if (this.bloqueoEscucha || this.seleccionEnCurso || this.isThinking) return;
+        if (this.bloqueoEscucha || this.seleccionEnCurso || this.isThinking || !this.isListening) return;
+        if (Date.now() < this.silencioPostHablaUntil) return;
         try { this.recognition.stop(); } catch (e) { }
         if (this.userTranscript) {
           this.isListening = false;
           const txt = this.userTranscript.trim();
+          if (this.esEcoDeLoHablado(txt)) {
+            this.transcriptAcumulado = '';
+            this.userTranscript = '';
+            this.escuchar();
+            return;
+          }
           const palabras = txt.split(/\s+/);
           const fraseUtil = palabras.length > 28 ? palabras.slice(-28).join(' ') : txt;
           this.procesarComandoVoz(fraseUtil);
@@ -606,11 +636,15 @@ get cuotasTarjetaValidas(): boolean {
         Swal.fire('Micrófono bloqueado', 'Permite el acceso al micrófono en el navegador.', 'error');
         this.cancelarAsistenteVoz();
       }
-      // aborted / no-speech: no reiniciar si estamos bloqueados
     };
 
     this.recognition.onend = () => {
-      // NUNCA reiniciar solo si hay bloqueo, pensamiento o selección en curso
+      // No reiniciar durante cooldown anti-eco / bloqueo
+      if (Date.now() < this.silencioPostHablaUntil) {
+        this.isListening = false;
+        this.cdr.detectChanges();
+        return;
+      }
       if (
         this.voiceState !== VoiceStep.OFF &&
         !this.isThinking &&
@@ -651,6 +685,14 @@ get cuotasTarjetaValidas(): boolean {
     this.seleccionEnCurso = false;
     this.transcriptAcumulado = '';
     this.userTranscript = '';
+    this.productoPendienteBodega = null;
+    this.itemPendienteBodega = null;
+    this.esperandoBodega = false;
+    this.silencioPostHablaUntil = 0;
+    this.ultimoTextoHablado = '';
+    this.bodegaPreferidaVoz = null;
+    this.opcionesVoz = [];
+    this.tipoOpciones = null;
     clearTimeout(this.silenceTimer);
     window.speechSynthesis.cancel();
     if (this.recognition) {
@@ -718,44 +760,126 @@ get cuotasTarjetaValidas(): boolean {
     utterance.pitch = Math.max(utterance.pitch || 1, 1.15);
   }
 
+  /** ¿El transcript parece eco de lo que Zoe acaba de decir? */
+  private esEcoDeLoHablado(transcript: string): boolean {
+    const t = this.limpiarTexto(transcript);
+    const h = this.limpiarTexto(this.ultimoTextoHablado || this.voiceMessage || '');
+    if (!t) return false;
+
+    // Frases típicas que Zoe dice al final → eco casi seguro
+    if (/^(listo|total|que mas|que m[aá]s|agregu[eé]|desde|emitiendo|cuota|no encontr|no pude|dime el|di el|ok no emit)/.test(t)
+      && t.split(/\s+/).length <= 14) {
+      return true;
+    }
+    // "listo total ... que mas" completo
+    if (/\blisto\b/.test(t) && /\btotal\b/.test(t) && t.split(/\s+/).length <= 16) return true;
+    if (/\bemitiendo\b/.test(t) && t.split(/\s+/).length <= 8) return true;
+
+    if (!h) return false;
+    if (t === h) return true;
+    if (t.length >= 5 && (h.includes(t) || t.includes(h.slice(0, Math.min(55, h.length))))) return true;
+
+    const wordsT = t.split(/\s+/).filter(w => w.length > 2);
+    const wordsH = new Set(h.split(/\s+/).filter(w => w.length > 2));
+    if (wordsT.length >= 2) {
+      const comunes = wordsT.filter(w => wordsH.has(w)).length;
+      if (comunes / wordsT.length >= 0.4) return true;
+      if (comunes >= 2) return true;
+    }
+    // Ventana post-habla: frases cortas con 1+ palabra en común = eco
+    if (Date.now() < this.silencioPostHablaUntil + 600 && wordsT.length <= 6) {
+      const comunes = wordsT.filter(w => wordsH.has(w)).length;
+      if (comunes >= 1) return true;
+    }
+    return false;
+  }
+
   private hablar(texto: string, callback?: () => void) {
-    // Mientras habla no debe escuchar (evita eco / confusión)
+    // Mic OFF total mientras habla + cooldown largo (anti-eco máximo)
     this.bloqueoEscucha = true;
     this.isListening = false;
     this.isThinking = true;
+    this.ultimoTextoHablado = texto || '';
     clearTimeout(this.silenceTimer);
     this.transcriptAcumulado = '';
+    this.userTranscript = '';
     window.speechSynthesis.cancel();
     if (this.recognition) {
       try { this.recognition.abort(); } catch (e) { }
+      try { this.recognition.stop(); } catch (e) { }
     }
-    
+    // Bloquear resultados desde YA (antes de que termine de hablar)
+    this.silencioPostHablaUntil = Date.now() + 60000;
+
+    let yaTermino = false;
+    const fin = () => {
+      if (yaTermino) return;
+      yaTermino = true;
+      this.isThinking = false;
+      this.bloqueoEscucha = true;
+      this.isListening = false;
+      this.transcriptAcumulado = '';
+      this.userTranscript = '';
+      // Cooldown anti-eco ~2.4s tras terminar de hablar
+      this.silencioPostHablaUntil = Date.now() + 2400;
+      this.cdr.detectChanges();
+
+      if (this.voiceState === VoiceStep.OFF) {
+        this.bloqueoEscucha = false;
+        return;
+      }
+
+      // Pausa ~2.2s + abort residual antes de abrir mic
+      setTimeout(() => {
+        if (this.voiceState === VoiceStep.OFF) return;
+        if (this.recognition) {
+          try { this.recognition.abort(); } catch (e) { }
+        }
+        this.transcriptAcumulado = '';
+        this.userTranscript = '';
+        this.cdr.detectChanges();
+        if (this.seleccionEnCurso) return;
+        setTimeout(() => {
+          if (this.voiceState === VoiceStep.OFF) return;
+          this.transcriptAcumulado = '';
+          this.userTranscript = '';
+          this.bloqueoEscucha = false;
+          this.cdr.detectChanges();
+          if (callback) callback();
+          else this.escuchar();
+        }, 250);
+      }, 2200);
+    };
 
     setTimeout(() => {
-      if (this.voiceState === VoiceStep.OFF) return;
+      if (this.voiceState === VoiceStep.OFF) {
+        fin();
+        return;
+      }
 
       this.voiceMessage = texto;
       this.userTranscript = '';
       this.cdr.detectChanges();
 
       const utterance = new SpeechSynthesisUtterance(texto);
-      utterance.rate = 1.28;
+      utterance.rate = 1.22;
       utterance.pitch = 1.15;
-      utterance.volume = 1;
+      // Volumen un poco más bajo → menos eco en el mic del PC
+      utterance.volume = 0.82;
       this.aplicarVozMujer(utterance);
 
-      const fin = () => {
-        this.isThinking = false;
-        this.bloqueoEscucha = false;
-        if (callback && this.voiceState !== VoiceStep.OFF && !this.seleccionEnCurso) {
-          callback();
-        }
-      };
       utterance.onend = fin;
       utterance.onerror = fin;
 
-      window.speechSynthesis.speak(utterance);
-    }, 80);
+      const msSeguro = Math.min(18000, Math.max(2800, texto.length * 70));
+      setTimeout(fin, msSeguro);
+
+      try {
+        window.speechSynthesis.speak(utterance);
+      } catch {
+        fin();
+      }
+    }, 100);
   }
 
   private escuchar() {
@@ -763,11 +887,17 @@ get cuotasTarjetaValidas(): boolean {
       this.voiceState === VoiceStep.OFF ||
       this.voiceState === VoiceStep.INICIANDO ||
       this.bloqueoEscucha ||
-      this.seleccionEnCurso ||
-      this.isThinking
+      this.seleccionEnCurso
     ) {
       return;
     }
+    if (Date.now() < this.silencioPostHablaUntil) {
+      // Aún en cooldown anti-eco → reintentar cuando pase
+      const falta = this.silencioPostHablaUntil - Date.now() + 30;
+      setTimeout(() => this.escuchar(), Math.max(50, falta));
+      return;
+    }
+    this.isThinking = false;
     this.isListening = true;
     this.cdr.detectChanges();
     try { this.recognition.start(); } catch (e) { }
@@ -777,6 +907,14 @@ get cuotasTarjetaValidas(): boolean {
   procesarComandoVoz(transcript: string) {
     this.transcriptAcumulado = '';
     const transcriptLimpio = this.limpiarTexto(transcript).replace(/[.,;:!?¡¿]+/g, ' ').replace(/\s+/g, ' ').trim();
+    // Seguridad anti-eco
+    if (this.esEcoDeLoHablado(transcriptLimpio)) {
+      this.userTranscript = '';
+      this.escuchar();
+      return;
+    }
+    // Nueva frase: bodega solo si la menciona ahora
+    this.bodegaPreferidaVoz = this.resolverBodegaDesdeFrase(transcriptLimpio);
     if (!transcriptLimpio) {
       this.escuchar();
       return;
@@ -816,38 +954,39 @@ get cuotasTarjetaValidas(): boolean {
       this.voiceState = VoiceStep.ESCUCHA_LIBRE;
     }
 
-    // Emitir DIRECTO sin pasar por Groq si el comando es solo emitir
+    // Emitir DIRECTO solo con comando explícito (nunca por "listo" / eco de Zoe)
     if (this.esSoloEmitirCorto(transcriptLimpio) || (
       this.esComandoEmitirFuerte(transcriptLimpio)
       && !this.fraseMencionaProducto(transcriptLimpio)
-      && !/\b(cliente|consumidor|tarjeta|cuotas?|meses?|transferencia|efectivo|descuento|agrega|pon)\b/.test(transcriptLimpio)
+      && !/\b(cliente|consumidor|tarjeta|cuotas?|meses?|transferencia|efectivo|descuento|agrega|pon|quita|elimina)\b/.test(transcriptLimpio)
     )) {
       this.emitirFacturaPorVoz();
       return;
     }
 
-    const quiereEmitir = this.esComandoEmitirFuerte(transcriptLimpio)
-      || ['todo bien', 'listo', 'ya esta', 'ya está', 'terminamos', 'finalizar', 'confirma', 'confirmar'].some(cmd => transcriptLimpio.includes(cmd));
+    // Solo intención de emitir si la frase trae verbo claro de emitir/cobrar
+    const quiereEmitir = this.esComandoEmitirFuerte(transcriptLimpio);
 
     this.analizarConGroq(transcriptLimpio, quiereEmitir);
   }
 
-  /** Frases cortas o casi solo emitir (tolerante a ruido del reconocimiento) */
+  /** Frases cortas SOLO de emitir (sin "listo"/"ya" — provocan emisión por eco) */
   private esSoloEmitirCorto(texto: string): boolean {
     const t = (texto || '').trim();
     if (!t) return false;
     const exactas = [
       'emite', 'emitir', 'cobra', 'cobrar', 'emite ya', 'emitir ya', 'cobra ya', 'cobrar ya',
-      'factura ya', 'guarda', 'guardar', 'listo emite', 'listo emitir', 'si emite', 'si emitir',
-      'adelante', 'de una', 'de una vez', 'hazlo', 'genera', 'generar', 'listo', 'ya',
-      'emite por favor', 'emitir por favor', 'cobra por favor', 'si por favor'
+      'factura ya', 'emite la factura', 'emitir la factura', 'cobra la factura',
+      'guarda la factura', 'guardar la factura', 'genera la factura', 'generar la factura',
+      'listo emite', 'listo emitir', 'si emite', 'si emitir', 'si cobra',
+      'emite por favor', 'emitir por favor', 'cobra por favor'
     ];
     if (exactas.some(e => t === e || t === e + ' por favor' || t === e + ' gracias')) return true;
-    // Frases cortas centradas en emitir (≤ 6 palabras)
     const palabras = t.split(/\s+/);
     if (palabras.length <= 6) {
-      const tieneEmit = /\b(emite|emitir|cobra|cobrar|guarda|guardar|genera|generar)\b/.test(t);
-      const tieneExtra = /\b(agrega|agregar|pon|poner|cliente|mouse|producto|tarjeta|cuotas?|descuento)\b/.test(t);
+      const tieneEmit = /\b(emite|emitir|cobra|cobrar)\b/.test(t)
+        || /\b(guarda|guardar|genera|generar)\s+(la\s+)?factura\b/.test(t);
+      const tieneExtra = /\b(agrega|agregar|pon|poner|cliente|producto|tarjeta|cuotas?|descuento|quita|elimina)\b/.test(t);
       if (tieneEmit && !tieneExtra) return true;
     }
     return false;
@@ -879,25 +1018,29 @@ get cuotasTarjetaValidas(): boolean {
       return;
     }
 
+    // Apagar mic TOTAL antes de hablar/emitir (evita eco al final)
     this.voiceState = VoiceStep.OFF;
     this.bloqueoEscucha = true;
     this.isListening = false;
     this.isThinking = false;
+    this.silencioPostHablaUntil = Date.now() + 10000;
     clearTimeout(this.silenceTimer);
     if (this.recognition) {
       try { this.recognition.abort(); } catch (e) { }
+      try { this.recognition.stop(); } catch (e) { }
     }
-    // Emitir ya (mensaje corto, sin esperar a que termine de hablar si se puede)
     this.voiceMessage = 'Emitiendo.';
+    this.ultimoTextoHablado = 'Emitiendo.';
     this.cdr.detectChanges();
     try {
       window.speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance('Emitiendo.');
       u.rate = 1.3;
+      u.volume = 0.8;
       this.aplicarVozMujer(u);
       window.speechSynthesis.speak(u);
     } catch (e) { }
-    setTimeout(() => { this.guardarFactura(); }, 300);
+    setTimeout(() => { this.guardarFactura(); }, 280);
   }
 
   /** Botones del panel Zoe (Sí / No) */
@@ -910,16 +1053,15 @@ get cuotasTarjetaValidas(): boolean {
     this.hablar("Ok, no emitimos. ¿Qué más?", () => this.escuchar());
   }
 
-  /** Comandos claros de emitir/cobrar */
+  /** Comandos claros de emitir/cobrar (verbos explícitos, no "listo" ni eco) */
   private esComandoEmitirFuerte(texto: string): boolean {
-    const t = texto || '';
-    const fuertes = [
-      'emite', 'emitir', 'factura ya', 'cobrar ya', 'guarda la factura', 'guardar factura',
-      'cobra', 'cobrar', 'emite ya', 'emitir ya', 'cobra ya', 'cobrar ya',
-      'genera la factura', 'generar factura', 'cierra la factura', 'cerrar factura',
-      'saca la factura', 'haz la factura'
-    ];
-    return fuertes.some(cmd => t.includes(cmd));
+    const t = this.limpiarTexto(texto || '');
+    if (!t) return false;
+    // Debe haber verbo de emisión, no solo palabras sueltas de confirmación
+    if (/\b(emite|emitir|cobra|cobrar)\b/.test(t)) return true;
+    if (/\b(guarda|guardar|genera|generar|cierra|cerrar|saca|haz|hacer)\s+(la\s+)?factura\b/.test(t)) return true;
+    if (/\bfactura\s+ya\b/.test(t) || /\bcobrar\s+ya\b/.test(t)) return true;
+    return false;
   }
 
   /** Detecta afirmaciones de voz (sí, dale, ok, confirmo, etc.) */
@@ -1049,7 +1191,10 @@ get cuotasTarjetaValidas(): boolean {
               && this.fraseMencionaProducto(fraseUsuario)) {
               datosLimpios.items = this.extraerItemsDesdeFrase(fraseUsuario);
             }
-            const intencionEmitir = quiereEmitirPalabra || String(datosLimpios.emitirFactura).toLowerCase() === 'true';
+            // Groq puede poner emitirFactura=true por error; solo confiar si la frase lo pide
+            const intencionEmitir = quiereEmitirPalabra
+              && (this.esComandoEmitirFuerte(fraseUsuario)
+                || String(datosLimpios.emitirFactura).toLowerCase() === 'true');
             this.aplicarDatosExtraidos(datosLimpios, intencionEmitir);
           } catch (e) {
             console.error("Error procesando voz:", e);
@@ -1213,26 +1358,39 @@ get cuotasTarjetaValidas(): boolean {
       else if (diceEfectivo) out.metodoPago = 'EFECTIVO';
     }
 
-    const seraConsumidorFinal = this.esConsumidorFinal
-      || /\b(consumidor\s*final|sin\s*datos)\b/.test(f)
+    // ¿La frase pide cambiar a un cliente real? (nombre, cédula, "cliente 421")
+    const pideClienteReal =
+      (out.cliente && out.cliente !== 'null' && !String(out.cliente).toUpperCase().includes('CONSUMIDOR'))
+      || /\b(cliente|cedula|c[eé]dula|ruc)\b/.test(f)
+      || /\b\d{3,13}\b/.test(f);
+    const diceConsumidorAhora = /\b(consumidor\s*final|sin\s*datos)\b/.test(f)
       || String(out.cliente || '').toUpperCase().includes('CONSUMIDOR');
+
+    // Solo bloquear tarjeta si SIGUE siendo consumidor final y NO está cambiando a cliente real
+    const seraConsumidorFinal = diceConsumidorAhora || (this.esConsumidorFinal && !pideClienteReal);
     if (seraConsumidorFinal && out.metodoPago === 'TARJETA_CREDITO') {
       out.metodoPago = diceEfectivo ? 'EFECTIVO' : (diceTransfer ? 'TRANSFERENCIA' : 'EFECTIVO');
       out.detallesTarjeta = null;
       out.cuotas = null;
       (out as any)._tarjetaBloqueadaConsumidor = true;
+    } else {
+      // Va a cambiar de cliente → NO bloquear tarjeta/cuotas todavía
+      (out as any)._tarjetaBloqueadaConsumidor = false;
     }
 
-    // No borrar cuotas si el usuario ya está en tarjeta y solo ajusta cuotas
+    // No borrar cuotas si el usuario ya está en tarjeta o está pidiendo tarjeta+cuotas con cliente nuevo
     const yaEnTarjeta = this.nuevaFactura.metodoPago === 'TARJETA_CREDITO' && this.permiteTarjetaCredito;
-    if (seraConsumidorFinal) {
+    if (seraConsumidorFinal && !pideClienteReal) {
       out.detallesTarjeta = null;
       out.cuotas = null;
-    } else if (!diceTarjeta && !yaEnTarjeta) {
+    } else if (!diceTarjeta && !yaEnTarjeta && !this.extraerCuotasDeFrase(f)) {
       out.detallesTarjeta = null;
-      // Solo anular cuotas si no las dijo en la frase
       if (!this.extraerCuotasDeFrase(f)) out.cuotas = null;
     }
+    // Si dijo cuotas en la frase, asegurar que se conserven
+    const cuotasFrase = this.extraerCuotasDeFrase(f);
+    if (cuotasFrase && !out.cuotas) out.cuotas = cuotasFrase;
+    if (diceTarjeta && !out.metodoPago) out.metodoPago = 'TARJETA_CREDITO';
 
     const diceDesc = /\b(descuento|rebaja|por\s*ciento|porcentaje)\b/.test(f);
     if (!diceDesc) {
@@ -1286,6 +1444,14 @@ get cuotasTarjetaValidas(): boolean {
     if (out.eliminarProducto && out.eliminarProducto !== 'null') {
       const diceQuitar = /\b(quita|quitar|borra|borrar|elimina|eliminar|saca|sacar)\b/.test(f);
       if (!diceQuitar) out.eliminarProducto = null;
+      else {
+        // Quitar y agregar en la misma frase se buguea → solo quitar
+        out.items = [];
+      }
+    }
+    // Si la frase es de quitar/restar unidades, no agregar productos
+    if (/\b(quita|quitar|borra|borrar|elimina|eliminar|saca|sacar)\b/.test(f)) {
+      out.items = [];
     }
 
     // Cuotas: de la IA o de la frase ("5 cuotas", "cambia a 3 meses")
@@ -1521,20 +1687,28 @@ get cuotasTarjetaValidas(): boolean {
     let algoAgregado = false;
     let mensajesAlerta: string[] = [];
 
-    // ── QUITAR PRODUCTO (todo el ítem) ──
-    let soloQuitoYNadaMas = false;
-    if (datos.eliminarProducto && datos.eliminarProducto !== 'null') {
-      const idx = this.buscarIndiceEnCarrito(String(datos.eliminarProducto));
-      if (idx !== -1) {
-        const nombreQuitado = this.nuevaFactura.detalles[idx].productoNombre;
-        this.eliminarDelCarrito(idx);
-        algoAgregado = true;
-        mensajesAlerta.push(`quité ${nombreQuitado}`);
-        // Si no hay más items que agregar ni otras acciones, responder y salir
-        const hayMasItems = Array.isArray(datos.items) && datos.items.length > 0;
-        const hayMod = datos.modificarCantidad && datos.modificarCantidad !== 'null';
-        if (!hayMasItems && !hayMod && !quiereEmitir) {
-          soloQuitoYNadaMas = true;
+    // Si dijo "de la bodega X" en esta frase → fijar para todos los productos del comando
+    const bodFrase = this.resolverBodegaDesdeFrase(this.ultimaFraseUsuario || '');
+    if (bodFrase) {
+      this.bodegaPreferidaVoz = bodFrase;
+    }
+
+    // ── QUITAR / RESTAR: SOLO eso en esta frase (no mezclar con agregar) ──
+    const tieneQuitar = !!(datos.eliminarProducto && datos.eliminarProducto !== 'null');
+    const tieneRestar = !!(datos.modificarCantidad && datos.modificarCantidad !== 'null'
+      && String(datos.modificarCantidad?.modo || '').toLowerCase() === 'restar');
+    const tieneModSet = !!(datos.modificarCantidad && datos.modificarCantidad !== 'null'
+      && String(datos.modificarCantidad?.modo || '').toLowerCase() !== 'restar');
+
+    if (tieneQuitar || tieneRestar) {
+      // No procesar items de agregar en la misma frase (evita bugs)
+      datos.items = [];
+
+      if (tieneQuitar) {
+        const idx = this.buscarIndiceEnCarrito(String(datos.eliminarProducto));
+        if (idx !== -1) {
+          const nombreQuitado = this.nuevaFactura.detalles[idx].productoNombre;
+          this.eliminarDelCarrito(idx);
           this.hablar(`Listo, quité ${nombreQuitado}. Total $${this.totalCarrito.toFixed(2)}. ¿Qué más?`, () => {
             this.bloqueoEscucha = false;
             this.isThinking = false;
@@ -1542,49 +1716,85 @@ get cuotasTarjetaValidas(): boolean {
           });
           return;
         }
-      } else {
-        mensajesAlerta.push(`no encontré "${datos.eliminarProducto}" en el ticket`);
+        this.hablar(`No encontré "${datos.eliminarProducto}" en el ticket. ¿Qué más?`, () => {
+          this.bloqueoEscucha = false;
+          this.isThinking = false;
+          this.escuchar();
+        });
+        return;
       }
-    }
 
-    // ── CAMBIAR / RESTAR CANTIDAD ──
-    if (datos.modificarCantidad && datos.modificarCantidad !== 'null') {
-      const mod = typeof datos.modificarCantidad === 'object'
-        ? datos.modificarCantidad
-        : null;
-      if (mod && mod.producto) {
+      if (tieneRestar) {
+        const mod = datos.modificarCantidad;
         let cant = this.normalizarCantidadVoz(mod.cantidad);
-        if (String(mod.modo || '').toLowerCase() === 'restar') {
-          const idx = this.buscarIndiceEnCarrito(String(mod.producto));
-          if (idx !== -1) {
-            const actual = Number(this.nuevaFactura.detalles[idx].cantidad) || 0;
-            cant = Math.max(0, actual - cant);
+        const idx = this.buscarIndiceEnCarrito(String(mod.producto));
+        if (idx !== -1) {
+          const actual = Number(this.nuevaFactura.detalles[idx].cantidad) || 0;
+          cant = Math.max(0, actual - cant);
+          const ok = this.modificarCantidadEnCarrito(String(mod.producto), cant);
+          if (ok) {
+            const msg = cant === 0
+              ? `Quité ${mod.producto}. Total $${this.totalCarrito.toFixed(2)}.`
+              : `${mod.producto} queda en ${cant}. Total $${this.totalCarrito.toFixed(2)}.`;
+            this.hablar(`${msg} ¿Qué más?`, () => {
+              this.bloqueoEscucha = false;
+              this.isThinking = false;
+              this.escuchar();
+            });
+            return;
           }
         }
-        // Si modo restar y quedó 0 → se elimina la línea
-        const ok = this.modificarCantidadEnCarrito(String(mod.producto), cant);
-        if (ok) {
-          algoAgregado = true;
-          if (cant === 0) mensajesAlerta.push(`quité ${mod.producto}`);
-          else mensajesAlerta.push(`${mod.producto} queda en ${cant}`);
-        } else {
-          mensajesAlerta.push(`no pude ajustar "${mod.producto}"`);
-        }
+        this.hablar(`No pude quitar unidades de "${mod.producto}". ¿Qué más?`, () => {
+          this.bloqueoEscucha = false;
+          this.isThinking = false;
+          this.escuchar();
+        });
+        return;
       }
     }
 
-    if (soloQuitoYNadaMas) return;
+    // Cambiar cantidad FINAL (deja N de X) — sin agregar en la misma frase
+    if (tieneModSet) {
+      datos.items = [];
+      const mod = datos.modificarCantidad;
+      const cant = this.normalizarCantidadVoz(mod.cantidad);
+      const ok = this.modificarCantidadEnCarrito(String(mod.producto), cant);
+      if (ok) {
+        this.hablar(`${mod.producto} queda en ${cant}. Total $${this.totalCarrito.toFixed(2)}. ¿Qué más?`, () => {
+          this.bloqueoEscucha = false;
+          this.isThinking = false;
+          this.escuchar();
+        });
+        return;
+      }
+      mensajesAlerta.push(`no pude ajustar "${mod.producto}"`);
+    }
 
-    // ── 1) CLIENTE (permite cambiar aunque ya haya uno) ──
+    // ── 1) CLIENTE primero (sale de Consumidor Final si aplica) ──
     let requiereDesambiguacionCli = null;
+    // Si no vino cliente en JSON pero hay dígitos de cédula en la frase, buscar
+    if ((!datos.cliente || datos.cliente === 'null') && this.ultimaFraseUsuario) {
+      const digs = this.limpiarTexto(this.ultimaFraseUsuario).match(/\d{3,13}/g);
+      if (digs && digs.length) {
+        for (const d of digs) {
+          const hits = this.buscarClientesUniversales(d);
+          if (hits.length >= 1) {
+            datos.cliente = hits.length === 1
+              ? (hits[0].nombreCompleto || hits[0].primerNombre || d)
+              : d;
+            break;
+          }
+        }
+      }
+    }
     if (datos.cliente && datos.cliente !== 'null') {
       if (datos.cliente === 'CONSUMIDOR_FINAL' || String(datos.cliente).toLowerCase().includes('consumidor')) {
         this.setConsumidorFinal();
         algoAgregado = true;
       } else {
-        const matchesCli = this.buscarClientesUniversales(datos.cliente);
+        const matchesCli = this.buscarClientesUniversales(String(datos.cliente));
         if (matchesCli.length === 1) {
-          this.seleccionarCliente(matchesCli[0]);
+          this.seleccionarCliente(matchesCli[0]); // limpia esConsumidorFinal
           algoAgregado = true;
         } else if (matchesCli.length > 1) {
           requiereDesambiguacionCli = matchesCli;
@@ -1607,38 +1817,74 @@ get cuotasTarjetaValidas(): boolean {
       return;
     }
 
-    // ── 2) MÉTODO DE PAGO (después del cliente) ──
-    if (datos._tarjetaBloqueadaConsumidor) {
+    // ── 2) MÉTODO DE PAGO + CUOTAS (después del cliente ya resuelto) ──
+    // Si el cliente ya es real, no aplicar bloqueo de consumidor aunque viniera de la IA
+    if (this.permiteTarjetaCredito) {
+      (datos as any)._tarjetaBloqueadaConsumidor = false;
+    }
+
+    // Restaurar tarjeta/cuotas desde la frase si sanear las borró por el consumidor anterior
+    const frasePago = this.limpiarTexto(this.ultimaFraseUsuario || '');
+    if (!datos.metodoPago || datos.metodoPago === 'null') {
+      if (/\b(tarjeta|credito|cr[eé]dito|visa|mastercard)\b/.test(frasePago)) {
+        datos.metodoPago = 'TARJETA_CREDITO';
+      } else if (/\b(transferencia|deposito|dep[oó]sito)\b/.test(frasePago)) {
+        datos.metodoPago = 'TRANSFERENCIA';
+      } else if (/\b(efectivo|contado|cash)\b/.test(frasePago)) {
+        datos.metodoPago = 'EFECTIVO';
+      }
+    }
+    if ((datos.cuotas == null || datos.cuotas === 'null') && frasePago) {
+      const cf = this.extraerCuotasDeFrase(frasePago);
+      if (cf) datos.cuotas = cf;
+    }
+
+    if ((datos as any)._tarjetaBloqueadaConsumidor && !this.permiteTarjetaCredito) {
       mensajesAlerta.push('tarjeta no permitida con Consumidor Final');
     }
 
-    const estadoPago = this.aplicarMetodoPagoSeguro(
+    this.aplicarMetodoPagoSeguro(
       datos.metodoPago,
       mensajesAlerta,
-      false // ya resolvimos cliente arriba
+      false
     );
 
-    // Tarjeta / cuotas (cambiar cuotas aunque solo diga "5 cuotas")
-    if (this.nuevaFactura.metodoPago === 'TARJETA_CREDITO' && this.permiteTarjetaCredito) {
+    // Si dijo cuotas + (tarjeta o ya está en tarjeta o permite tarjeta), aplicar
+    const quiereTarjeta = String(datos.metodoPago || '').toUpperCase().includes('TARJETA')
+      || this.nuevaFactura.metodoPago === 'TARJETA_CREDITO'
+      || /\b(tarjeta|credito|cr[eé]dito)\b/.test(frasePago);
+
+    if (quiereTarjeta && this.permiteTarjetaCredito) {
+      this.nuevaFactura.metodoPago = 'TARJETA_CREDITO';
+      this.metodoPagoConfirmado = true;
       if (datos.detallesTarjeta && datos.detallesTarjeta !== 'null') {
         this.nuevaFactura.detallesTarjeta = datos.detallesTarjeta;
       }
-      if (datos.cuotas !== undefined && datos.cuotas !== null) {
-        const numCuotas = parseInt(String(datos.cuotas), 10);
-        if (!isNaN(numCuotas) && numCuotas >= 1 && numCuotas <= 48) {
-          this.nuevaFactura.numeroCuotas = numCuotas;
-          algoAgregado = true;
-          // feedback limpio en el mensaje final (no como alerta de error)
-          (datos as any)._cuotasActualizadas = numCuotas;
-        }
+      const numCuotas = datos.cuotas != null ? parseInt(String(datos.cuotas), 10) : NaN;
+      if (!isNaN(numCuotas) && numCuotas >= 1 && numCuotas <= 48) {
+        this.nuevaFactura.numeroCuotas = numCuotas;
+        algoAgregado = true;
+        (datos as any)._cuotasActualizadas = numCuotas;
+      } else if (!this.nuevaFactura.numeroCuotas || this.nuevaFactura.numeroCuotas < 1) {
+        // Dijo tarjeta pero sin cuotas → dejar pendiente, no forzar efectivo
+        algoAgregado = true;
       }
-    } else if (this.nuevaFactura.metodoPago === 'TARJETA_CREDITO') {
+    } else if (this.nuevaFactura.metodoPago === 'TARJETA_CREDITO' && !this.permiteTarjetaCredito) {
       this.bloquearTarjetaSiConsumidorFinal(false);
-    } else if (datos.cuotas != null && this.nuevaFactura.metodoPago !== 'TARJETA_CREDITO') {
-      // Dijo cuotas pero aún no hay tarjeta → avisar
+    } else if (datos.cuotas != null && this.nuevaFactura.metodoPago !== 'TARJETA_CREDITO' && !this.permiteTarjetaCredito) {
       const n = parseInt(String(datos.cuotas), 10);
       if (!isNaN(n) && n >= 1) {
-        mensajesAlerta.push('para usar cuotas elige primero tarjeta de crédito');
+        mensajesAlerta.push('para usar cuotas elige primero un cliente registrado y tarjeta');
+      }
+    } else if (datos.cuotas != null && this.permiteTarjetaCredito && quiereTarjeta === false) {
+      // Solo dijo cuotas con cliente real → activar tarjeta
+      const n = parseInt(String(datos.cuotas), 10);
+      if (!isNaN(n) && n >= 1) {
+        this.nuevaFactura.metodoPago = 'TARJETA_CREDITO';
+        this.metodoPagoConfirmado = true;
+        this.nuevaFactura.numeroCuotas = n;
+        algoAgregado = true;
+        (datos as any)._cuotasActualizadas = n;
       }
     }
 
@@ -1648,7 +1894,10 @@ get cuotasTarjetaValidas(): boolean {
       this.metodoPagoConfirmado = true;
     }
 
-    this.bloquearTarjetaSiConsumidorFinal(false);
+    // Solo bloquear tarjeta si AÚN es consumidor (después de cambiar cliente no debería)
+    if (!this.permiteTarjetaCredito) {
+      this.bloquearTarjetaSiConsumidorFinal(false);
+    }
 
     // ── 3) DESCUENTO GLOBAL ──
     if (datos.descuentoGlobalPorcentaje !== undefined && datos.descuentoGlobalPorcentaje !== null) {
@@ -1676,17 +1925,22 @@ get cuotasTarjetaValidas(): boolean {
     let descPctTemp = 0;
     const itemsRestantes: any[] = [];
 
-    // Agregar todos los que tengan match claro; solo pausar en el primer ambiguo
+    // Agregar todos los que tengan match claro; pausar en ambiguo o al pedir bodega
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
-      // Resolver SOLO por el nombre del ítem (no toda la frase)
       const matchesProd = this.resolverMatchesProductoVoz(String(item.producto), String(item.producto));
 
       if (matchesProd.length === 1) {
         const ok = this.intentarAgregarProductoVoz(matchesProd[0], item, mensajesAlerta);
         if (ok) algoAgregado = true;
+        // Esperando bodega → guardar el resto de la lista
+        if (this.esperandoBodega) {
+          for (let j = i + 1; j < items.length; j++) itemsRestantes.push(items[j]);
+          this.itemsVozPendientes = itemsRestantes;
+          this.quiereEmitirPendiente = quiereEmitir;
+          return; // iniciarDesambiguacion ya habló
+        }
       } else if (matchesProd.length > 1) {
-        // Ambiguo: guardar el resto y pedir opción solo para este
         requiereDesambiguacionProd = matchesProd;
         cantTemp = this.normalizarCantidadVoz(item.cantidad);
         descTemp = Number(item.descuento || 0) || 0;
@@ -1747,28 +2001,32 @@ get cuotasTarjetaValidas(): boolean {
           () => this.escuchar()
         );
       } else {
-        // Emitir directo — no depender solo del callback de speech (a veces no dispara)
+        // Emitir: mic OFF total (sin eco al final)
         this.voiceState = VoiceStep.OFF;
         this.bloqueoEscucha = true;
         this.isListening = false;
         this.isThinking = false;
+        this.silencioPostHablaUntil = Date.now() + 10000;
         clearTimeout(this.silenceTimer);
         if (this.recognition) {
           try { this.recognition.abort(); } catch (e) { }
+          try { this.recognition.stop(); } catch (e) { }
         }
         const cuotasTxt = this.nuevaFactura.metodoPago === 'TARJETA_CREDITO'
           ? ` en ${this.nuevaFactura.numeroCuotas} cuota(s)`
           : '';
         this.voiceMessage = `${prefijoAviso}Total $${this.totalCarrito.toFixed(2)}${cuotasTxt}. Emitiendo.`;
+        this.ultimoTextoHablado = this.voiceMessage;
         this.cdr.detectChanges();
         try {
           window.speechSynthesis.cancel();
           const u = new SpeechSynthesisUtterance('Emitiendo.');
           u.rate = 1.3;
+          u.volume = 0.8;
           this.aplicarVozMujer(u);
           window.speechSynthesis.speak(u);
         } catch (e) { }
-        setTimeout(() => { this.guardarFactura(); }, 350);
+        setTimeout(() => { this.guardarFactura(); }, 280);
       }
     } else if (algoAgregado) {
       this.voiceState = VoiceStep.ESCUCHA_LIBRE;
@@ -1789,6 +2047,49 @@ get cuotasTarjetaValidas(): boolean {
   }
 
   /** Agrega un producto resuelto por voz (1 match). Devuelve true si se agregó. */
+  /** Resuelve bodega por nombre dicho: "bodega central", "central", etc. */
+  private resolverBodegaDesdeFrase(frase: string): any | null {
+    const f = this.limpiarTexto(frase || '');
+    if (!f || !this.bodegasList.length) return null;
+
+    // "bodega X" / "de la bodega X"
+    const m = f.match(/\bbodega\s+(?:de\s+)?([a-záéíóúñü0-9\s]{2,40}?)(?:\s*,|\s+agrega|\s+añade|\s+un\s|\s+una\s|\s+dos\s|\s+y\s|$)/);
+    let nombre = m ? m[1].trim() : '';
+
+    // También "desde central", "en principal"
+    if (!nombre) {
+      const m2 = f.match(/\b(?:desde|en)\s+(?:la\s+)?(?:bodega\s+)?([a-záéíóúñü0-9]{3,30})\b/);
+      if (m2) nombre = m2[1].trim();
+    }
+
+    if (!nombre) {
+      // ¿Algún nombre de bodega aparece completo en la frase?
+      for (const b of this.bodegasList) {
+        const bn = this.limpiarTexto(b.nombre);
+        if (bn.length >= 3 && f.includes(bn)) return b;
+      }
+      return null;
+    }
+
+    const hits = this.bodegasList.filter(b => {
+      const bn = this.limpiarTexto(b.nombre);
+      return bn === nombre || bn.includes(nombre) || nombre.includes(bn);
+    });
+    if (hits.length === 1) return hits[0];
+    if (hits.length > 1) {
+      // Preferir match más exacto
+      const exact = hits.find(b => this.limpiarTexto(b.nombre) === nombre);
+      return exact || hits[0];
+    }
+    return null;
+  }
+
+  /**
+   * Agrega producto.
+   * - Si el usuario ya dijo la bodega en la frase → usa esa (sin preguntar).
+   * - Si no hay stock ahí → avisa y no agrega.
+   * - Si no dijo bodega y hay 2+ → pregunta.
+   */
   private intentarAgregarProductoVoz(prod: any, item: any, mensajesAlerta: string[]): boolean {
     let cant = this.normalizarCantidadVoz(item?.cantidad);
 
@@ -1796,45 +2097,78 @@ get cuotasTarjetaValidas(): boolean {
     let descMonto = Number(item.descuento || 0);
     if (isNaN(descPct) || descPct < 0) descPct = 0;
     if (isNaN(descMonto) || descMonto < 0) descMonto = 0;
-    // Solo aplicar descuento si el usuario lo dijo (valores > 0)
     if (descPct > 0) {
       const precioUnit = this.precioParaFactura(prod);
       descMonto = (precioUnit * cant * Math.min(descPct, 100)) / 100;
     }
 
-    let bodegaUsar: any = null;
-    let stockActual = 0;
-    for (const bod of this.bodegasList) {
-      const stockEnBod = this.obtenerStock(prod.id, bod.id) || 0;
-      if (stockEnBod > 0) {
-        bodegaUsar = bod.id;
-        stockActual = stockEnBod;
-        break;
-      }
-    }
-    if (!bodegaUsar && this.bodegasList.length > 0) {
-      bodegaUsar = this.bodegasList[0].id;
-      stockActual = this.obtenerStock(prod.id, bodegaUsar) || 0;
-    }
-    if (!bodegaUsar) {
-      mensajesAlerta.push(`no hay bodegas para ${prod.nombre}`);
+    if (!this.bodegasList.length) {
+      mensajesAlerta.push(`no hay bodegas configuradas`);
       return false;
     }
 
+    // Bodega ya dicha en la frase (o preferida del comando)
+    const preferida = this.bodegaPreferidaVoz;
+    if (preferida) {
+      const stock = this.obtenerStock(prod.id, preferida.id) || 0;
+      if (stock <= 0) {
+        mensajesAlerta.push(`no hay stock de ${prod.nombre} en ${preferida.nombre}`);
+        return false;
+      }
+      return this.agregarProductoConBodega(prod, cant, preferida.id, descMonto, descPct, mensajesAlerta);
+    }
+
+    const conStock = this.bodegasList.filter(b => (this.obtenerStock(prod.id, b.id) || 0) > 0);
+    const opcionesBod = conStock.length > 0 ? conStock : [...this.bodegasList];
+
+    // Preguntar solo si hay más de una y el usuario NO dijo bodega
+    if (opcionesBod.length > 1) {
+      this.productoPendienteBodega = prod;
+      this.itemPendienteBodega = {
+        cantidad: cant,
+        descuento: descMonto,
+        descuentoPorcentaje: descPct
+      };
+      this.esperandoBodega = true;
+      const lista = opcionesBod.slice(0, 8).map((b, i) => {
+        const st = this.obtenerStock(prod.id, b.id) || 0;
+        return `${i + 1}) ${b.nombre}${st > 0 ? ` (${st})` : ''}`;
+      }).join('. ');
+      this.iniciarDesambiguacion(
+        'BODEGA',
+        opcionesBod,
+        `¿De qué bodega tomo ${prod.nombre}? ${lista}. Di el número.`
+      );
+      return false;
+    }
+
+    const bodegaUsar = opcionesBod[0].id;
+    return this.agregarProductoConBodega(prod, cant, bodegaUsar, descMonto, descPct, mensajesAlerta);
+  }
+
+  private agregarProductoConBodega(
+    prod: any,
+    cant: number,
+    bodegaId: any,
+    descMonto: number,
+    descPct: number,
+    mensajesAlerta: string[]
+  ): boolean {
+    const stockActual = this.obtenerStock(prod.id, bodegaId) || 0;
     const yaEnCarrito = this.nuevaFactura.detalles
-      .filter((d: any) => d.productoId === prod.id && d.bodegaId === bodegaUsar)
+      .filter((d: any) => d.productoId === prod.id && d.bodegaId === bodegaId)
       .reduce((s: number, d: any) => s + Number(d.cantidad || 0), 0);
     const disponible = Math.max(0, stockActual - yaEnCarrito);
 
     if (disponible <= 0) {
-      mensajesAlerta.push(`no hay stock de ${prod.nombre}`);
+      mensajesAlerta.push(`no hay stock de ${prod.nombre} en esa bodega`);
       return false;
     }
     if (cant > disponible) {
       mensajesAlerta.push(`solo agregué ${disponible} de ${prod.nombre} (stock)`);
       cant = disponible;
     }
-    this.agregarProductoDirecto(prod, cant, bodegaUsar, descMonto, descPct);
+    this.agregarProductoDirecto(prod, cant, bodegaId, descMonto, descPct);
     return true;
   }
 
@@ -2032,7 +2366,7 @@ get cuotasTarjetaValidas(): boolean {
     return out.sort((a, b) => this.limpiarTexto(a.nombre).length - this.limpiarTexto(b.nombre).length);
   }
 
-  private iniciarDesambiguacion(tipo: 'CLIENTE' | 'PRODUCTO', opciones: any[], mensaje: string) {
+  private iniciarDesambiguacion(tipo: 'CLIENTE' | 'PRODUCTO' | 'BODEGA', opciones: any[], mensaje: string) {
     this.pausarMicYVoz();
     this.tipoOpciones = tipo;
     this.opcionesVoz = opciones.slice(0, 10);
@@ -2113,6 +2447,19 @@ get cuotasTarjetaValidas(): boolean {
       }
     }
 
+    if (this.tipoOpciones === 'BODEGA' && t.length >= 2) {
+      const porNombre = this.opcionesVoz.filter(b => {
+        const nom = this.limpiarTexto(b.nombre);
+        return nom === t || nom.startsWith(t) || (t.length >= 3 && nom.includes(t));
+      });
+      if (porNombre.length === 1) {
+        this.seleccionEnCurso = true;
+        this.pausarMicYVoz();
+        this.procesarSeleccionDesambiguacion(porNombre[0]);
+        return;
+      }
+    }
+
     this.hablar("No capté la opción. Di el número: uno, dos, tres...", () => {
       this.bloqueoEscucha = false;
       this.isThinking = false;
@@ -2141,6 +2488,63 @@ get cuotasTarjetaValidas(): boolean {
       return;
     }
 
+    if (tipo === 'BODEGA') {
+      const prod = this.productoPendienteBodega;
+      const item = this.itemPendienteBodega || { cantidad: 1, descuento: 0, descuentoPorcentaje: 0 };
+      this.productoPendienteBodega = null;
+      this.itemPendienteBodega = null;
+      this.esperandoBodega = false;
+      this.seleccionEnCurso = false;
+
+      // Recordar bodega elegida para el resto de productos pendientes
+      if (seleccionado) {
+        this.bodegaPreferidaVoz = seleccionado;
+      }
+
+      const alertas: string[] = [];
+      let ok = false;
+      if (prod && seleccionado) {
+        ok = this.agregarProductoConBodega(
+          prod,
+          this.normalizarCantidadVoz(item.cantidad),
+          seleccionado.id,
+          Number(item.descuento || 0),
+          Number(item.descuentoPorcentaje || 0),
+          alertas
+        );
+      }
+
+      const pendientes = [...this.itemsVozPendientes];
+      const emitir = this.quiereEmitirPendiente;
+      this.itemsVozPendientes = [];
+      this.datosVozPendientes = null;
+
+      if (pendientes.length > 0) {
+        this.aplicarDatosExtraidos({ items: pendientes }, emitir);
+        return;
+      }
+
+      if (!ok && alertas.length > 0) {
+        this.hablar(`${alertas.join(', ')}. ¿Qué más?`, () => {
+          this.bloqueoEscucha = false;
+          this.isThinking = false;
+          this.escuchar();
+        });
+        return;
+      }
+
+      if (emitir) {
+        this.aplicarDatosExtraidos({}, true);
+      } else {
+        this.hablar(`Listo, ${prod?.nombre || 'producto'} desde ${seleccionado?.nombre || 'bodega'}. Total $${this.totalCarrito.toFixed(2)}. ¿Qué más?`, () => {
+          this.bloqueoEscucha = false;
+          this.isThinking = false;
+          this.escuchar();
+        });
+      }
+      return;
+    }
+
     if (tipo === 'PRODUCTO') {
       const itemFake = {
         cantidad: this.itemTemp.cantidad || 1,
@@ -2153,6 +2557,12 @@ get cuotasTarjetaValidas(): boolean {
       this.itemTemp.cantidad = null;
       this.itemTemp.descuento = null;
       this.itemTemp.descuentoPorcentaje = null;
+
+      // Si pidió bodega, no continuar aún
+      if (this.esperandoBodega) {
+        this.seleccionEnCurso = false;
+        return;
+      }
 
       const pendientes = [...this.itemsVozPendientes];
       const emitir = this.quiereEmitirPendiente;
@@ -2409,8 +2819,15 @@ get cuotasTarjetaValidas(): boolean {
       return;
     }
 
+    // Cortar voz al emitir → modal no se queda colgado
+    this.cancelarAsistenteVoz();
     this.isSaving = true;
-    Swal.fire({ title: 'Emitiendo Factura...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+    Swal.fire({
+      title: 'Emitiendo...',
+      allowOutsideClick: false,
+      timer: 8000,
+      didOpen: () => Swal.showLoading()
+    });
 
     const descGlobal = this.descuentoGlobalMonto;
     this.nuevaFactura.descuentoGlobal = descGlobal;
@@ -2440,8 +2857,10 @@ get cuotasTarjetaValidas(): boolean {
     ).subscribe({
       next: (res) => {
         this.isSaving = false;
+        // Cerrar modal YA (antes del PDF / toast)
         this.showModal = false;
-        if (this.negocioId) this.cargarTodasLasFacturas(this.negocioId);
+        this.cancelarAsistenteVoz();
+        this.cdr.detectChanges();
 
         const detallesCarrito = this.nuevaFactura.detalles.map((d: any) => ({ ...d }));
         const totalApi = Number(res.totalFactura ?? res.total ?? 0);
@@ -2465,8 +2884,16 @@ get cuotasTarjetaValidas(): boolean {
             : detallesCarrito
         };
 
-        this.imprimirFacturaPDF(facturaParaPDF);
-        Swal.fire({ icon: 'success', title: '¡Factura Emitida!', timer: 1500, showConfirmButton: false });
+        Swal.close();
+        Swal.fire({
+          icon: 'success',
+          title: '¡Factura emitida!',
+          timer: 900,
+          showConfirmButton: false
+        });
+        // PDF un instante después para no retrasar el cierre del modal
+        setTimeout(() => this.imprimirFacturaPDF(facturaParaPDF), 50);
+        if (this.negocioId) this.cargarTodasLasFacturas(this.negocioId);
       },
       error: (err) => {
         this.isSaving = false;
