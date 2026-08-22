@@ -369,13 +369,13 @@ export class Facturas implements OnInit, OnDestroy {
   }
 
   /** Con tarjeta de crédito las cuotas son obligatorias (>= 1). */
-  
+
   get previewSubtotal(): number {
     const d = this.facturaPreview?.detalles || [];
     return d.reduce((s: number, x: any) => s + Number(x.subtotal || 0), 0);
   }
 
-get cuotasTarjetaValidas(): boolean {
+  get cuotasTarjetaValidas(): boolean {
     if (this.nuevaFactura.metodoPago !== 'TARJETA_CREDITO') return true;
     const n = Number(this.nuevaFactura.numeroCuotas);
     return Number.isFinite(n) && n >= 1;
@@ -443,7 +443,7 @@ get cuotasTarjetaValidas(): boolean {
     this.cdr.detectChanges();
   }
 
-  
+
   private aplicarMetodoPagoSeguro(metodo: string | null | undefined, mensajesAlerta: string[], esperarCliente = false): 'ok' | 'bloqueado' | 'pendiente' {
     if (!metodo || metodo === 'null' || metodo === 'NULL') return 'ok';
     const m = String(metodo).toUpperCase();
@@ -2031,7 +2031,7 @@ get cuotasTarjetaValidas(): boolean {
     } else if (algoAgregado) {
       this.voiceState = VoiceStep.ESCUCHA_LIBRE;
       const extraCuotas = (datos as any)._cuotasActualizadas
-        ? ` ${ (datos as any)._cuotasActualizadas } cuota(s).`
+        ? ` ${(datos as any)._cuotasActualizadas} cuota(s).`
         : (this.nuevaFactura.metodoPago === 'TARJETA_CREDITO' && this.cuotasTarjetaValidas
           ? ` Tarjeta a ${this.nuevaFactura.numeroCuotas} cuota(s).`
           : '');
@@ -2903,7 +2903,7 @@ get cuotasTarjetaValidas(): boolean {
     });
   }
 
-  
+
   /** Normaliza líneas de factura (API o lista) para el preview. */
   private normalizarDetallesPreview(raw: any[]): any[] {
     return (raw || []).map((d: any) => {
