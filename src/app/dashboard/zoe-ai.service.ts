@@ -76,29 +76,42 @@ export class ZoeAiService {
   }
 
   private seleccionarVozFemenina(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null {
-    const es = voices.filter(v => 
-      v.lang && v.lang.toLowerCase().startsWith('es') && 
-      !/pablo|jorge|diego|carlos|juan|pedro|antonio|male|hombre|david|boy/i.test(v.name)
-    );
+  // 1. Filtrar voces en español y descartar hombres
+  const vocesEspañol = voices.filter(v => 
+    v.lang && v.lang.toLowerCase().startsWith('es') && 
+    !/pablo|jorge|diego|carlos|juan|pedro|antonio|male|hombre|david|boy/i.test(v.name)
+  );
 
-    if (!es.length) {
-      return voices.find(v => /female|mujer|woman/i.test(v.name) || !/male|hombre|boy/i.test(v.name)) || voices[0];
-    }
-
-    let vozPremium = es.find(v => /natural|neural/i.test(v.name) && /mia|elena|paloma|camila|lucrecia|salome/i.test(v.name));
-    if (!vozPremium) vozPremium = es.find(v => /female|mujer/i.test(v.name));
-
-    const preferidas = /sabina|paulina|m[oó]nica|luc[ií]a|mar[ií]a|isabel|sofia|laura/i;
-    if (!vozPremium) {
-      vozPremium = es.find(v => preferidas.test(v.name));
-    }
-
-    if (!vozPremium) {
-      vozPremium = es.find(v => v.name.toLowerCase().includes('google') && !/masculino|male/i.test(v.name));
-    }
-
-    return vozPremium || es[0]; 
+  if (!vocesEspañol.length) {
+    return voices.find(v => /female|mujer|woman/i.test(v.name) || !/male|hombre|boy/i.test(v.name)) || voices[0];
   }
+
+  // PRIORIDAD 1: Voces Neurales/Naturales (Edge, Windows 11). Son las más humanas.
+  // Ejemplos: "Microsoft Elvira Online (Natural) - Spanish", "Microsoft Dalia Online"
+  const vozNeural = vocesEspañol.find(v => 
+    (/natural|neural|online/i.test(v.name)) && 
+    /mia|elvira|dalia|paloma|elena|camila|lucrecia|salome|ximena/i.test(v.name)
+  );
+  if (vozNeural) return vozNeural;
+
+  // PRIORIDAD 2: Voces de Apple/iOS (Premium o de alta calidad nativa)
+  const vozApple = vocesEspañol.find(v => 
+    (/premium|enhanced/i.test(v.name)) || 
+    /m[oó]nica|paulina|luc[ií]a|mar[ií]a|isabel|sofia|laura|victoria/i.test(v.name)
+  );
+  if (vozApple) return vozApple;
+
+  // PRIORIDAD 3: Voces de Google (Chrome inyecta "Google español" que suele ser buena)
+  const vozGoogle = vocesEspañol.find(v => v.name.toLowerCase().includes('google'));
+  if (vozGoogle) return vozGoogle;
+
+  // PRIORIDAD 4: Cualquier otra que indique ser de mujer explícitamente
+  const vozFemeninaGenerica = vocesEspañol.find(v => /female|mujer/i.test(v.name));
+  if (vozFemeninaGenerica) return vozFemeninaGenerica;
+
+  // FALLBACK: La primera voz en español (ej. Microsoft Sabina Desktop)
+  return vocesEspañol[0]; 
+}
 
   inicializarChat(nombreUsuario: string, rol: string) {
     if (this.chatMensajesSubject.value.length === 0) {
@@ -398,7 +411,7 @@ REGLAS DE ORO - ACTÚA COMO HUMANA SIMPÁTICA Y EFICIENTE:
       }
       
       utterance.rate = 1.05; 
-      utterance.pitch = 1.25; 
+      utterance.pitch = 1.0; 
       utterance.volume = 1;
 
       utterance.onend = () => { 
