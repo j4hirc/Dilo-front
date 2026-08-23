@@ -203,6 +203,30 @@ export class Inventario implements OnInit {
     });
   }
 
+  estadoCaducidad(lote: any): 'VIGENTE' | 'POR_VENCER' | 'CADUCADO' | 'AGOTADO' {
+    if (lote.estado === 'AGOTADO') return 'AGOTADO';
+    if (lote.estado === 'CADUCADO') return 'CADUCADO'; 
+
+    if (!lote.fechaCaducidad) return 'VIGENTE';
+
+    const fechaVencimiento = new Date(lote.fechaCaducidad);
+    const hoy = new Date();
+    
+    const limiteAlerta = new Date();
+    limiteAlerta.setDate(hoy.getDate() + 15);
+
+    fechaVencimiento.setHours(0, 0, 0, 0);
+    hoy.setHours(0, 0, 0, 0);
+    limiteAlerta.setHours(0, 0, 0, 0);
+
+    if (fechaVencimiento < hoy) {
+      return 'CADUCADO';
+    } else if (fechaVencimiento <= limiteAlerta) {
+      return 'POR_VENCER';
+    }
+    return 'VIGENTE';
+  }
+
   abrirModalLotes(item: any) {
     if (!this.negocioId) return;
 
