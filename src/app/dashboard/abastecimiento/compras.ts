@@ -345,6 +345,9 @@ export class Compras implements OnInit {
     
     this.http.get<any[]>(`${this.apiUrl}/negocios/${this.negocioId}/categorias`, { headers }).subscribe({
       next: (categorias) => {
+        // 1. GENERAMOS EL CÓDIGO AQUÍ
+        const siguienteCodigo = this.generarSiguienteCodigo();
+
         categorias.forEach(cat => {
             opcionesCategorias += `<option value="${cat.id}">${cat.nombre}</option>`;
         });
@@ -353,7 +356,8 @@ export class Compras implements OnInit {
           title: 'Producto Express',
           html: `
             <div style="display:flex; flex-direction:column; gap:10px; text-align:left; font-size: 0.9rem;">
-                <input id="swal-prod-cod" class="swal2-input" placeholder="Código (Dejar vacío para S/C)" style="margin:0; width:100%; box-sizing:border-box;">
+                <!-- 2. INYECTAMOS EL CÓDIGO EN EL ATRIBUTO value="..." DEL INPUT -->
+                <input id="swal-prod-cod" class="swal2-input" value="${siguienteCodigo}" placeholder="Código (Dejar vacío para S/C)" style="margin:0; width:100%; box-sizing:border-box;">
                 <input id="swal-prod-nom" class="swal2-input" placeholder="Nombre del Producto *" style="margin:0; width:100%; box-sizing:border-box;">
                 <select id="swal-prod-cat" class="swal2-select" style="margin:0; width:100%; box-sizing:border-box;">
                     ${opcionesCategorias}
@@ -380,14 +384,13 @@ export class Compras implements OnInit {
               return false;
             }
 
-            // Evitamos enviar campos vacíos que rompen la API
             const codigoFinal = codigoRaw || 'S/C';
 
             return {
               codigo: codigoFinal, 
               codigoPrincipal: codigoFinal, 
               nombre: nombre, 
-              marca: 'Sin marca', // Evita error 400
+              marca: 'Sin marca', 
               precio: 0, 
               precioUnitario: 0, 
               categoriaId: Number(categoriaVal),
@@ -417,7 +420,6 @@ export class Compras implements OnInit {
                 });
               },
               error: (err) => {
-                // Ahora si falla, te dirá el motivo exacto del backend
                 console.error('Detalle del error 400:', err);
                 const msg = err.error?.message || err.error || 'Revisa los datos ingresados.';
                 Swal.fire('No se pudo crear', msg, 'error');
@@ -431,4 +433,38 @@ export class Compras implements OnInit {
       }
     });
   }
+
+
+
+  generarSiguienteCodigo(): string {
+    if (!this.productos || this.productos.length === 0) {
+      return 'PROD-001';
+    }
+
+    let maxNumber = 0;
+    let prefix = 'PROD-';
+
+    this.productos.forEach(prod => {
+      const codigo = prod.codigoPrincipal;
+      if (codigo && codigo !== 'S/C') {
+        const match = codigo.match(/^(.*?)(\d+)$/);
+        if (match) {
+          const currentPrefix = match[1];
+          const currentNumber = parseInt(match[2], 10);
+          if (currentNumber > maxNumber) {
+            maxNumber = currentNumber;
+            prefix = currentPrefix;
+          }
+        }
+      }
+    });
+
+    const nextNumber = maxNumber + 1;
+    const padLength = Math.max(3, String(maxNumber).length);
+    const paddedNumber = nextNumber.toString().padStart(padLength, '0');
+
+    return `${prefix}${paddedNumber}`;
+  }
+
+
 }

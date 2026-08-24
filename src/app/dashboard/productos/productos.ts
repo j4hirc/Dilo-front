@@ -138,9 +138,12 @@ export class Productos implements OnInit {
     this.currentProductId = null;
     this.selectedFile = null;
     this.imagenActual = null;
+
+    const siguienteCodigo = this.generarSiguienteCodigo();
+
     this.productoForm = {
       nombre: '',
-      codigoPrincipal: '',
+      codigoPrincipal: siguienteCodigo, 
       marca: '',
       precioUnitario: 0,
       categoriaId: this.categorias.length > 0 ? this.categorias[0].id : 0,
@@ -149,6 +152,40 @@ export class Productos implements OnInit {
       tieneCaducidad: false
     };
     this.showModal = true;
+  }
+
+  generarSiguienteCodigo(): string {
+    if (!this.productos || this.productos.length === 0) {
+      return 'PROD-001'; // Código inicial por defecto si el catálogo está vacío
+    }
+
+    let maxNumber = 0;
+    let prefix = 'PROD-';
+
+    this.productos.forEach(prod => {
+      const codigo = prod.codigoPrincipal;
+      
+      if (codigo && codigo !== 'S/C') {
+        const match = codigo.match(/^(.*?)(\d+)$/);
+        
+        if (match) {
+          const currentPrefix = match[1];
+          const currentNumber = parseInt(match[2], 10);
+
+          if (currentNumber > maxNumber) {
+            maxNumber = currentNumber;
+            prefix = currentPrefix; 
+          }
+        }
+      }
+    });
+
+    const nextNumber = maxNumber + 1;
+    
+    const padLength = Math.max(3, String(maxNumber).length);
+    const paddedNumber = nextNumber.toString().padStart(padLength, '0');
+
+    return `${prefix}${paddedNumber}`;
   }
 
   abrirModalEditar(prod: any) {
