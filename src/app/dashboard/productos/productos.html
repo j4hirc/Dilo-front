@@ -138,10 +138,19 @@
                     <input type="text" [(ngModel)]="productoForm.nombre" placeholder="Ej: Teclado Mecánico RGB">
                 </div>
                 
-                <div class="form-row">
+           <div class="form-row">
                     <div class="form-group">
                         <label>Código Principal</label>
-                        <input type="text" [(ngModel)]="productoForm.codigoPrincipal" placeholder="Ej: PROD-001">
+                        <!-- Input bloqueado (readonly) con estilos grises -->
+                        <input type="text" [(ngModel)]="productoForm.codigoPrincipal" 
+                            [readonly]="true"
+                            style="background-color: #f1f5f9; color: #475569; font-weight: 700; cursor: not-allowed; border: 1px solid #cbd5e1;" 
+                            title="El código es autogenerado por el sistema">
+                        
+                        <div *ngIf="!isEditing" style="margin-top: 6px; font-size: 0.75rem; color: #2563eb; display: flex; align-items: flex-start; gap: 5px; line-height: 1.25;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 1px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                            <span>Se genera de forma correlativa automáticamente para mantener el orden.</span>
+                        </div>
                     </div>
                     <div class="form-group">
                         <label>Marca</label>
