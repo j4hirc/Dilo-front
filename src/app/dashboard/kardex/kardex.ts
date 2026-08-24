@@ -311,7 +311,10 @@ export class Kardex implements OnInit {
       { headers }
     ).subscribe({
       next: () => {
-        this.cerrarModal();
+        Swal.close(); 
+        
+        this.cerrarModal(); 
+
         Swal.fire({
           title: '¡Éxito!',
           text: 'Ajuste manual registrado correctamente en el Kardex.',
@@ -329,4 +332,186 @@ export class Kardex implements OnInit {
       }
     });
   }
+
+
+  generarSiguienteCodigo(): string {
+    if (!this.productos || this.productos.length === 0) {
+      return 'PROD-001';
+    }
+
+    let maxNumber = 0;
+    let prefix = 'PROD-';
+
+    this.productos.forEach(prod => {
+      const codigo = prod.codigoPrincipal;
+      if (codigo && codigo !== 'S/C') {
+        const match = codigo.match(/^(.*?)(\d+)$/);
+        if (match) {
+          const currentPrefix = match[1];
+          const currentNumber = parseInt(match[2], 10);
+          if (currentNumber > maxNumber) {
+            maxNumber = currentNumber;
+            prefix = currentPrefix;
+          }
+        }
+      }
+    });
+
+    const nextNumber = maxNumber + 1;
+    const padLength = Math.max(3, String(maxNumber).length);
+    const paddedNumber = nextNumber.toString().padStart(padLength, '0');
+
+    return `${prefix}${paddedNumber}`;
+  }
+
+  crearBodegaRapida(tipo: 'origen' | 'destino') {
+    Swal.fire({
+      title: 'Nueva Bodega',
+      html: `
+        <div style="display:flex; flex-direction:column; gap:15px; text-align:left;">
+            <input id="swal-bod-nombre" class="swal2-input" placeholder="Nombre de la bodega *" style="margin:0; width:100%; box-sizing:border-box;">
+            <input id="swal-bod-dir" class="swal2-input" placeholder="Dirección (Opcional)" style="margin:0; width:100%; box-sizing:border-box;">
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonColor: '#ea580c',
+      confirmButtonText: 'Guardar',
+      cancelButtonText: 'Cancelar',
+      preConfirm: () => {
+        const nombre = (document.getElementById('swal-bod-nombre') as HTMLInputElement).value.trim();
+        const direccion = (document.getElementById('swal-bod-dir') as HTMLInputElement).value.trim();
+        if (!nombre) {
+          Swal.showValidationMessage('El nombre es obligatorio');
+          return false;
+        }
+        return { nombre, direccion: direccion || 'S/D' };
+      }
+    }).then((result) => {
+      if (result.isConfirmed && this.negocioId) {
+        const headers = this.getAuthHeaders();
+        Swal.fire({ title: 'Guardando...', didOpen: () => Swal.showLoading() });
+        
+        this.http.post<any>(`${this.apiUrl}/negocios/${this.negocioId}/bodegas`, result.value, { headers }).subscribe({
+          next: (nuevaBodega) => {
+            Swal.close();
+            this.http.get<any[]>(`${this.apiUrl}/negocios/${this.negocioId}/bodegas`, { headers }).subscribe(res => {
+              this.bodegas = res || [];
+              this.bodegasOrigenDisponibles = [...this.bodegas]; // Actualizamos lista visual
+              
+              const idBodegaCreada = nuevaBodega?.id || res[res.length - 1]?.id;
+              
+              // Asignamos según qué botón presionó
+              if (tipo === 'origen') {
+                  this.transaccionForm.bodegaOrigenId = idBodegaCreada;
+                  this.onBodegaOrigenChange();
+              } else {
+                  this.transaccionForm.bodegaDestinoId = idBodegaCreada;
+              }
+              this.cdr.detectChanges();
+            });
+          },
+          error: (err) => {
+            const msg = err.error?.message || err.error || 'Error desconocido';
+            Swal.fire('No se pudo crear', msg, 'error');
+          }
+        });
+      }
+    });
+  }
+
+  crearProductoRapido() {
+    let opcionesCategorias = '<option value="">-- Selecciona una categoría --</option>';
+    const headers = this.getAuthHeaders();
+    
+    Swal.fire({ title: 'Preparando...', didOpen: () => Swal.showLoading() });
+    
+    this.http.get<any[]>(`${this.apiUrl}/negocios/${this.negocioId}/categorias`, { headers }).subscribe({
+      next: (categorias) => {
+        const siguienteCodigo = this.generarSiguienteCodigo();
+
+        categorias.forEach(cat => {
+            opcionesCategorias += `<option value="${cat.id}">${cat.nombre}</option>`;
+        });
+
+        Swal.fire({
+          title: 'Producto Express',
+          html: `
+            <div style="display:flex; flex-direction:column; gap:10px; text-align:left; font-size: 0.9rem;">
+                <input id="swal-prod-cod" class="swal2-input" value="${siguienteCodigo}" placeholder="Código (Dejar vacío para S/C)" style="margin:0; width:100%; box-sizing:border-box;">
+                <input id="swal-prod-nom" class="swal2-input" placeholder="Nombre del Producto *" style="margin:0; width:100%; box-sizing:border-box;">
+                <select id="swal-prod-cat" class="swal2-select" style="margin:0; width:100%; box-sizing:border-box;">
+                    ${opcionesCategorias}
+                </select>
+                <div style="display:flex; justify-content:space-between; margin-top:10px;">
+                    <label style="display:flex; align-items:center; gap:5px;"><input type="checkbox" id="swal-prod-iva"> Graba IVA</label>
+                    <label style="display:flex; align-items:center; gap:5px;"><input type="checkbox" id="swal-prod-cad"> Tiene Caducidad</label>
+                </div>
+            </div>
+          `,
+          showCancelButton: true,
+          confirmButtonColor: '#ea580c',
+          confirmButtonText: 'Crear y Seleccionar',
+          cancelButtonText: 'Cancelar',
+          preConfirm: () => {
+            const codigoRaw = (document.getElementById('swal-prod-cod') as HTMLInputElement).value.trim();
+            const nombre = (document.getElementById('swal-prod-nom') as HTMLInputElement).value.trim();
+            const categoriaVal = (document.getElementById('swal-prod-cat') as HTMLSelectElement).value;
+            const grabaIva = (document.getElementById('swal-prod-iva') as HTMLInputElement).checked;
+            const tieneCaducidad = (document.getElementById('swal-prod-cad') as HTMLInputElement).checked;
+            
+            if (!nombre || !categoriaVal) {
+              Swal.showValidationMessage('Nombre y Categoría son obligatorios');
+              return false;
+            }
+
+            const codigoFinal = codigoRaw || 'S/C';
+
+            return {
+              codigo: codigoFinal, 
+              codigoPrincipal: codigoFinal, 
+              nombre: nombre, 
+              marca: 'Sin marca', 
+              precio: 0, 
+              precioUnitario: 0, 
+              categoriaId: Number(categoriaVal),
+              grabaIva: grabaIva, 
+              unidadMedida: 'UNIDADES', 
+              tieneCaducidad: tieneCaducidad
+            };
+          }
+        }).then((result) => {
+          if (result.isConfirmed && this.negocioId) {
+            Swal.fire({ title: 'Creando producto...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+            
+            const formData = new FormData();
+            formData.append('datos', new Blob([JSON.stringify(result.value)], { type: 'application/json' }));
+            
+            this.http.post<any>(`${this.apiUrl}/negocios/${this.negocioId}/productos`, formData, { headers }).subscribe({
+              next: () => {
+                Swal.close();
+                this.http.get<any[]>(`${this.apiUrl}/negocios/${this.negocioId}/productos`, { headers }).subscribe(res => {
+                  this.productos = res || [];
+                  if(this.productos.length > 0) {
+                      const recienCreado = this.productos[this.productos.length - 1];
+                      // IMPORTANTE: En el Kardex se asigna a transaccionForm
+                      this.transaccionForm.productoId = recienCreado.id;
+                      this.onProductoChange();
+                  }
+                  this.cdr.detectChanges();
+                });
+              },
+              error: (err) => {
+                const msg = err.error?.message || err.error || 'Revisa los datos ingresados.';
+                Swal.fire('No se pudo crear', msg, 'error');
+              }
+            });
+          }
+        });
+      },
+      error: () => {
+        Swal.fire('Error', 'No se pudieron cargar las categorías', 'error');
+      }
+    });
+  }
+
 }

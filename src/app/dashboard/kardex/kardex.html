@@ -208,7 +208,12 @@
                     </div>
 
                     <div class="form-group" style="grid-column: 1 / -1;">
-                        <label>Producto a Ajustar *</label>
+                        <label style="display:flex; justify-content:space-between; align-items:center;">
+                            <span>Producto a Ajustar *</span>
+                            <a href="javascript:void(0)" (click)="crearProductoRapido()"
+                                style="color: #2563eb; font-size: 0.75rem; text-decoration: none; font-weight: bold;">+
+                                Crear Producto</a>
+                        </label>
                         <ng-select [items]="productos" bindLabel="nombre" bindValue="id"
                             [(ngModel)]="transaccionForm.productoId" (change)="onProductoChange()"
                             placeholder="Buscar por código o nombre..." notFoundText="Producto no encontrado"
@@ -233,7 +238,12 @@
                 <div class="form-row triple-col">
                     <div class="form-group"
                         *ngIf="transaccionForm.tipo === 'EGRESO' || transaccionForm.tipo === 'TRANSFERENCIA'">
-                        <label>Bodega Origen *</label>
+                        <label style="display:flex; justify-content:space-between; align-items:center;">
+                            <span>Bodega Origen *</span>
+                            <a href="javascript:void(0)" (click)="crearBodegaRapida('origen')"
+                                style="color: var(--primary-orange); font-size: 0.75rem; text-decoration: none; font-weight: bold;">+
+                                Nueva</a>
+                        </label>
                         <ng-select [items]="bodegasOrigenDisponibles" bindLabel="nombre" bindValue="id"
                             [(ngModel)]="transaccionForm.bodegaOrigenId" (change)="onBodegaOrigenChange()"
                             placeholder="Seleccionar bodega origen..." notFoundText="No se encontraron bodegas"
@@ -247,7 +257,12 @@
 
                     <div class="form-group"
                         *ngIf="transaccionForm.tipo === 'INGRESO' || transaccionForm.tipo === 'TRANSFERENCIA'">
-                        <label>Bodega Destino *</label>
+                        <label style="display:flex; justify-content:space-between; align-items:center;">
+                            <span>Bodega Destino *</span>
+                            <a href="javascript:void(0)" (click)="crearBodegaRapida('destino')"
+                                style="color: var(--primary-orange); font-size: 0.75rem; text-decoration: none; font-weight: bold;">+
+                                Nueva</a>
+                        </label>
                         <ng-select [(ngModel)]="transaccionForm.bodegaDestinoId"
                             placeholder="Seleccionar bodega destino..." notFoundText="No se encontraron bodegas"
                             [editableSearchTerm]="true" class="custom-ng-select">
