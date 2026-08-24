@@ -95,15 +95,27 @@
 
 <!-- TODOS LOS MIEMBROS -->
 <div *ngIf="!isLoading" class="fade-in">
-    <div class="section-title">
+    <!-- Título y Buscador -->
+    <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
         <h3>Colaboradores</h3>
+        
+        <div class="search-box" style="flex: 1; max-width: 350px;">
+            <span class="search-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+            </span>
+            <input type="text" placeholder="Buscar por nombre, email o rol..." [(ngModel)]="searchTerm" (input)="filtrarMiembros()">
+        </div>
     </div>
 
     <div class="card full-height-card">
         <div class="card-body" style="padding: 30px;">
             <div class="team-grid">
 
-                <div *ngIf="miembrosActivos.length === 0" class="empty-state">
+                <!-- Estado Vacío Mejorado -->
+                <div *ngIf="miembrosFiltrados.length === 0" class="empty-state">
                     <div class="empty-icon">
                         <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none"
                             stroke="#cbd5e1" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
@@ -113,10 +125,12 @@
                             <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
                         </svg>
                     </div>
-                    <p>No tienes colaboradores registrados en este momento.</p>
+                    <p *ngIf="searchTerm">No se encontraron colaboradores que coincidan con <strong>"{{ searchTerm }}"</strong>.</p>
+                    <p *ngIf="!searchTerm">No tienes colaboradores registrados en este momento.</p>
                 </div>
 
-                <div class="team-card" *ngFor="let m of miembrosActivos"
+                <!-- AQUÍ CAMBIAMOS A miembrosFiltrados -->
+                <div class="team-card" *ngFor="let m of miembrosFiltrados"
                     [ngStyle]="{'border': m.esCreador ? '2px solid #fbbf24' : ''}">
 
                     <div class="status-dot active-dot"></div>

@@ -4,11 +4,12 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { forkJoin, of } from 'rxjs'; 
 import { catchError } from 'rxjs/operators'; 
 import Swal from 'sweetalert2';
+import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-equipo',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './equipo.html',
   styleUrls: ['./equipo.css'],
 })
@@ -17,12 +18,15 @@ export class Equipo implements OnInit {
   private cdr = inject(ChangeDetectorRef);
 
   miembrosActivos: any[] = [];
+  miembrosFiltrados: any[] = [];
   solicitudes: any[] = [];
   isLoading = true;
   negocioId: number | null = null;
   codigoInvitacion: string = 'Cargando...'; 
 
   private apiUrl = 'https://dilo-backend-mxlu.onrender.com/api/v1';
+
+  searchTerm: string = '';
 
   ngOnInit(): void {
     const userStr = localStorage.getItem('usuario') || localStorage.getItem('dilo_user');
@@ -64,18 +68,20 @@ export class Equipo implements OnInit {
         const equipoCompleto = Array.isArray(miemData) ? miemData : [];
         
         this.solicitudes = equipoCompleto.filter(m => m.estadoInvitacion === 'PENDIENTE');
-        
         this.miembrosActivos = equipoCompleto.filter(m => m.estadoInvitacion !== 'PENDIENTE');
 
         if (this.miembrosActivos.length > 0) {
           this.miembrosActivos.sort((a, b) => {
             const timeA = a.fechaVinculacion ? new Date(a.fechaVinculacion.replace(' ', 'T')).getTime() : new Date().getTime();
             const timeB = b.fechaVinculacion ? new Date(b.fechaVinculacion.replace(' ', 'T')).getTime() : new Date().getTime();
-            return timeA - timeB; // Ascendente
+            return timeA - timeB; 
           });
 
           this.miembrosActivos[0].esCreador = true;
         }
+
+        // 5. Inicializamos el arreglo filtrado con todos los miembros
+        this.filtrarMiembros();
 
         if (negData) {
           this.codigoInvitacion = negData.codigoInvitacion || negData.codigo || 'NO-DISPONIBLE';
@@ -92,6 +98,20 @@ export class Equipo implements OnInit {
         this.cdr.detectChanges();
       }
     });
+  }
+
+  filtrarMiembros() {
+    if (!this.searchTerm.trim()) {
+      this.miembrosFiltrados = [...this.miembrosActivos];
+    } else {
+      const term = this.searchTerm.toLowerCase().trim();
+      this.miembrosFiltrados = this.miembrosActivos.filter(m => 
+        (m.nombreUsuario && m.nombreUsuario.toLowerCase().includes(term)) ||
+        (m.emailUsuario && m.emailUsuario.toLowerCase().includes(term)) ||
+        (m.rol && m.rol.toLowerCase().includes(term))
+      );
+    }
+    this.cdr.detectChanges();
   }
 
   copiarCodigo() {
