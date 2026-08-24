@@ -227,7 +227,7 @@ export class Inventario implements OnInit {
     return 'VIGENTE';
   }
 
-  abrirModalLotes(item: any) {
+ abrirModalLotes(item: any) {
     if (!this.negocioId) return;
 
     this.productoLotesActivo = item;
@@ -244,12 +244,25 @@ export class Inventario implements OnInit {
       { headers }
     ).subscribe({
       next: (data) => {
-        this.lotesDelProducto = (data || []).map((lote: any) => ({
-          ...lote,
-          cantidadInicial: Number(lote.cantidadInicial ?? 0),
-          cantidadDisponible: Number(lote.cantidadDisponible ?? 0),
-          costoUnitario: Number(lote.costoUnitario ?? 0)
-        }));
+        this.lotesDelProducto = (data || [])
+          .map((lote: any) => ({
+            ...lote,
+            cantidadInicial: Number(lote.cantidadInicial ?? 0),
+            cantidadDisponible: Number(lote.cantidadDisponible ?? 0),
+            costoUnitario: Number(lote.costoUnitario ?? 0)
+          }))
+          // 👇 AGREGAMOS ESTE SORT 👇
+          .sort((a, b) => {
+            // Ponemos primero los que tienen stock disponible
+            if (b.cantidadDisponible !== a.cantidadDisponible) {
+              return b.cantidadDisponible - a.cantidadDisponible;
+            }
+            // Si ambos tienen el mismo stock, ordenamos por fecha de caducidad
+            const fechaA = a.fechaCaducidad ? new Date(a.fechaCaducidad).getTime() : 0;
+            const fechaB = b.fechaCaducidad ? new Date(b.fechaCaducidad).getTime() : 0;
+            return fechaA - fechaB;
+          });
+
         this.isLoadingLotes = false;
         this.cdr.detectChanges();
       },
