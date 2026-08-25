@@ -77,48 +77,38 @@ export class ZoeAiService {
     }
   }
 
-  private seleccionarVozFemenina(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null {
-    // 1. Voces en español
-    const vocesEspañol = voices.filter(v =>
+ private seleccionarVozFemenina(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null {
+    // 1. Prioridad absoluta: Voces femeninas de Argentina (es-AR)
+    let vocesArgentinas = voices.filter(v =>
+      v.lang && v.lang.toLowerCase().includes('es-ar') &&
+      !/pablo|jorge|diego|carlos|juan|pedro|antonio|male|hombre|david|boy/i.test(v.name)
+    );
+
+    // Si no hay de Argentina, buscamos en español general
+    let vocesEspañol = vocesArgentinas.length > 0 ? vocesArgentinas : voices.filter(v =>
       v.lang && v.lang.toLowerCase().startsWith('es') &&
-      !/pablo|jorge|diego|carlos|juan|pedro|antonio|male|hombre|david|boy|hombre/i.test(v.name)
+      !/pablo|jorge|diego|carlos|juan|pedro|antonio|male|hombre|david|boy/i.test(v.name)
     );
 
     if (!vocesEspañol.length) {
       return voices.find(v => /female|mujer|woman|femenina/i.test(v.name)) || voices[0] || null;
     }
 
-    // 2. Prioridad máxima: voces neurales / naturales con nombres femeninos
+    // 2. Prioridad máxima: voces neurales / naturales
     const prioridadAlta = [
-      /m[oó]nica/i, /paulina/i, /luc[ií]a/i, /mar[ií]a/i, /isabel/i,
-      /sofia|sofía/i, /laura/i, /victoria/i, /elena/i, /camila/i,
-      /paloma/i, /dalia/i, /salome|salomé/i, /ximena/i, /lucrecia/i,
-      /mia|mía/i, /elvira/i, /carmen/i, /ana/i, /clara/i
+      /natural/i, /neural/i, /online/i, /premium/i, /enhanced/i, /wavenet/i, /studio/i,
+      /elena/i, /sofia/i, /mia/i, /victoria/i
     ];
 
     for (const regex of prioridadAlta) {
-      const encontrada = vocesEspañol.find(v =>
-        regex.test(v.name) &&
-        (/natural|neural|online|premium|enhanced|wavenet|studio/i.test(v.name) || true)
-      );
+      const encontrada = vocesEspañol.find(v => regex.test(v.name));
       if (encontrada) return encontrada;
     }
 
-    // 3. Voces premium / enhanced / neural
-    const vozPremium = vocesEspañol.find(v =>
-      /premium|enhanced|natural|neural|online|wavenet|studio/i.test(v.name)
-    );
-    if (vozPremium) return vozPremium;
-
-    // 4. Google español
+    // 3. Google español (Google suele tener un buen es-AR si está instalado)
     const vozGoogle = vocesEspañol.find(v => v.name.toLowerCase().includes('google'));
     if (vozGoogle) return vozGoogle;
 
-    // 5. Cualquier voz que diga female/mujer
-    const vozFemeninaGenerica = vocesEspañol.find(v => /female|mujer|femenina|woman/i.test(v.name));
-    if (vozFemeninaGenerica) return vozFemeninaGenerica;
-
-    // 6. Primera voz en español disponible
     return vocesEspañol[0];
   }
 
@@ -228,7 +218,7 @@ REGLAS DE SEGURIDAD MÁXIMA (OBLIGATORIAS - NO NEGOCIABLES):
       { role: 'system', content: this.promptSistemaBase },
       ...historial
     ],
-    temperature: 0.1,
+    temperature: 0.25,
     max_tokens: 500
   };
 
