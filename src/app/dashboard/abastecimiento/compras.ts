@@ -345,7 +345,6 @@ export class Compras implements OnInit {
     
     this.http.get<any[]>(`${this.apiUrl}/negocios/${this.negocioId}/categorias`, { headers }).subscribe({
       next: (categorias) => {
-        // 1. GENERAMOS EL CÓDIGO AQUÍ
         const siguienteCodigo = this.generarSiguienteCodigo();
 
         categorias.forEach(cat => {
@@ -356,12 +355,26 @@ export class Compras implements OnInit {
           title: 'Producto Express',
           html: `
             <div style="display:flex; flex-direction:column; gap:10px; text-align:left; font-size: 0.9rem;">
-                <!-- 2. INYECTAMOS EL CÓDIGO EN EL ATRIBUTO value="..." DEL INPUT -->
-                <input id="swal-prod-cod" class="swal2-input" value="${siguienteCodigo}" placeholder="Código (Dejar vacío para S/C)" style="margin:0; width:100%; box-sizing:border-box;">
+                
+                <!-- CONTENEDOR DEL CÓDIGO BLOQUEADO CON MENSAJE -->
+                <div>
+                    <input id="swal-prod-cod" class="swal2-input" value="${siguienteCodigo}" 
+                        readonly 
+                        style="margin:0; width:100%; box-sizing:border-box; background-color: #f1f5f9; color: #475569; font-weight: 700; cursor: not-allowed; border: 1px solid #cbd5e1;" 
+                        title="El código es autogenerado por el sistema">
+                        
+                    <div style="margin-top: 6px; margin-bottom: 4px; font-size: 0.75rem; color: #2563eb; display: flex; align-items: flex-start; gap: 5px; line-height: 1.25;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 1px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                        <span>Se genera de forma correlativa automáticamente para mantener el orden.</span>
+                    </div>
+                </div>
+
                 <input id="swal-prod-nom" class="swal2-input" placeholder="Nombre del Producto *" style="margin:0; width:100%; box-sizing:border-box;">
+                
                 <select id="swal-prod-cat" class="swal2-select" style="margin:0; width:100%; box-sizing:border-box;">
                     ${opcionesCategorias}
                 </select>
+                
                 <div style="display:flex; justify-content:space-between; margin-top:10px;">
                     <label style="display:flex; align-items:center; gap:5px;"><input type="checkbox" id="swal-prod-iva"> Graba IVA</label>
                     <label style="display:flex; align-items:center; gap:5px;"><input type="checkbox" id="swal-prod-cad"> Tiene Caducidad</label>
