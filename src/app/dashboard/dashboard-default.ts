@@ -88,11 +88,35 @@ export class DashboardDefault implements OnInit, OnDestroy, AfterViewChecked {
     this.rolUsuario = this.usuarioLogueado?.rol || 'PROPIETARIO';
     this.fotoPerfilUrl = this.usuarioLogueado?.fotoPerfil || null;
     
-    const nombre = this.usuarioLogueado?.primerNombre || '';
-    this.inicialesUsuario = nombre ? nombre.substring(0, 2).toUpperCase() : 'US';
+ 
+    
+    let nombreCompleto = '';
+    
+    if (this.usuarioLogueado?.nombreUsuario) {
+        nombreCompleto = this.usuarioLogueado.nombreUsuario;
+    } else if (this.usuarioLogueado?.primerNombre) {
+        nombreCompleto = this.usuarioLogueado.primerNombre + ' ' + (this.usuarioLogueado?.apellidoPaterno || '');
+    } else if (this.usuarioLogueado?.nombre) {
+        nombreCompleto = this.usuarioLogueado.nombre;
+    }
+
+    nombreCompleto = nombreCompleto.trim();
+
+    if (nombreCompleto) {
+        const partes = nombreCompleto.split(' ').filter(p => p.length > 0);
+        
+        if (partes.length >= 2) {
+            this.inicialesUsuario = (partes[0].charAt(0) + partes[1].charAt(0)).toUpperCase();
+        } else {
+            this.inicialesUsuario = partes[0].substring(0, 2).toUpperCase();
+        }
+    } else {
+        this.inicialesUsuario = 'US';
+    }
+
     this.negocioId = this.usuarioLogueado?.negocioId || this.usuarioLogueado?.idNegocio;
 
-    this.zoeService.inicializarChat(this.usuarioLogueado?.primerNombre || 'Usuario', this.rolUsuario);
+    this.zoeService.inicializarChat(this.usuarioLogueado?.primerNombre || this.usuarioLogueado?.nombreUsuario || 'Usuario', this.rolUsuario);
 
     this.zoeService.chatMensajes$
       .pipe(takeUntil(this.destroy$))
