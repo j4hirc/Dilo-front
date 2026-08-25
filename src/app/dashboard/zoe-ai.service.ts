@@ -196,119 +196,120 @@ REGLAS DE SEGURIDAD MÁXIMA (OBLIGATORIAS - NO NEGOCIABLES):
 }
 
   enviarMensaje(texto: string, responderConVoz: boolean = false) {
-    if (!texto.trim() || this.isChatLoadingSubject.value) return;
+  if (!texto.trim() || this.isChatLoadingSubject.value) return;
 
-    this.detenerInteraccion();
-    this.keepListeningActive = responderConVoz;
-    const miPeticionId = this.peticionActivaId;
+  this.detenerInteraccion();
+  this.keepListeningActive = responderConVoz;
+  const miPeticionId = this.peticionActivaId;
 
-    const mensajesActuales = this.chatMensajesSubject.value;
-    this.chatMensajesSubject.next([
-      ...mensajesActuales,
-      { role: 'user', text: texto, safeHtml: this.formatearMensaje(texto) }
-    ]);
+  const mensajesActuales = this.chatMensajesSubject.value;
+  this.chatMensajesSubject.next([
+    ...mensajesActuales,
+    { role: 'user', text: texto, safeHtml: this.formatearMensaje(texto) }
+  ]);
 
-    this.isChatLoadingSubject.next(true);
+  this.isChatLoadingSubject.next(true);
 
-    const headers = new HttpHeaders({
-      'Authorization': `Bearer ${this.groqApiKey}`,
-      'Content-Type': 'application/json'
-    });
+  const headers = new HttpHeaders({
+    'Authorization': `Bearer ${this.groqApiKey}`,
+    'Content-Type': 'application/json'
+  });
 
-    const historial = this.chatMensajesSubject.value.slice(-6).map(msg => ({
-      role: msg.role,
-      content: msg.text
-    }));
+  const historial = this.chatMensajesSubject.value.slice(-6).map(msg => ({
+    role: msg.role,
+    content: msg.text
+  }));
 
-    const rutaActual = this.router.url;
-    const promptConUbicacion = `${this.promptSistemaBase}\n\nUBICACIÓN ACTUAL DEL USUARIO: ${rutaActual}`;
+  // Ya NO enviamos la ubicación actual al modelo.
+  // Solo usamos el prompt del sistema normal.
+  const payload = {
+    model: 'openai/gpt-oss-120b',
+    messages: [
+      { role: 'system', content: this.promptSistemaBase },
+      ...historial
+    ],
+    temperature: 0.1,
+    max_tokens: 500
+  };
 
-    const payload = {
-      model: 'openai/gpt-oss-120b',
-      messages: [{ role: 'system', content: promptConUbicacion }, ...historial],
-      temperature: 0.1,
-      max_tokens: 400
-    };
+  this.http.post<any>('https://api.groq.com/openai/v1/chat/completions', payload, { headers })
+    .subscribe({
+      next: (res) => {
+        this.zone.run(() => {
+          if (this.peticionActivaId !== miPeticionId) return;
 
-    this.http.post<any>('https://api.groq.com/openai/v1/chat/completions', payload, { headers })
-      .subscribe({
-        next: (res) => {
-          this.zone.run(() => {
-            if (this.peticionActivaId !== miPeticionId) return;
+          let textoCompleto = res.choices[0]?.message?.content || '';
+          textoCompleto = textoCompleto.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
 
-            let textoCompleto = res.choices[0]?.message?.content || '';
-            textoCompleto = textoCompleto.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+          const navMatch = textoCompleto.match(/\[\[NAVEGAR:\s*([^\]]+)\]\]/i);
+          let rutaSolicitada = null;
+          if (navMatch) {
+            rutaSolicitada = navMatch[1].trim();
+            textoCompleto = textoCompleto.replace(navMatch[0], '').trim();
+          }
 
-            const navMatch = textoCompleto.match(/\[\[NAVEGAR:\s*([^\]]+)\]\]/i);
-            let rutaSolicitada = null;
-            if (navMatch) {
-              rutaSolicitada = navMatch[1].trim();
-              textoCompleto = textoCompleto.replace(navMatch[0], '').trim();
-            }
+          let textoParaPantalla = textoCompleto;
+          let textoParaVoz = '';
 
-            let textoParaPantalla = textoCompleto;
-            let textoParaVoz = '';
+          const vozMatch = textoCompleto.match(/<voz>([\s\S]*?)<\/voz>/i);
+          if (vozMatch) {
+            textoParaVoz = vozMatch[1].trim();
+            textoParaPantalla = textoCompleto.replace(vozMatch[0], '').trim();
+          } else {
+            textoParaPantalla = textoCompleto.replace(/<voz>|<\/voz>/gi, '').trim();
+            textoParaVoz = this.limpiarTextoParaVoz(textoParaPantalla);
+          }
 
-            const vozMatch = textoCompleto.match(/<voz>([\s\S]*?)<\/voz>/i);
-            if (vozMatch) {
-              textoParaVoz = vozMatch[1].trim();
-              textoParaPantalla = textoCompleto.replace(vozMatch[0], '').trim();
-            } else {
-              // Fallback: limpiamos agresivamente si el modelo no puso la etiqueta
-              textoParaPantalla = textoCompleto.replace(/<voz>|<\/voz>/gi, '').trim();
-              textoParaVoz = this.limpiarTextoParaVoz(textoParaPantalla);
-            }
+          this.chatMensajesSubject.next([
+            ...this.chatMensajesSubject.value,
+            { role: 'assistant', text: textoParaPantalla, safeHtml: this.formatearMensaje(textoParaPantalla) }
+          ]);
 
-            this.chatMensajesSubject.next([
-              ...this.chatMensajesSubject.value,
-              { role: 'assistant', text: textoParaPantalla, safeHtml: this.formatearMensaje(textoParaPantalla) }
-            ]);
+          this.isChatLoadingSubject.next(false);
 
-            this.isChatLoadingSubject.next(false);
+          if (rutaSolicitada && this.modulosNavegables.some(m => m.ruta === rutaSolicitada)) {
+            setTimeout(() => this.zone.run(() => this.router.navigate([rutaSolicitada])), 500);
+          }
 
-            if (rutaSolicitada && this.modulosNavegables.some(m => m.ruta === rutaSolicitada)) {
-              setTimeout(() => this.zone.run(() => this.router.navigate([rutaSolicitada])), 500);
-            }
-
-            if (responderConVoz && textoParaVoz) {
-              this.hablar(textoParaVoz, () => {
-                if (this.keepListeningActive) this.iniciarEscucha();
-              });
-            } else {
+          if (responderConVoz && textoParaVoz) {
+            this.hablar(textoParaVoz, () => {
               if (this.keepListeningActive) this.iniciarEscucha();
-            }
-          });
-        },
-        error: (err) => {
-          this.zone.run(() => {
-            if (this.peticionActivaId !== miPeticionId) return;
+            });
+          } else {
+            if (this.keepListeningActive) this.iniciarEscucha();
+          }
+        });
+      },
+      error: (err) => {
+        this.zone.run(() => {
+          if (this.peticionActivaId !== miPeticionId) return;
 
-            let msjError = 'Lo siento, por favor revisa tu conexión a internet.';
-            let detenerMicrofonoPorError = false;
+          let msjError = 'Lo siento, por favor revisa tu conexión a internet.';
+          let detenerMicrofonoPorError = false;
 
-            if (err.status === 429) {
-              msjError = 'Dame un segundito. Tus consultas van muy rápido, háblame un poco más despacio por favor.';
-              detenerMicrofonoPorError = false;
-            }
+          if (err.status === 429) {
+            msjError = 'Dame un segundito. Tus consultas van muy rápido, háblame un poco más despacio por favor.';
+            detenerMicrofonoPorError = false;
+          }
 
-            this.chatMensajesSubject.next([
-              ...this.chatMensajesSubject.value,
-              { role: 'assistant', text: msjError, safeHtml: this.formatearMensaje(msjError) }
-            ]);
+          this.chatMensajesSubject.next([
+            ...this.chatMensajesSubject.value,
+            { role: 'assistant', text: msjError, safeHtml: this.formatearMensaje(msjError) }
+          ]);
 
-            this.isChatLoadingSubject.next(false);
+          this.isChatLoadingSubject.next(false);
 
-            if (responderConVoz) {
-              this.hablar(msjError, () => {
-                if (this.keepListeningActive && !detenerMicrofonoPorError) this.iniciarEscucha();
-              });
-            } else {
+          if (responderConVoz) {
+            this.hablar(msjError, () => {
               if (this.keepListeningActive && !detenerMicrofonoPorError) this.iniciarEscucha();
-            }
-          });
-        }
-      });
-  }
+            });
+          } else {
+            if (this.keepListeningActive && !detenerMicrofonoPorError) this.iniciarEscucha();
+          }
+        });
+      }
+    });
+}
 
   /** Limpia el texto para que suene natural y humano al hablar */
  private limpiarTextoParaVoz(texto: string): string {
