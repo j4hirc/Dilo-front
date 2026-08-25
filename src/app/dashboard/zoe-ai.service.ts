@@ -132,25 +132,24 @@ export class ZoeAiService {
       }]);
     }
   }
+actualizarContexto(
+  contextoTexto: string,
+  modulosPermitidos: string,
+  modulosRestringidos: string,
+  roles: string,
+  nombreUsuario: string,
+  rolUsuario: string,
+  negocioNombre: string,
+  alertasTexto: string,
+  modulosNavegables: ModuloNavegable[] = [],
+  modulosEnConstruccion: string = 'Ninguno por el momento'
+) {
+  this.contextoGlobal = contextoTexto;
+  this.modulosNavegables = modulosNavegables;
 
-  actualizarContexto(
-    contextoTexto: string,
-    modulosPermitidos: string,
-    modulosRestringidos: string,
-    roles: string,
-    nombreUsuario: string,
-    rolUsuario: string,
-    negocioNombre: string,
-    alertasTexto: string,
-    modulosNavegables: ModuloNavegable[] = [],
-    modulosEnConstruccion: string = 'Ninguno por el momento'
-  ) {
-    this.contextoGlobal = contextoTexto;
-    this.modulosNavegables = modulosNavegables;
+  const listaRutasParaComando = modulosNavegables.map(m => m.ruta).join(', ');
 
-    const listaRutasParaComando = modulosNavegables.map(m => m.ruta).join(', ');
-
-    this.promptSistemaBase = `Eres "Zoe", la asistente virtual EXCLUSIVA del software Dilo (Cuenca, Ecuador). Hablas con **${nombreUsuario}** (rol: **${rolUsuario}**) de **"${negocioNombre}"**.
+  this.promptSistemaBase = `Eres "Zoe", la asistente virtual EXCLUSIVA del software Dilo (Cuenca, Ecuador). Hablas con **${nombreUsuario}** (rol: **${rolUsuario}**) de **"${negocioNombre}"**.
 
 CONTEXTO DEL NEGOCIO (Es tu ÚNICO universo de conocimiento. Úsalo textualmente):
 ${this.contextoGlobal}
@@ -173,28 +172,28 @@ REGLAS DE SEGURIDAD MÁXIMA (OBLIGATORIAS - NO NEGOCIABLES):
    - Cualquier otra cosa → responde ÚNICA Y EXACTAMENTE:
      "Lo siento, soy Zoe. Solo puedo ayudarte con temas de facturación, inventario y la gestión de tu negocio. ¿En qué te asisto hoy con el sistema?"
 
-3. RESPUESTAS EXTREMADAMENTE BREVES EN PANTALLA:
-   - Máximo 2-3 oraciones cortas. El usuario odia los párrafos.
-   - Sé directa, usa números exactos del contexto y ve al grano.
+3. RESPUESTAS EN PANTALLA:
+   - Máximo 2-4 oraciones cortas. Sé directa y usa números exactos.
 
-4. ETIQUETA <voz> OBLIGATORIA Y MUY IMPORTANTE:
-   - Debes incluir SIEMPRE al final de tu respuesta el texto exacto que dirás en voz alta, entre <voz> y </voz>.
-   - El contenido de <voz> debe ser:
-     • Muy corto (máximo 1 o 2 oraciones naturales)
-     • Como si estuvieras hablando con una amiga (tono conversacional, humano)
-     • Sin markdown, sin listas, sin símbolos, sin asteriscos, sin números de factura largos
-     • Interpreta la información, NO la leas literalmente
-     • Habla rápido y directo
+4. ETIQUETA <voz> OBLIGATORIA (MUY IMPORTANTE):
+   - Debes incluir SIEMPRE al final de tu respuesta el texto que dirás en voz alta entre <voz> y </voz>.
+   - El contenido de <voz> debe:
+     • Incluir TODA la información importante (nombres de productos, cantidades, montos, fechas, etc.).
+     • Decirlo de forma NATURAL y HUMANA, como si estuvieras conversando con una amiga.
+     • Ser fluido, conversacional y fácil de escuchar.
+     • NO leer listas, NO usar markdown, NO decir "punto", "guión", "asterisco".
+     • Hablar de corrido, agrupando la información de forma inteligente.
+     • Puedes usar 2 a 5 oraciones si es necesario para no perder datos.
    - EJEMPLOS CORRECTOS:
-     <voz>Tienes cinco productos bajos de stock. ¿Quieres que te diga cuáles?</voz>
-     <voz>Este mes llevas mil doscientos dólares en ventas.</voz>
-     <voz>No hay nada pendiente por cobrar ahora mismo.</voz>
+     <voz>Tienes cinco productos con stock bajo: el arroz tiene tres unidades y el mínimo es cinco, el aceite tiene dos, el azúcar está en cero, la leche tiene cuatro y el jabón también está bajo.</voz>
+     <voz>Este mes llevas mil doscientos cincuenta dólares en ventas, con un ticket promedio de treinta y dos dólares. Las últimas facturas son de María por ochenta dólares y de Carlos por cuarenta y cinco.</voz>
+     <voz>No hay productos sin stock en este momento y solo tienes dos con stock bajo: el atún y el detergente.</voz>
 
 5. NAVEGACIÓN:
    - Solo si el usuario pide ir a un módulo permitido: añade al final [[NAVEGAR:/ruta-exacta]]
    - Rutas válidas: ${listaRutasParaComando}
    - Nunca inventes rutas.`;
-  }
+}
 
   enviarMensaje(texto: string, responderConVoz: boolean = false) {
     if (!texto.trim() || this.isChatLoadingSubject.value) return;
@@ -312,24 +311,23 @@ REGLAS DE SEGURIDAD MÁXIMA (OBLIGATORIAS - NO NEGOCIABLES):
   }
 
   /** Limpia el texto para que suene natural y humano al hablar */
-  private limpiarTextoParaVoz(texto: string): string {
-    return (texto || '')
-      .replace(/\*\*/g, '')
-      .replace(/#+\s*/g, '')
-      .replace(/\|/g, '')
-      .replace(/id:\s*\d+/gi, '')
-      .replace(/\(.*?\)/g, '')
-      .replace(/\[.*?\]/g, '')
-      .replace(/⚠|✖|•|–|—/g, '')
-      .replace(/\$/g, ' dólares ')
-      .replace(/(\d+)\s*uds?/gi, '$1 unidades')
-      .replace(/(\d+)\s*mín/gi, 'mínimo $1')
-      .replace(/-/g, ' ')
-      .replace(/\n+/g, '. ')
-      .replace(/\s{2,}/g, ' ')
-      .replace(/\.\s*\./g, '.')
-      .trim();
-  }
+ private limpiarTextoParaVoz(texto: string): string {
+  return (texto || '')
+    .replace(/\*\*/g, '')
+    .replace(/#+\s*/g, '')
+    .replace(/\|/g, ', ')
+    .replace(/id:\s*\d+/gi, '')
+    .replace(/⚠|✖|•|–|—/g, '')
+    .replace(/\$/g, ' dólares ')
+    .replace(/(\d+)\s*uds?/gi, '$1 unidades')
+    .replace(/(\d+)\s*mín/gi, 'mínimo $1')
+    .replace(/-/g, ' ')
+    .replace(/\n+/g, '. ')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/\.\s*\./g, '.')
+    .replace(/\s+,/g, ',')
+    .trim();
+}
 
   private initSpeechRecognition() {
     const { webkitSpeechRecognition } = window as any;
