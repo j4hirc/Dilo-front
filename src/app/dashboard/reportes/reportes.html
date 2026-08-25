@@ -561,7 +561,21 @@
           </div>
         </div>
 
-        <div class="modal-cliente-footer">
+        <div class="modal-cliente-footer" style="display: flex; justify-content: space-between; align-items: center;">
+          
+          <!-- Botón PDF mejorado con color Rojo y sombra -->
+          <button type="button" class="btn-primary" (click)="exportarPdfCliente()" 
+                  style="display: flex; align-items: center; gap: 6px; padding: 8px 16px; font-size: 0.85rem; background-color: #dc2626; border-color: #dc2626; box-shadow: 0 4px 6px -1px rgba(220, 38, 38, 0.3);">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+              <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+            Descargar Reporte PDF
+          </button>
+
           <button type="button" class="btn-secondary-rep" (click)="cerrarDetalleCliente()">Cerrar</button>
         </div>
       </div>

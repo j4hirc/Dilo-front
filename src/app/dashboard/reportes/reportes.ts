@@ -1127,4 +1127,142 @@ export class Reportes implements OnInit {
   colorTextoCalor(intensidad: number): string {
     return intensidad >= 0.5 ? '#ffffff' : '#475569';
   }
+
+  exportarPdfCliente() {
+    if (!this.clienteDetalle) return;
+
+    try {
+      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const pageW = doc.internal.pageSize.getWidth();
+      const margin = 14;
+      let y = 16;
+
+      // 1. Cabecera (Banner Azul)
+      doc.setFillColor(23, 42, 70);
+      doc.rect(0, 0, pageW, 28, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Reporte Individual de Cliente', margin, 12);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text(this.negocioNombre, margin, 20);
+      doc.text(`Generado: ${new Date().toLocaleString('es-EC')}`, pageW - margin, 16, { align: 'right' });
+
+      y = 38;
+      doc.setTextColor(15, 23, 42);
+
+      // 2. Datos del Cliente
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text(this.clienteDetalle.nombre, margin, y);
+      y += 6;
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(100, 116, 139);
+      if (this.clienteDetalle.identificacion) {
+         doc.text(`CI/RUC: ${this.clienteDetalle.identificacion}`, margin, y);
+         y += 6;
+      }
+
+      y += 2;
+
+      // 3. Tabla de Resumen (Métricas)
+      autoTable(doc, {
+        startY: y,
+        margin: { left: margin, right: margin },
+        head: [['Facturas Emitidas', 'Total Facturado', 'Saldo Pendiente']],
+        body: [
+          [
+            String(this.clienteDetalle.numFacturas || 0),
+            `$${this.fmtMoney(this.clienteDetalle.totalFacturado || 0)}`,
+            `$${this.fmtMoney(this.clienteDetalle.saldoPendiente || 0)}`
+          ]
+        ],
+        theme: 'grid',
+        headStyles: { fillColor: [234, 88, 12], textColor: 255, fontStyle: 'bold', fontSize: 10, halign: 'center' },
+        bodyStyles: { fontSize: 11, textColor: [15, 23, 42], halign: 'center', fontStyle: 'bold' }
+      });
+
+      y = (doc as any).lastAutoTable.finalY + 12;
+
+      // 4. Historial de Facturas
+      if (this.clienteDetalle.facturas && this.clienteDetalle.facturas.length > 0) {
+        this.ensureSpace(doc, y, 30);
+        y = (doc as any)._rendimientoY ?? y;
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(15, 23, 42);
+        doc.text('Historial de Facturas', margin, y);
+        y += 4;
+
+        autoTable(doc, {
+          startY: y,
+          margin: { left: margin, right: margin },
+          head: [['Comprobante', 'Fecha', 'Forma Pago', 'Estado', 'Total']],
+          body: this.clienteDetalle.facturas.map(f => [
+            `#${f.numero}`,
+            f.fecha,
+            f.tipo,
+            f.estado,
+            `$${this.fmtMoney(f.monto)}`
+          ]),
+          theme: 'striped',
+          headStyles: { fillColor: [23, 42, 70], textColor: 255, fontSize: 9 },
+          bodyStyles: { fontSize: 8 },
+          alternateRowStyles: { fillColor: [248, 250, 252] }
+        });
+        y = (doc as any).lastAutoTable.finalY + 12;
+      }
+
+      // 5. Historial de Cuentas por Cobrar (Créditos)
+      if (this.clienteDetalle.creditos && this.clienteDetalle.creditos.length > 0) {
+        this.ensureSpace(doc, y, 30);
+        y = (doc as any)._rendimientoY ?? y;
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(15, 23, 42);
+        doc.text('Cuentas de Crédito / Saldos Pendientes', margin, y);
+        y += 4;
+
+        autoTable(doc, {
+          startY: y,
+          margin: { left: margin, right: margin },
+          head: [['Ref. Factura', 'Vencimiento', 'Estado', 'Monto Original', 'Deuda Actual']],
+          body: this.clienteDetalle.creditos.map(c => [
+            c.factura,
+            c.fechaVencimiento,
+            c.estado,
+            `$${this.fmtMoney(c.montoTotal)}`,
+            `$${this.fmtMoney(c.saldoPendiente)}`
+          ]),
+          theme: 'striped',
+          headStyles: { fillColor: [234, 88, 12], textColor: 255, fontSize: 9 },
+          bodyStyles: { fontSize: 8 },
+          alternateRowStyles: { fillColor: [248, 250, 252] }
+        });
+      }
+
+      // 6. Paginación de fondo
+      const totalPages = doc.getNumberOfPages();
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(148, 163, 184);
+        doc.text(
+          `Dilo · Página ${i} de ${totalPages}`,
+          pageW / 2,
+          doc.internal.pageSize.getHeight() - 8,
+          { align: 'center' }
+        );
+      }
+
+      const nombreLimpio = this.clienteDetalle.nombre.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 20);
+      doc.save(`Estado_Cuenta_${nombreLimpio}.pdf`);
+
+    } catch (err) {
+      console.error('Error al generar PDF de cliente:', err);
+      alert('Hubo un error al generar el PDF del cliente.');
+    }
+  }
 }
