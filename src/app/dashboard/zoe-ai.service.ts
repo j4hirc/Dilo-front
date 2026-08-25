@@ -426,14 +426,14 @@ REGLAS DE SEGURIDAD MÁXIMA (OBLIGATORIAS - NO NEGOCIABLES):
 
       if (this.vozFemenina) {
         this.currentUtterance.voice = this.vozFemenina;
-        this.currentUtterance.lang = this.vozFemenina.lang || 'es-EC';
+        this.currentUtterance.lang = this.vozFemenina.lang || 'es-AR';
       } else {
-        this.currentUtterance.lang = 'es-EC';
+        this.currentUtterance.lang = 'es-AR'; // Forzar argentino por defecto si falla la voz elegida
       }
 
-      // === AJUSTES DE VOZ MÁS MUJER Y RÁPIDA ===
-      this.currentUtterance.rate = 1.22;   // Rápida pero natural
-      this.currentUtterance.pitch = 1.15;  // Más agudo = más femenino
+      // === AJUSTES DE VOZ MÁS SENSUAL Y HUMANA ===
+      this.currentUtterance.rate = 0.94;  // Más pausada y relajada (antes 1.22)
+      this.currentUtterance.pitch = 0.85; // Un tono ligeramente más grave da un efecto más sugerente/cálido (antes 1.15)
       this.currentUtterance.volume = 1;
 
       this.currentUtterance.onend = () => {
