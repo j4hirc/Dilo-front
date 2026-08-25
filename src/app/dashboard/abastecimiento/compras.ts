@@ -286,9 +286,9 @@ export class Compras implements OnInit {
       title: 'Nuevo Proveedor',
       html: 
         '<div style="display:flex; flex-direction:column; gap:10px; text-align:left;">' +
-            '<input id="swal-prov-nombre" class="swal2-input" placeholder="Nombre / Razón Social *" style="margin:0; width:100%; box-sizing:border-box;">' +
-            '<input id="swal-prov-dni" class="swal2-input" placeholder="RUC / DNI *" style="margin:0; width:100%; box-sizing:border-box;">' +
-            '<input id="swal-prov-tel" class="swal2-input" placeholder="Teléfono" style="margin:0; width:100%; box-sizing:border-box;">' +
+            '<input id="swal-prov-nombre" class="swal2-input" placeholder="Nombre / Razón Social *" style="margin:0; width:100%; box-sizing:border-box;" maxlength="20">' +
+            '<input id="swal-prov-dni" class="swal2-input" placeholder="RUC / DNI *" style="margin:0; width:100%; box-sizing:border-box;" maxlength="15">' +
+            '<input id="swal-prov-tel" class="swal2-input" placeholder="Teléfono" style="margin:0; width:100%; box-sizing:border-box;" maxlength="10">' +
         '</div>',
       showCancelButton: true,
       confirmButtonColor: '#ea580c',
@@ -369,7 +369,7 @@ export class Compras implements OnInit {
                     </div>
                 </div>
 
-                <input id="swal-prod-nom" class="swal2-input" placeholder="Nombre del Producto *" style="margin:0; width:100%; box-sizing:border-box;">
+                <input id="swal-prod-nom" class="swal2-input" placeholder="Nombre del Producto *" style="margin:0; width:100%; box-sizing:border-box;" maxlength="20">
                 
                 <select id="swal-prod-cat" class="swal2-select" style="margin:0; width:100%; box-sizing:border-box;">
                     ${opcionesCategorias}

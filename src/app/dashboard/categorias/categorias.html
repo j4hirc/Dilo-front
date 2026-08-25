@@ -63,11 +63,11 @@
         <div class="modal-body">
             <div class="form-group">
                 <label>Nombre *</label>
-                <input type="text" [(ngModel)]="categoriaForm.nombre" placeholder="Ej: Lácteos">
+                <input type="text" [(ngModel)]="categoriaForm.nombre" placeholder="Ej: Lácteos" maxlength="20">
             </div>
             <div class="form-group">
                 <label>Descripción</label>
-                <textarea [(ngModel)]="categoriaForm.descripcion" rows="3" placeholder="Detalles de lo que incluye esta categoría..."></textarea>
+                <textarea [(ngModel)]="categoriaForm.descripcion" rows="3" placeholder="Detalles de lo que incluye esta categoría..." maxlength="50"></textarea>
             </div>
         </div>
 

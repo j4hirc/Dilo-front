@@ -90,8 +90,8 @@ export class Bodegas implements OnInit {
       title: 'Nueva Bodega',
       html: `
         <div class="swal-form-container">
-            <input id="swal-nombre" class="swal2-input custom-swal-input" placeholder="Nombre de la bodega (Ej: Bodega Central)">
-            <input id="swal-direccion" class="swal2-input custom-swal-input" placeholder="Dirección (Opcional)">
+            <input id="swal-nombre" class="swal2-input custom-swal-input" placeholder="Nombre de la bodega (Ej: Bodega Central)" maxlength="20">
+            <input id="swal-direccion" class="swal2-input custom-swal-input" placeholder="Dirección (Opcional)" maxlength="30">
         </div>
       `,
       showCancelButton: true,
@@ -128,8 +128,8 @@ export class Bodegas implements OnInit {
       title: 'Editar Bodega',
       html: `
         <div class="swal-form-container">
-            <input id="swal-nombre" class="swal2-input custom-swal-input" value="${bodega.nombre}" placeholder="Nombre de la bodega">
-            <input id="swal-direccion" class="swal2-input custom-swal-input" value="${bodega.direccion || ''}" placeholder="Dirección">
+            <input id="swal-nombre" class="swal2-input custom-swal-input" value="${bodega.nombre}" placeholder="Nombre de la bodega" maxlength="20">
+            <input id="swal-direccion" class="swal2-input custom-swal-input" value="${bodega.direccion || ''}" placeholder="Dirección" maxlength="30">
         </div>
       `,
       showCancelButton: true,

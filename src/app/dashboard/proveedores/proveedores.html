@@ -119,17 +119,17 @@
             <div class="form-row">
                 <div class="form-group">
                     <label>RUC o DNI *</label>
-                    <input type="text" [(ngModel)]="proveedorForm.dni" placeholder="Ej: 0102030405001">
+                    <input type="text" [(ngModel)]="proveedorForm.dni" placeholder="Ej: 0102030405001" maxlength="13">
                 </div>
                 <div class="form-group">
                     <label>Teléfono de Contacto</label>
-                    <input type="text" [(ngModel)]="proveedorForm.telefono" placeholder="Ej: 0991234567">
+                    <input type="text" [(ngModel)]="proveedorForm.telefono" placeholder="Ej: 0991234567" maxlength="10">
                 </div>
             </div>
 
             <div class="form-group">
                 <label>Razón Social o Nombre Comercial *</label>
-                <input type="text" [(ngModel)]="proveedorForm.nombre" placeholder="Ej: Distribuidora El Sol S.A.">
+                <input type="text" [(ngModel)]="proveedorForm.nombre" placeholder="Ej: Distribuidora El Sol S.A." maxlength="30">
             </div>
 
             <div class="form-group">

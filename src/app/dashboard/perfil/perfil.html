@@ -58,12 +58,12 @@
         </div>
 
         <div *ngIf="isEditing" class="edit-names-container">
-            <input type="text" class="custom-input" [(ngModel)]="editData.primerNombre" placeholder="Primer Nombre">
-            <input type="text" class="custom-input" [(ngModel)]="editData.segundoNombre" placeholder="Segundo Nombre">
+            <input type="text" class="custom-input" [(ngModel)]="editData.primerNombre" placeholder="Primer Nombre" maxlength="20">
+            <input type="text" class="custom-input" [(ngModel)]="editData.segundoNombre" placeholder="Segundo Nombre" maxlength="20">
             <input type="text" class="custom-input" [(ngModel)]="editData.apellidoPaterno"
-                placeholder="Apellido Paterno">
+                placeholder="Apellido Paterno" maxlength="20">
             <input type="text" class="custom-input" [(ngModel)]="editData.apellidoMaterno"
-                placeholder="Apellido Materno">
+                placeholder="Apellido Materno" maxlength="20">
         </div>
 
         <div class="profile-info-grid">
@@ -93,7 +93,7 @@
                 <div class="info-text">
                     <label>Teléfono</label>
                     <p *ngIf="!isEditing">{{ usuario?.telefono || 'No registrado' }}</p>
-                    <input *ngIf="isEditing" type="text" class="custom-input-small" [(ngModel)]="editData.telefono">
+                    <input *ngIf="isEditing" type="text" class="custom-input-small" [(ngModel)]="editData.telefono" maxlength="10">
                 </div>
             </div>
 
@@ -124,7 +124,7 @@
                 <div class="info-text">
                     <label>Dirección</label>
                     <p *ngIf="!isEditing">{{ usuario?.direccion || 'No registrada' }}</p>
-                    <input *ngIf="isEditing" type="text" class="custom-input-small" [(ngModel)]="editData.direccion">
+                    <input *ngIf="isEditing" type="text" class="custom-input-small" [(ngModel)]="editData.direccion" maxlength="40">
                 </div>
             </div>
 
@@ -188,7 +188,7 @@
                 <div class="password-inputs">
                     <div class="password-input-wrapper">
                         <input [type]="showNewPassword ? 'text' : 'password'" class="custom-input custom-input-icon"
-                            [(ngModel)]="passwordData.newPassword" placeholder="Nueva Contraseña">
+                            [(ngModel)]="passwordData.newPassword" placeholder="Nueva Contraseña" maxlength="20">
                         <button type="button" class="btn-eye" (click)="togglePasswordVisibility('new')"
                             [attr.aria-label]="showNewPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'">
                             <svg *ngIf="!showNewPassword" xmlns="http://www.w3.org/2000/svg" width="20" height="20"
@@ -210,6 +210,7 @@
 
                     <div class="password-input-wrapper">
                         <input [type]="showConfirmPassword ? 'text' : 'password'" class="custom-input custom-input-icon"
+                            maxlength="20"
                             [(ngModel)]="passwordData.confirmPassword" placeholder="Confirmar Nueva Contraseña">
                         <button type="button" class="btn-eye" (click)="togglePasswordVisibility('confirm')"
                             [attr.aria-label]="showConfirmPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'">

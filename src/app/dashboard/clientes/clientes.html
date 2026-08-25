@@ -90,29 +90,29 @@
             <div class="form-row">
                 <div class="form-group">
                     <label>Primer Nombre *</label>
-                    <input type="text" [(ngModel)]="clienteForm.primerNombre" placeholder="Ej: Juan">
+                    <input type="text" [(ngModel)]="clienteForm.primerNombre" placeholder="Ej: Juan" maxlength="20">
                 </div>
                 <div class="form-group">
                     <label>Segundo Nombre</label>
-                    <input type="text" [(ngModel)]="clienteForm.segundoNombre" placeholder="Ej: Carlos">
+                    <input type="text" [(ngModel)]="clienteForm.segundoNombre" placeholder="Ej: Carlos" maxlength="20">
                 </div>
             </div>
 
             <div class="form-row">
                 <div class="form-group">
                     <label>Apellido Paterno *</label>
-                    <input type="text" [(ngModel)]="clienteForm.apellidoPaterno" placeholder="Ej: Pérez">
+                    <input type="text" [(ngModel)]="clienteForm.apellidoPaterno" placeholder="Ej: Pérez" maxlength="20">
                 </div>
                 <div class="form-group">
                     <label>Apellido Materno</label>
-                    <input type="text" [(ngModel)]="clienteForm.apellidoMaterno" placeholder="Ej: Gómez">
+                    <input type="text" [(ngModel)]="clienteForm.apellidoMaterno" placeholder="Ej: Gómez" maxlength="20">
                 </div>
             </div>
 
             <div class="form-row">
                 <div class="form-group">
                     <label>Teléfono</label>
-                    <input type="text" [(ngModel)]="clienteForm.telefono" placeholder="Ej: 0991234567">
+                    <input type="text" [(ngModel)]="clienteForm.telefono" placeholder="Ej: 0991234567" maxlength="10">
                 </div>
                 <div class="form-group">
                     <label>Fecha de Nacimiento</label>
@@ -122,12 +122,12 @@
 
             <div class="form-group">
                 <label>Correo Electrónico</label>
-                <input type="email" [(ngModel)]="clienteForm.email" placeholder="Ej: juan.perez@email.com">
+                <input type="email" [(ngModel)]="clienteForm.email" placeholder="Ej: juan.perez@email.com" maxlength="40">
             </div>
 
             <div class="form-group">
                 <label>Dirección</label>
-                <textarea [(ngModel)]="clienteForm.direccion" rows="2" placeholder="Ej: Calle Principal 123"></textarea>
+                <textarea [(ngModel)]="clienteForm.direccion" rows="2" placeholder="Ej: Calle Principal 123" maxlength="40"></textarea>
             </div>
             
         </div>
