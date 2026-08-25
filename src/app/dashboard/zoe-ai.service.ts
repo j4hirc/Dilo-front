@@ -144,34 +144,29 @@ Módulos permitidos: ${modulosPermitidos}
 
 REGLAS DE SEGURIDAD MÁXIMA (OBLIGATORIAS - NO NEGOCIABLES):
 
-0. Dilo
-- Cuando te pregunten qué es Dilo, responde que es un sistema de facturación, inventario y gestión de negocios.
+0.Dilo
+-cuando le pregunten que es dilo que diga es un sistema de facturación, inventario y gestión de negocios.
 
 1. CERO INVENTOS / CERO ALUCINACIONES:
    - SOLO puedes responder con datos que aparezcan EXPLÍCITAMENTE en el CONTEXTO DEL NEGOCIO de arriba.
-   - NUNCA inventes nombres de productos, clientes, proveedores, facturas, montos, fechas, stock o rutas.
+   - NUNCA inventes nombres de productos, clientes, proveedores, facturas, montos, fechas, stock, rutas o cualquier dato.
    - Si te preguntan algo que NO está en el contexto, responde exactamente:
      "No tengo ese dato en el sistema ahora mismo. ¿Quieres que revise otra cosa del negocio?"
+   - Si el contexto está incompleto o vacío, dilo claramente. No completes con conocimiento general.
 
 2. CERO OFF-TOPIC:
    - Solo temas de facturación, inventario, clientes, proveedores, ventas, stock, equipo y módulos de Dilo.
-   - Cualquier otra cosa (definiciones, recetas, programación, etc.) → responde:
+   - Cualquier otra cosa (definiciones, recetas, historia, programación, cultura general, etc.) → responde ÚNICA Y EXACTAMENTE:
      "Lo siento, soy Zoe. Solo puedo ayudarte con temas de facturación, inventario y la gestión de tu negocio. ¿En qué te asisto hoy con el sistema?"
 
-3. FORMATO Y DETALLE (¡IMPORTANTE!):
-   - Si el usuario te pide ver sus productos, stock, clientes, facturas, etc., DEBES mencionarlos explícitamente utilizando la información del contexto.
-   - Utiliza SIEMPRE listas con viñetas (guiones "- ") para listar la información en la pantalla de forma ordenada y clara.
-   - NO omitas la información en el texto escrito; la pantalla está para mostrar el detalle completo.
+3. RESPUESTAS EXTREMADAMENTE BREVES:
+   - Máximo 2-3 oraciones cortas. El usuario odia los párrafos.
+   - Sé directa, usa números exactos del contexto y ve al grano.
 
 4. ETIQUETA VOZ OBLIGATORIA:
-   - Debes incluir SIEMPRE al final de tu respuesta la etiqueta <voz>Texto aquí</voz>.
-   - El texto dentro de las etiquetas <voz> debe ser un resumen MUY CORTO, hablado, natural y directo de tu respuesta.
-   - NUNCA leas listas largas en la voz. Haz un resumen para la voz y deja el detalle completo en el texto escrito (fuera de la etiqueta).
-   - EJEMPLO IDEAL DE RESPUESTA: 
-     Aquí tienes tus productos registrados:
-     - Manzanas (costo: $1.00)
-     - Peras (costo: $1.20)
-     <voz>He encontrado tus productos. Tienes manzanas, peras, entre otros. Revísalos a detalle en pantalla.</voz>
+   - Debes incluir SIEMPRE al final de tu respuesta el texto exacto que dirás en voz alta, encerrado entre <voz> y </voz>.
+   - El texto dentro de las etiquetas debe ser una versión muy resumida, natural y directa de tu respuesta. Cero markdown, listas o caracteres especiales.
+   - EJEMPLO CORRECTO: <voz>He revisado el inventario y tienes 5 productos bajos en stock.</voz>
 
 5. NAVEGACIÓN:
    - Solo si el usuario pide ir a un módulo permitido: añade al final [[NAVEGAR:/ruta-exacta]]
@@ -211,7 +206,7 @@ REGLAS DE SEGURIDAD MÁXIMA (OBLIGATORIAS - NO NEGOCIABLES):
       model: 'openai/gpt-oss-120b',
       messages: [{ role: 'system', content: promptConUbicacion }, ...historial],
       temperature: 0.1,
-      max_tokens: 500 // Le aumentamos un poco para que alcance a escribir las listas
+      max_tokens: 400
     };
 
     this.http.post<any>('https://api.groq.com/openai/v1/chat/completions', payload, { headers })
@@ -239,8 +234,7 @@ REGLAS DE SEGURIDAD MÁXIMA (OBLIGATORIAS - NO NEGOCIABLES):
               textoParaPantalla = textoCompleto.replace(vozMatch[0], '').trim();
             } else {
               textoParaPantalla = textoCompleto.replace(/<voz>|<\/voz>/gi, '').trim();
-              
-              // Fallback por si la IA no encapsula bien la voz
+
               let textoLimpio = textoParaPantalla
                 .replace(/\*\*/g, '')
                 .replace(/#/g, '')
@@ -250,10 +244,6 @@ REGLAS DE SEGURIDAD MÁXIMA (OBLIGATORIAS - NO NEGOCIABLES):
                 .replace(/\s{2,}/g, ' ')
                 .trim();
 
-              // Si es muy largo el fallback, recortarlo
-              if(textoLimpio.length > 200) {
-                 textoLimpio = textoLimpio.substring(0, 200) + '... Revisa la pantalla para más detalles.';
-              }
               textoParaVoz = textoLimpio;
             }
 
@@ -463,32 +453,26 @@ REGLAS DE SEGURIDAD MÁXIMA (OBLIGATORIAS - NO NEGOCIABLES):
 
     html = html.replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-    // Headers
     html = html.replace(/^### (.*$)/gim, '<h4 style="margin: 12px 0 6px; font-weight: bold; color: var(--primary-orange, #ea580c); font-size: 1.05em;">$1</h4>');
     html = html.replace(/^## (.*$)/gim, '<h3 style="margin: 14px 0 8px; font-weight: bold; color: var(--primary-orange, #ea580c); font-size: 1.15em;">$1</h3>');
     html = html.replace(/^# (.*$)/gim, '<h2 style="margin: 16px 0 10px; font-weight: bold; color: var(--primary-orange, #c2410c); font-size: 1.25em;">$1</h2>');
 
-    // Negritas
     html = html.replace(/\*\*([\s\S]*?)\*\*/g, '<strong>$1</strong>');
 
-    // Separadores
     html = html.replace(/\|/g, '');
     html = html.replace(/---/g, '');
 
     const lineas = html.split('\n');
     let dentroDeLista = false;
-    let tipoLista = ''; // 'ul' o 'ol'
     let resultado = '';
 
     for (let linea of lineas) {
       linea = linea.trim();
 
-      // Líneas vacías
       if (!linea) {
         if (dentroDeLista) {
-          resultado += `</${tipoLista}>`;
+          resultado += '</ul>';
           dentroDeLista = false;
-          tipoLista = '';
         }
         if (!resultado.endsWith('<br>')) {
           resultado += '<br>';
@@ -496,30 +480,17 @@ REGLAS DE SEGURIDAD MÁXIMA (OBLIGATORIAS - NO NEGOCIABLES):
         continue;
       }
 
-      // Detección de listas dinámicas
-      const esViñeta = /^[-*]\s+/.test(linea);
-      const esNumero = /^\d+\.\s+/.test(linea);
-
-      if (esViñeta || esNumero) {
-        const nuevoTipo = esViñeta ? 'ul' : 'ol';
-        
+      if (/^[-*]\s+/.test(linea)) {
         if (!dentroDeLista) {
-          resultado += `<${nuevoTipo} style="margin: 6px 0; padding-left: 20px; line-height: 1.5;">`;
+          resultado += '<ul style="margin: 6px 0; padding-left: 20px; line-height: 1.4;">';
           dentroDeLista = true;
-          tipoLista = nuevoTipo;
-        } else if (dentroDeLista && tipoLista !== nuevoTipo) {
-          // Cambio de tipo de lista en medio
-          resultado += `</${tipoLista}><${nuevoTipo} style="margin: 6px 0; padding-left: 20px; line-height: 1.5;">`;
-          tipoLista = nuevoTipo;
         }
-
-        let itemLimpio = linea.replace(/^([-*]\s+|\d+\.\s+)/, '');
-        resultado += `<li style="margin-bottom: 6px;">${itemLimpio}</li>`;
+        let itemLimpio = linea.replace(/^[-*]\s+/, '');
+        resultado += `<li style="margin-bottom: 4px;">${itemLimpio}</li>`;
       } else {
         if (dentroDeLista) {
-          resultado += `</${tipoLista}>`;
+          resultado += '</ul>';
           dentroDeLista = false;
-          tipoLista = '';
         }
 
         if (linea.startsWith('<h')) {
@@ -530,9 +501,8 @@ REGLAS DE SEGURIDAD MÁXIMA (OBLIGATORIAS - NO NEGOCIABLES):
       }
     }
 
-    if (dentroDeLista) resultado += `</${tipoLista}>`;
+    if (dentroDeLista) resultado += '</ul>';
 
-    // Limpiar saltos de línea sobrantes al inicio/final
     resultado = resultado.replace(/^(<br>)+/, '').replace(/(<br>)+$/, '');
 
     return this.sanitizer.bypassSecurityTrustHtml(resultado);
