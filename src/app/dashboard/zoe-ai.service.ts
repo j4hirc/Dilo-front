@@ -77,7 +77,6 @@ export class ZoeAiService {
   }
 
   private seleccionarVozFemenina(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null {
-    // 1. Filtrar voces en español y descartar hombres
     const vocesEspañol = voices.filter(v =>
       v.lang && v.lang.toLowerCase().startsWith('es') &&
       !/pablo|jorge|diego|carlos|juan|pedro|antonio|male|hombre|david|boy/i.test(v.name)
@@ -87,30 +86,24 @@ export class ZoeAiService {
       return voices.find(v => /female|mujer|woman/i.test(v.name) || !/male|hombre|boy/i.test(v.name)) || voices[0];
     }
 
-    // PRIORIDAD 1: Voces Neurales/Naturales (Edge, Windows 11). Son las más humanas.
-    // Ejemplos: "Microsoft Elvira Online (Natural) - Spanish", "Microsoft Dalia Online"
     const vozNeural = vocesEspañol.find(v =>
       (/natural|neural|online/i.test(v.name)) &&
       /mia|elvira|dalia|paloma|elena|camila|lucrecia|salome|ximena/i.test(v.name)
     );
     if (vozNeural) return vozNeural;
 
-    // PRIORIDAD 2: Voces de Apple/iOS (Premium o de alta calidad nativa)
     const vozApple = vocesEspañol.find(v =>
       (/premium|enhanced/i.test(v.name)) ||
       /m[oó]nica|paulina|luc[ií]a|mar[ií]a|isabel|sofia|laura|victoria/i.test(v.name)
     );
     if (vozApple) return vozApple;
 
-    // PRIORIDAD 3: Voces de Google (Chrome inyecta "Google español" que suele ser buena)
     const vozGoogle = vocesEspañol.find(v => v.name.toLowerCase().includes('google'));
     if (vozGoogle) return vozGoogle;
 
-    // PRIORIDAD 4: Cualquier otra que indique ser de mujer explícitamente
     const vozFemeninaGenerica = vocesEspañol.find(v => /female|mujer/i.test(v.name));
     if (vozFemeninaGenerica) return vozFemeninaGenerica;
 
-    // FALLBACK: La primera voz en español (ej. Microsoft Sabina Desktop)
     return vocesEspañol[0];
   }
 
@@ -125,7 +118,7 @@ export class ZoeAiService {
     }
   }
 
- actualizarContexto(
+  actualizarContexto(
     contextoTexto: string,
     modulosPermitidos: string,
     modulosRestringidos: string,
@@ -144,21 +137,40 @@ export class ZoeAiService {
 
     this.promptSistemaBase = `Eres "Zoe", la asistente virtual EXCLUSIVA del software Dilo (Cuenca, Ecuador). Hablas con **${nombreUsuario}** (rol: **${rolUsuario}**) de **"${negocioNombre}"**.
 
-CONTEXTO DEL NEGOCIO (Es tu ÚNICO universo de conocimiento):
+CONTEXTO DEL NEGOCIO (Es tu ÚNICO universo de conocimiento. Úsalo textualmente):
 ${this.contextoGlobal}
 Alertas caducidad: ${alertasTexto || 'Ninguna'}.
 Módulos permitidos: ${modulosPermitidos}
 
-DIRECTRICES DE SEGURIDAD MÁXIMA (CUMPLIMIENTO OBLIGATORIO):
-1. CERO OFF-TOPIC Y CERO CULTURA GENERAL: Tienes PROHIBIDO definir palabras (ej. "procrastinación", "qué es X"), dar recetas, hablar de historia, psicología, programación o cualquier tema general. Tu mundo es SOLO facturación, inventario y Dilo.
-   -> REGLA DE ABORTO UNIVERSAL: Si te preguntan CUALQUIER COSA que no tenga que ver directamente con el negocio o el software, DEBES NEGARTE y responder ÚNICA Y EXACTAMENTE con esta frase:
-   "Lo siento, soy Zoe. Solo puedo ayudarte con temas de facturación, inventario y la gestión de tu negocio. ¿En qué te asisto hoy con el sistema?"
-2. RESPUESTAS EXTREMADAMENTE BREVES: El usuario odia los párrafos largos. Sé directa y al grano. Usa máximo 2 o 3 oraciones cortas. ¡No te extiendas!
-3. CERO INVENTOS: NUNCA inventes nombres, productos, clientes o facturas. Si no está en tu CONTEXTO, di que no lo sabes.
-4. ETIQUETA VOZ OBLIGATORIA: Añade al final <voz>Tu respuesta hablada aquí, MUY CORTA, directa y sin leer listas</voz>. 
-5. NAVEGACIÓN: Para ir a un módulo añade al final: [[NAVEGAR:/ruta]]. Rutas: ${listaRutasParaComando}.`;
-  }
+REGLAS DE SEGURIDAD MÁXIMA (OBLIGATORIAS - NO NEGOCIABLES):
 
+0.Dilo
+-cuando le pregunten que es dilo que diga es un sistema de facturación, inventario y gestión de negocios.
+
+1. CERO INVENTOS / CERO ALUCINACIONES:
+   - SOLO puedes responder con datos que aparezcan EXPLÍCITAMENTE en el CONTEXTO DEL NEGOCIO de arriba.
+   - NUNCA inventes nombres de productos, clientes, proveedores, facturas, montos, fechas, stock, rutas o cualquier dato.
+   - Si te preguntan algo que NO está en el contexto, responde exactamente:
+     "No tengo ese dato en el sistema ahora mismo. ¿Quieres que revise otra cosa del negocio?"
+   - Si el contexto está incompleto o vacío, dilo claramente. No completes con conocimiento general.
+
+2. CERO OFF-TOPIC:
+   - Solo temas de facturación, inventario, clientes, proveedores, ventas, stock, equipo y módulos de Dilo.
+   - Cualquier otra cosa (definiciones, recetas, historia, programación, cultura general, etc.) → responde ÚNICA Y EXACTAMENTE:
+     "Lo siento, soy Zoe. Solo puedo ayudarte con temas de facturación, inventario y la gestión de tu negocio. ¿En qué te asisto hoy con el sistema?"
+
+3. RESPUESTAS EXTREMADAMENTE BREVES:
+   - Máximo 2-3 oraciones cortas. El usuario odia los párrafos.
+   - Sé directa, usa números exactos del contexto y ve al grano.
+
+4. ETIQUETA VOZ OBLIGATORIA:
+   - Añade siempre al final: <voz>Versión hablada MUY CORTA, natural y sin listas ni markdown</voz>
+
+5. NAVEGACIÓN:
+   - Solo si el usuario pide ir a un módulo permitido: añade al final [[NAVEGAR:/ruta-exacta]]
+   - Rutas válidas: ${listaRutasParaComando}
+   - Nunca inventes rutas.`;
+  }
 
   enviarMensaje(texto: string, responderConVoz: boolean = false) {
     if (!texto.trim() || this.isChatLoadingSubject.value) return;
@@ -191,10 +203,9 @@ DIRECTRICES DE SEGURIDAD MÁXIMA (CUMPLIMIENTO OBLIGATORIO):
     const payload = {
       model: 'openai/gpt-oss-120b',
       messages: [{ role: 'system', content: promptConUbicacion }, ...historial],
-      temperature: 0.1, 
-      max_tokens: 400 
+      temperature: 0.1,
+      max_tokens: 400
     };
-
 
     this.http.post<any>('https://api.groq.com/openai/v1/chat/completions', payload, { headers })
       .subscribe({
@@ -218,7 +229,6 @@ DIRECTRICES DE SEGURIDAD MÁXIMA (CUMPLIMIENTO OBLIGATORIO):
             const vozMatch = textoCompleto.match(/<voz>([\s\S]*?)<\/voz>/i);
             if (vozMatch) {
               textoParaVoz = vozMatch[1].trim();
-              
               textoParaPantalla = textoCompleto.replace(vozMatch[0], '').trim();
             } else {
               textoParaPantalla = textoCompleto.replace(/<voz>|<\/voz>/gi, '').trim();
@@ -228,8 +238,8 @@ DIRECTRICES DE SEGURIDAD MÁXIMA (CUMPLIMIENTO OBLIGATORIO):
                 .replace(/#/g, '')
                 .replace(/-/g, '')
                 .replace(/\|/g, '')
-                .replace(/\n/g, '. ') 
-                .replace(/\s{2,}/g, ' ') 
+                .replace(/\n/g, '. ')
+                .replace(/\s{2,}/g, ' ')
                 .trim();
 
               textoParaVoz = textoLimpio;
@@ -332,7 +342,7 @@ DIRECTRICES DE SEGURIDAD MÁXIMA (CUMPLIMIENTO OBLIGATORIO):
     window.speechSynthesis.pause();
     window.speechSynthesis.cancel();
 
-    this.currentUtterance = null; 
+    this.currentUtterance = null;
 
     this.keepListeningActive = false;
     this.peticionActivaId++;
@@ -416,13 +426,13 @@ DIRECTRICES DE SEGURIDAD MÁXIMA (CUMPLIMIENTO OBLIGATORIO):
 
       this.currentUtterance.onend = () => {
         this.zone.run(() => this.isSpeaking = false);
-        this.currentUtterance = null; 
+        this.currentUtterance = null;
         if (onFinish) onFinish();
       };
 
       this.currentUtterance.onerror = () => {
         this.zone.run(() => this.isSpeaking = false);
-        this.currentUtterance = null; 
+        this.currentUtterance = null;
         if (onFinish) onFinish();
       };
 
@@ -445,7 +455,6 @@ DIRECTRICES DE SEGURIDAD MÁXIMA (CUMPLIMIENTO OBLIGATORIO):
     html = html.replace(/^## (.*$)/gim, '<h3 style="margin: 14px 0 8px; font-weight: bold; color: var(--primary-orange, #ea580c); font-size: 1.15em;">$1</h3>');
     html = html.replace(/^# (.*$)/gim, '<h2 style="margin: 16px 0 10px; font-weight: bold; color: var(--primary-orange, #c2410c); font-size: 1.25em;">$1</h2>');
 
-     
     html = html.replace(/\*\*([\s\S]*?)\*\*/g, '<strong>$1</strong>');
 
     html = html.replace(/\|/g, '');

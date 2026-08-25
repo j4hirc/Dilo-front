@@ -301,106 +301,145 @@ export class DashboardDefault implements OnInit, OnDestroy, AfterViewChecked {
   } 
 
   construirResumenDelNegocio(
-    productos: any[], categorias: any[], clientes: any[], proveedores: any[],
-    inventario: any[], facturas: any[], bodegas: any[], miembros: any[],
-    cuentasPorCobrar: any[], negocioInfo: any
-  ): string {
-    const listaProductos = productos.slice(0, 25).map(p => {
-      const costo = Number(p.costoPromedioActual ?? p.costoPromedio ?? 0).toFixed(2);
-      const cat = p.categoriaNombre || p.categoria?.nombre || '';
-      return `${p.nombre}${cat ? ' [' + cat + ']' : ''} (costo:$${costo})`;
-    }).join('; ');
-    const avisoMasProductos = productos.length > 25 ? ` ...(+${productos.length - 25} productos más en el catálogo)` : '';
+  productos: any[], categorias: any[], clientes: any[], proveedores: any[],
+  inventario: any[], facturas: any[], bodegas: any[], miembros: any[],
+  cuentasPorCobrar: any[], negocioInfo: any
+): string {
+  const listaProductos = productos.slice(0, 25).map(p => {
+    const costo = Number(p.costoPromedioActual ?? p.costoPromedio ?? 0).toFixed(2);
+    const cat = p.categoriaNombre || p.categoria?.nombre || '';
+    return `${p.nombre}${cat ? ' [' + cat + ']' : ''} (costo:$${costo})`;
+  }).join('; ');
+  const avisoMasProductos = productos.length > 25 ? ` ...(+${productos.length - 25} productos más en el catálogo)` : '';
 
-    const listaCategorias = categorias.slice(0, 15).map(c => c.nombre).filter(Boolean).join(', ') || 'Ninguna';
+  const listaCategorias = categorias.slice(0, 15).map(c => c.nombre).filter(Boolean).join(', ') || 'Ninguna';
 
-    const bodegasMap = new Map<string, { items: string[]; bajos: string[]; ceros: string[] }>();
-    const bajosGlobal: string[] = [];
-    const cerosGlobal: string[] = [];
+  const bodegasMap = new Map<string, { items: string[]; bajos: string[]; ceros: string[] }>();
+  const bajosGlobal: string[] = [];
+  const cerosGlobal: string[] = [];
 
-    inventario.forEach(i => {
-      const bodega = (i.bodegaNombre || 'Bodega Principal').trim();
-      if (!bodegasMap.has(bodega)) {
-        bodegasMap.set(bodega, { items: [], bajos: [], ceros: [] });
+  inventario.forEach(i => {
+    const bodega = (i.bodegaNombre || 'Bodega Principal').trim();
+    if (!bodegasMap.has(bodega)) {
+      bodegasMap.set(bodega, { items: [], bajos: [], ceros: [] });
+    }
+    const entry = bodegasMap.get(bodega)!;
+    const cant = Number(i.cantidadActual ?? 0);
+    const min = Number(i.stockMinimo ?? 0);
+    const nombreProd = i.productoNombre || 'Producto';
+    const linea = `${nombreProd}: ${cant} uds (mín:${min})`;
+
+    entry.items.push(linea);
+
+    if (cant <= 0) {
+      entry.ceros.push(`${nombreProd} (0 en ${bodega})`);
+      cerosGlobal.push(`${nombreProd} → ${bodega}`);
+    } else if (min > 0 && cant <= min) {
+      entry.bajos.push(`${nombreProd}: ${cant}/${min} en ${bodega}`);
+      bajosGlobal.push(`${nombreProd}: ${cant} uds (mín ${min}) → ${bodega}`);
+    }
+  });
+
+  let inventarioPorBodegaTexto = '';
+  if (bodegasMap.size === 0) {
+    inventarioPorBodegaTexto = '\n       (Sin registros de inventario todavía)';
+  } else {
+    bodegasMap.forEach((data, bodega) => {
+      const itemsSeguros = data.items.slice(0, 18);
+      const avisoMas = data.items.length > 18 ? ` ...(+${data.items.length - 18} más)` : '';
+      inventarioPorBodegaTexto += `\n       • ${bodega} (${data.items.length} productos): ${itemsSeguros.join(' | ')}${avisoMas}`;
+      if (data.bajos.length) {
+        inventarioPorBodegaTexto += `\n         ⚠ Stock bajo en esta bodega: ${data.bajos.slice(0, 8).join('; ')}`;
       }
-      const entry = bodegasMap.get(bodega)!;
-      const cant = Number(i.cantidadActual ?? 0);
-      const min = Number(i.stockMinimo ?? 0);
-      const nombreProd = i.productoNombre || 'Producto';
-      const linea = `${nombreProd}: ${cant} uds (mín:${min})`;
-
-      entry.items.push(linea);
-
-      if (cant <= 0) {
-        entry.ceros.push(`${nombreProd} (0 en ${bodega})`);
-        cerosGlobal.push(`${nombreProd} → ${bodega}`);
-      } else if (min > 0 && cant <= min) {
-        entry.bajos.push(`${nombreProd}: ${cant}/${min} en ${bodega}`);
-        bajosGlobal.push(`${nombreProd}: ${cant} uds (mín ${min}) → ${bodega}`);
+      if (data.ceros.length) {
+        inventarioPorBodegaTexto += `\n         ✖ Sin stock (0): ${data.ceros.slice(0, 8).join('; ')}`;
       }
     });
+  }
 
-    let inventarioPorBodegaTexto = '';
-    if (bodegasMap.size === 0) {
-      inventarioPorBodegaTexto = '\n       (Sin registros de inventario todavía)';
-    } else {
-      bodegasMap.forEach((data, bodega) => {
-        const itemsSeguros = data.items.slice(0, 18);
-        const avisoMas = data.items.length > 18 ? ` ...(+${data.items.length - 18} más)` : '';
-        inventarioPorBodegaTexto += `\n       • ${bodega} (${data.items.length} productos): ${itemsSeguros.join(' | ')}${avisoMas}`;
-        if (data.bajos.length) {
-          inventarioPorBodegaTexto += `\n         ⚠ Stock bajo en esta bodega: ${data.bajos.slice(0, 8).join('; ')}`;
-        }
-        if (data.ceros.length) {
-          inventarioPorBodegaTexto += `\n         ✖ Sin stock (0): ${data.ceros.slice(0, 8).join('; ')}`;
-        }
-      });
+  let resumenFaltantes = '';
+  if (cerosGlobal.length === 0 && bajosGlobal.length === 0) {
+    resumenFaltantes = 'Ningún producto con stock 0 ni por debajo del mínimo según los datos cargados.';
+  } else {
+    if (cerosGlobal.length) {
+      resumenFaltantes += `SIN STOCK (0 unidades): ${cerosGlobal.slice(0, 15).join('; ')}${cerosGlobal.length > 15 ? ` ...(+${cerosGlobal.length - 15} más)` : ''}. `;
     }
-
-    let resumenFaltantes = '';
-    if (cerosGlobal.length === 0 && bajosGlobal.length === 0) {
-      resumenFaltantes = 'Ningún producto con stock 0 ni por debajo del mínimo según los datos cargados.';
-    } else {
-      if (cerosGlobal.length) {
-        resumenFaltantes += `SIN STOCK (0 unidades): ${cerosGlobal.slice(0, 15).join('; ')}${cerosGlobal.length > 15 ? ` ...(+${cerosGlobal.length - 15} más)` : ''}. `;
-      }
-      if (bajosGlobal.length) {
-        resumenFaltantes += `STOCK BAJO (≤ mínimo): ${bajosGlobal.slice(0, 15).join('; ')}${bajosGlobal.length > 15 ? ` ...(+${bajosGlobal.length - 15} más)` : ''}.`;
-      }
+    if (bajosGlobal.length) {
+      resumenFaltantes += `STOCK BAJO (≤ mínimo): ${bajosGlobal.slice(0, 15).join('; ')}${bajosGlobal.length > 15 ? ` ...(+${bajosGlobal.length - 15} más)` : ''}.`;
     }
+  }
 
-    const totalVentas = facturas.reduce((acc, f) => acc + Number(f.totalFactura || f.total || 0), 0);
-    const nombresBodegas = bodegas.map(b => b.nombre).filter(Boolean).join(', ') || 'Ninguna registrada';
-    const miembrosActivos = miembros.filter(m => m.estadoInvitacion !== 'PENDIENTE');
-    const listaMiembros = miembrosActivos.map(m => `${m.nombreUsuario || m.primerNombre || 'Usuario'} (${m.rol})`).join(', ') || 'Solo el propietario';
-    const totalPorCobrar = cuentasPorCobrar.reduce((acc, c) => acc + Number(c.saldoPendiente || 0), 0);
+  // ========== SECCIÓN DE VENTAS MEJORADA ==========
+  const facturasOrdenadas = [...facturas]
+    .filter(f => f && (f.totalFactura != null || f.total != null))
+    .sort((a, b) => {
+      const fechaA = new Date(a.fechaEmision || a.fecha || a.createdAt || 0).getTime();
+      const fechaB = new Date(b.fechaEmision || b.fecha || b.createdAt || 0).getTime();
+      return fechaB - fechaA;
+    });
 
-    const ruc = negocioInfo?.ruc || negocioInfo?.identificacion || '';
-    const dir = negocioInfo?.direccion || '';
+  const totalVentas = facturasOrdenadas.reduce((acc, f) => acc + Number(f.totalFactura || f.total || 0), 0);
+  const cantidadFacturas = facturasOrdenadas.length;
+  const ticketPromedio = cantidadFacturas > 0 ? totalVentas / cantidadFacturas : 0;
 
-    return `
+  const ultimasFacturas = facturasOrdenadas.slice(0, 8).map(f => {
+    const total = Number(f.totalFactura || f.total || 0).toFixed(2);
+    const cliente = f.clienteNombre || f.cliente?.nombre || f.nombreCliente || 'Cliente';
+    const fechaRaw = f.fechaEmision || f.fecha || f.createdAt || '';
+    const fechaCorta = fechaRaw
+      ? new Date(fechaRaw).toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: '2-digit' })
+      : '';
+    const num = f.numeroFactura || f.numero || f.id || '';
+    return `#${num} ${cliente} $${total}${fechaCorta ? ' (' + fechaCorta + ')' : ''}`;
+  }).join(' | ');
+
+  const ahora = new Date();
+  const mesActual = ahora.getMonth();
+  const anioActual = ahora.getFullYear();
+  const ventasMesActual = facturasOrdenadas
+    .filter(f => {
+      const d = new Date(f.fechaEmision || f.fecha || f.createdAt || 0);
+      return d.getMonth() === mesActual && d.getFullYear() === anioActual;
+    })
+    .reduce((acc, f) => acc + Number(f.totalFactura || f.total || 0), 0);
+
+  const totalPorCobrar = cuentasPorCobrar.reduce((acc, c) => acc + Number(c.saldoPendiente || 0), 0);
+
+  const nombresBodegas = bodegas.map(b => b.nombre).filter(Boolean).join(', ') || 'Ninguna registrada';
+  const miembrosActivos = miembros.filter(m => m.estadoInvitacion !== 'PENDIENTE');
+  const listaMiembros = miembrosActivos.map(m => `${m.nombreUsuario || m.primerNombre || 'Usuario'} (${m.rol})`).join(', ') || 'Solo el propietario';
+
+  const ruc = negocioInfo?.ruc || negocioInfo?.identificacion || '';
+  const dir = negocioInfo?.direccion || '';
+
+  return `
 NEGOCIO: "${this.negocioNombre}"${ruc ? ` | RUC: ${ruc}` : ''}${dir ? ` | Dir: ${dir}` : ''}
+
+=== VENTAS (datos reales del sistema) ===
+- Total histórico de ventas: $${totalVentas.toFixed(2)} (${cantidadFacturas} facturas)
+- Ticket promedio: $${ticketPromedio.toFixed(2)}
+- Ventas del mes actual: $${ventasMesActual.toFixed(2)}
+- Últimas facturas: ${ultimasFacturas || 'Sin facturas registradas'}
+- Cuentas por cobrar pendientes: $${totalPorCobrar.toFixed(2)}
 
 BODEGAS REGISTRADAS: ${nombresBodegas}
 Total productos en catálogo: ${productos.length}
 Categorías: ${listaCategorias}
 
-CATÁLOGO (muestra): ${listaProductos || 'Sin productos'}${avisoMasProductos}
+CATÁLOGO (muestra de hasta 25): ${listaProductos || 'Sin productos'}${avisoMasProductos}
 
 STOCK POR BODEGA (cantidadActual y stockMinimo):
 ${inventarioPorBodegaTexto}
 
-PRODUCTOS CON STOCK BAJO O CERO (lo que "falta" o está crítico):
+PRODUCTOS CON STOCK BAJO O CERO:
 ${resumenFaltantes}
 
 RESUMEN GENERAL:
 - Clientes: ${clientes.length} | Proveedores: ${proveedores.length}
 - Equipo: ${listaMiembros}
-- Cuentas por cobrar: $${totalPorCobrar.toFixed(2)}
-- Ventas históricas (suma facturas): $${totalVentas.toFixed(2)}
 - Registros de inventario: ${inventario.length}
-    `.trim();
-  }
+  `.trim();
+}
 
   enviarMensajeDesdeInput() {
     if (this.nuevoMensajeTexto.trim()) {
