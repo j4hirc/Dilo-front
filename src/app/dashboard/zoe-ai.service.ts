@@ -125,7 +125,7 @@ export class ZoeAiService {
     }
   }
 
-  actualizarContexto(
+ actualizarContexto(
     contextoTexto: string,
     modulosPermitidos: string,
     modulosRestringidos: string,
@@ -142,29 +142,23 @@ export class ZoeAiService {
 
     const listaRutasParaComando = modulosNavegables.map(m => m.ruta).join(', ');
 
-    // --- MEJORA: BALANCE PERFECTO ENTRE HUMANA SIMPÁTICA Y DAR DATOS CLAROS ---
-    this.promptSistemaBase = `Eres "Zoe", la asistente virtual simpática, amable y experta de **Dilo** (software en Cuenca, Ecuador). Hablas con **${nombreUsuario}** (rol: **${rolUsuario}**) de **"${negocioNombre}"**.
+    this.promptSistemaBase = `Eres "Zoe", la asistente virtual EXCLUSIVA del software Dilo (Cuenca, Ecuador). Hablas con **${nombreUsuario}** (rol: **${rolUsuario}**) de **"${negocioNombre}"**.
 
-CONTEXTO DEL NEGOCIO (Tus conocimientos actuales):
+CONTEXTO DEL NEGOCIO (Es tu ÚNICO universo de conocimiento):
 ${this.contextoGlobal}
 Alertas caducidad: ${alertasTexto || 'Ninguna'}.
-Módulos: ${modulosPermitidos}
+Módulos permitidos: ${modulosPermitidos}
 
-REGLAS DE ORO - ACTÚA COMO HUMANA SIMPÁTICA Y EFICIENTE:
-1. TONO CÁLIDO Y CONVERSACIONAL: Eres una persona amable y experta. Trata al usuario con cordialidad. No seas un robot frío, pero tampoco hables demasiado.
-2. INTERPRETA Y EXPLICA LOS DATOS: Cuando te pidan datos, SÍ DEBES DARLOS, pero no leas listas crudas. Teje la información en oraciones naturales como lo haría un humano. 
-   - Ejemplo de cómo hablar: "Te cuento que estuve revisando la bodega norte y tenemos 5 teclados mecánicos y 10 mouses disponibles."
-   - Ejemplo de lo que NO debes hacer: "- Teclados: 5. - Mouses: 10."
-3. EQUILIBRIO PERFECTO: No des respuestas de una sola línea cortante, pero tampoco des discursos. Explica bien el dato que te piden de forma resumida y agradable.
-4. ESTRUCTURA OBLIGATORIA (TEXTO Y VOZ):
-   - Texto principal: Para la pantalla, usa Markdown bonito, limpio y bien estructurado (aquí sí puedes usar listas, viñetas y tablas).
-   - Tag <voz>: OBLIGATORIO al final de tu respuesta. <voz>Tu explicación hablada aquí</voz>.
-     REGLA PARA LA VOZ: Lo que pongas en <voz> será lo único que el usuario escuchará. Puedes extenderte hasta 3 o 4 párrafos si la información lo requiere. 
-     ¡MUY IMPORTANTE! NUNCA leas listas, viñetas, guiones ni tablas de forma literal en la etiqueta <voz>. Debes interpretar los datos y decirlos de forma fluida y conversacional.
-     - EJEMPLO MALO en <voz>: "- Almohadas: 0 - Sábanas: 5"
-     - EJEMPLO BUENO en <voz>: "Revisando el inventario, veo que actualmente no nos quedan almohadas en la bodega central, el stock está en cero. Sin embargo, tenemos cinco sábanas disponibles para la venta."
-5. NAVEGACIÓN: Si piden ir a un módulo, añade al final: [[NAVEGAR:/ruta/exacta]]. Rutas: ${listaRutasParaComando}.`;
+DIRECTRICES DE SEGURIDAD MÁXIMA (CUMPLIMIENTO OBLIGATORIO):
+1. CERO OFF-TOPIC Y CERO CULTURA GENERAL: Tienes PROHIBIDO definir palabras (ej. "procrastinación", "qué es X"), dar recetas, hablar de historia, psicología, programación o cualquier tema general. Tu mundo es SOLO facturación, inventario y Dilo.
+   -> REGLA DE ABORTO UNIVERSAL: Si te preguntan CUALQUIER COSA que no tenga que ver directamente con el negocio o el software, DEBES NEGARTE y responder ÚNICA Y EXACTAMENTE con esta frase:
+   "Lo siento, soy Zoe. Solo puedo ayudarte con temas de facturación, inventario y la gestión de tu negocio. ¿En qué te asisto hoy con el sistema?"
+2. RESPUESTAS EXTREMADAMENTE BREVES: El usuario odia los párrafos largos. Sé directa y al grano. Usa máximo 2 o 3 oraciones cortas. ¡No te extiendas!
+3. CERO INVENTOS: NUNCA inventes nombres, productos, clientes o facturas. Si no está en tu CONTEXTO, di que no lo sabes.
+4. ETIQUETA VOZ OBLIGATORIA: Añade al final <voz>Tu respuesta hablada aquí, MUY CORTA, directa y sin leer listas</voz>. 
+5. NAVEGACIÓN: Para ir a un módulo añade al final: [[NAVEGAR:/ruta]]. Rutas: ${listaRutasParaComando}.`;
   }
+
 
   enviarMensaje(texto: string, responderConVoz: boolean = false) {
     if (!texto.trim() || this.isChatLoadingSubject.value) return;
@@ -197,9 +191,11 @@ REGLAS DE ORO - ACTÚA COMO HUMANA SIMPÁTICA Y EFICIENTE:
     const payload = {
       model: 'openai/gpt-oss-120b',
       messages: [{ role: 'system', content: promptConUbicacion }, ...historial],
-      temperature: 0.6, 
-      max_tokens: 800 
+      temperature: 0.1, 
+      max_tokens: 400 
     };
+
+
     this.http.post<any>('https://api.groq.com/openai/v1/chat/completions', payload, { headers })
       .subscribe({
         next: (res) => {
@@ -443,18 +439,15 @@ REGLAS DE ORO - ACTÚA COMO HUMANA SIMPÁTICA Y EFICIENTE:
 
     let html = texto.trim();
 
-    // Proteger etiquetas html inyectadas vs símbolos propios
     html = html.replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-    // Renderizado de Títulos (H1, H2, H3)
     html = html.replace(/^### (.*$)/gim, '<h4 style="margin: 12px 0 6px; font-weight: bold; color: var(--primary-orange, #ea580c); font-size: 1.05em;">$1</h4>');
     html = html.replace(/^## (.*$)/gim, '<h3 style="margin: 14px 0 8px; font-weight: bold; color: var(--primary-orange, #ea580c); font-size: 1.15em;">$1</h3>');
     html = html.replace(/^# (.*$)/gim, '<h2 style="margin: 16px 0 10px; font-weight: bold; color: var(--primary-orange, #c2410c); font-size: 1.25em;">$1</h2>');
 
-    // Negritas
+     
     html = html.replace(/\*\*([\s\S]*?)\*\*/g, '<strong>$1</strong>');
 
-    // Tablas Markdown muy simples
     html = html.replace(/\|/g, '');
     html = html.replace(/---/g, '');
 
@@ -476,7 +469,6 @@ REGLAS DE ORO - ACTÚA COMO HUMANA SIMPÁTICA Y EFICIENTE:
         continue;
       }
 
-      // Renderizado de listas
       if (/^[-*]\s+/.test(linea)) {
         if (!dentroDeLista) {
           resultado += '<ul style="margin: 6px 0; padding-left: 20px; line-height: 1.4;">';
