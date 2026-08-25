@@ -163,10 +163,8 @@ REGLAS DE SEGURIDAD MÁXIMA (OBLIGATORIAS - NO NEGOCIABLES):
    - Máximo 2-3 oraciones cortas. El usuario odia los párrafos.
    - Sé directa, usa números exactos del contexto y ve al grano.
 
-4. ETIQUETA VOZ OBLIGATORIA:
-   - Añade siempre al final: <voz>Versión hablada MUY CORTA, natural y sin listas ni markdown</voz>
 
-5. NAVEGACIÓN:
+4. NAVEGACIÓN:
    - Solo si el usuario pide ir a un módulo permitido: añade al final [[NAVEGAR:/ruta-exacta]]
    - Rutas válidas: ${listaRutasParaComando}
    - Nunca inventes rutas.`;
