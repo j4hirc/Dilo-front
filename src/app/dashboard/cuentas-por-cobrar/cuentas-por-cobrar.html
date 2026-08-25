@@ -202,14 +202,27 @@
                                     </button>
                                 </td>
                                 <td class="action-cells">
-                                    <button class="btn-primary-small" *ngIf="c.saldoPendiente > 0"
-                                        (click)="abrirModalPago(c)">
-                                        Panel de Cuenta
-                                    </button>
-                                    <button class="btn-outline-secondary" style="padding: 5px 10px; font-size: 0.75rem;"
-                                        *ngIf="c.saldoPendiente <= 0" (click)="abrirModalPago(c)">
-                                        Ver Historial
-                                    </button>
+                                    <div style="display: flex; gap: 6px; justify-content: center; align-items: center;">
+                                        
+                                        <button class="btn-primary-small" *ngIf="c.saldoPendiente > 0"
+                                            (click)="abrirModalPago(c)" style="padding: 6px 12px; font-weight: 600;">
+                                            Cobrar
+                                        </button>
+                                        
+                                        <button class="btn-action-icon" *ngIf="c.saldoPendiente > 0" 
+                                            (click)="enviarRecordatorio(c)" title="Enviar recordatorio al cliente">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                                                <polyline points="22,6 12,13 2,6"></polyline>
+                                            </svg>
+                                        </button>   
+
+                                        <button class="btn-outline-secondary" style="padding: 6px 12px; font-size: 0.75rem;"
+                                            *ngIf="c.saldoPendiente <= 0" (click)="abrirModalPago(c)">
+                                            Historial
+                                        </button>
+                                        
+                                    </div>
                                 </td>
                             </tr>
 
@@ -368,11 +381,30 @@
                                 [ngStyle]="{'color': c.saldoPendiente > 0 ? '#ea580c' : '#16a34a'}">
                                 ${{ c.saldoPendiente | number:'1.2-2' }}
                             </td>
-                            <td style="text-align: center;">
-                                <button class="btn-primary-small" *ngIf="c.saldoPendiente > 0"
-                                    (click)="abrirModalPago(c)">Abonar</button>
-                                <button class="btn-outline-secondary" style="padding: 5px 10px; font-size: 0.75rem;"
-                                    *ngIf="c.saldoPendiente <= 0" (click)="abrirModalPago(c)">Historial</button>
+                           <td style="text-align: center;">
+                                <div style="display: flex; gap: 6px; justify-content: center; align-items: center;">
+                                    
+                                    <!-- BOTÓN ABONAR -->
+                                    <button class="btn-primary-small" *ngIf="c.saldoPendiente > 0"
+                                        (click)="abrirModalPago(c)" style="padding: 6px 12px; font-weight: 600;">
+                                        Cobrar
+                                    </button>
+
+                                    <!-- BOTÓN ENVIAR CORREO -->
+                                    <button class="btn-action-icon" *ngIf="c.saldoPendiente > 0" 
+                                        (click)="enviarRecordatorio(c)" title="Enviar recordatorio al cliente">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                                            <polyline points="22,6 12,13 2,6"></polyline>
+                                        </svg>
+                                    </button>
+
+                                    <!-- BOTÓN HISTORIAL -->
+                                    <button class="btn-outline-secondary" style="padding: 6px 12px; font-size: 0.75rem;"
+                                        *ngIf="c.saldoPendiente <= 0" (click)="abrirModalPago(c)">
+                                        Historial
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                     </tbody>

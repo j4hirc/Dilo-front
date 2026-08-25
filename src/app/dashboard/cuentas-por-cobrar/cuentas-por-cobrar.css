@@ -885,3 +885,29 @@
     font-weight: 800;
     vertical-align: middle;
 }
+
+.btn-action-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background-color: #f1f5f9;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-action-icon:hover {
+    background-color: var(--primary-orange, #ea580c);
+    color: white;
+    border-color: var(--primary-orange, #ea580c);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px -1px rgba(234, 88, 12, 0.2), 0 2px 4px -1px rgba(234, 88, 12, 0.1);
+}
+
+.btn-action-icon:active {
+    transform: translateY(0);
+}

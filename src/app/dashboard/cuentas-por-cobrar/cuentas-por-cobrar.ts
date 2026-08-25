@@ -400,6 +400,52 @@ export class CuentasPorCobrar implements OnInit {
       });
   }
 
+  enviarRecordatorio(cuenta: any) {
+    Swal.fire({
+      title: '¿Enviar Recordatorio?',
+      html: `Se enviará un correo a <b>${cuenta.clienteNombre}</b> recordándole su saldo pendiente de <b>$${cuenta.saldoPendiente.toFixed(2)}</b> por la factura <b>#${cuenta.numeroFactura}</b>.`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#ea580c', // Naranja como tu tema
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Sí, enviar',
+      cancelButtonText: 'Cancelar'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        
+        // 1. Mostrar pantalla de carga
+        Swal.fire({
+          title: 'Enviando correo...',
+          text: 'Por favor espera un momento.',
+          allowOutsideClick: false,
+          didOpen: () => {
+            Swal.showLoading();
+          }
+        });
+
+        // 2. Llamada a la API (Nota: responseType 'text' porque tu Spring devuelve un String plano)
+        this.http.post(`${this.apiUrl}/cuentas-por-cobrar/${cuenta.id}/recordatorio-email`, {}, {
+          headers: this.getAuthHeaders(), 
+          responseType: 'text'
+        }).subscribe({
+          next: (res) => {
+            Swal.fire(
+              '¡Enviado!',
+              'El recordatorio ha sido enviado exitosamente al correo del cliente.',
+              'success'
+            );
+          },
+          error: (err) => {
+            console.error('Error al enviar correo:', err);
+            // Capturamos el error que mandas desde tu Backend (ej. "El cliente no tiene un correo electrónico...")
+            const msgError = err.error || 'Ocurrió un error al intentar enviar el correo.';
+            Swal.fire('No se pudo enviar', msgError, 'warning');
+          }
+        });
+      }
+    });
+  }
+
   registrarPago() {
     if (!this.montoAbono || this.montoAbono <= 0) {
       Swal.fire('Error', 'Ingresa un monto válido.', 'warning');
@@ -457,4 +503,6 @@ export class CuentasPorCobrar implements OnInit {
       }
     });
   }
+
+  
 }
