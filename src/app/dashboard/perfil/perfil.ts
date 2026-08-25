@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import Swal from 'sweetalert2';
+import {environment} from "../../../environments/environment";
 
 @Component({
   selector: 'app-perfil',
@@ -17,7 +18,7 @@ export class Perfil implements OnInit {
 
   usuario: any = null;
   isLoading = true;
-  private apiUrl = 'https://dilo-backend-mxlu.onrender.com/api/v1';
+  private apiUrl = environment.apiUrl;
 
   isEditing = false;
   editData: any = {};

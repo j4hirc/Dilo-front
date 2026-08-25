@@ -5,6 +5,7 @@ import { CommonModule } from '@angular/common';
 import { AuthService } from '../auth.service';
 import { HttpClient } from '@angular/common/http';
 import Swal from 'sweetalert2';
+import { environment } from "../../../environments/environment";
 
 @Component({
   selector: 'app-registro',
@@ -19,7 +20,7 @@ export class Registro implements OnInit {
   private router = inject(Router);
   private http = inject(HttpClient); 
   
-  private apiUrlParroquias = 'https://dilo-backend-mxlu.onrender.com/api/v1/parroquias';
+  private apiUrlParroquias = environment.apiUrl + '/parroquias';
 
   imagePreview: string | ArrayBuffer | null = null;
   showPassword = false;

@@ -6,6 +6,7 @@ import { FormsModule } from '@angular/forms';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import Swal from 'sweetalert2';
+import { environment } from "../../../environments/environment";
 
 @Component({
   selector: 'app-propietario',
@@ -36,7 +37,7 @@ export class Propietario implements OnInit {
   usuarioLogueado: any;
   negocioId: number | null = null;
   
-  private apiUrl = 'https://dilo-backend-mxlu.onrender.com/api/v1';
+  private apiUrl = environment.apiUrl;
 
   ngOnInit(): void {
     const userStr = localStorage.getItem('usuario') || localStorage.getItem('dilo_user');

@@ -4,6 +4,7 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import Swal from 'sweetalert2';
 import { NgSelectModule } from '@ng-select/ng-select';
+import { environment } from "../../../environments/environment";
 
 @Component({
   selector: 'app-compras',
@@ -25,7 +26,7 @@ export class Compras implements OnInit {
 
   isLoading = true;
   negocioId: number | null = null;
-  private apiUrl = 'https://dilo-backend-mxlu.onrender.com/api/v1';
+  private apiUrl = environment.apiUrl;
 
   searchTerm: string = '';
 

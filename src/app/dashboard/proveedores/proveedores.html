@@ -133,10 +133,17 @@
             </div>
 
             <div class="form-group">
-                <label>Categorías que suministra <small style="color: #64748b;">(Mantén presionado Ctrl para elegir varias)</small></label>
-                <select multiple [(ngModel)]="proveedorForm.categoriasIds" class="custom-select multi-select">
-                    <option *ngFor="let cat of categorias" [ngValue]="cat.id">{{ cat.nombre }}</option>
-                </select>
+                <label>Categorías que suministra</label>
+                <ng-select 
+                    [items]="categorias" 
+                    [multiple]="true"
+                    bindLabel="nombre" 
+                    bindValue="id"
+                    [(ngModel)]="proveedorForm.categoriasIds" 
+                    placeholder="Buscar y seleccionar categorías..."
+                    notFoundText="No se encontraron categorías" 
+                    class="custom-ng-select">
+                </ng-select>
             </div>
 
             <div class="form-row" style="margin-top: 15px;">

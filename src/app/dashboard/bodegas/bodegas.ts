@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import Swal from 'sweetalert2';
+import { environment } from "../../../environments/environment";
 
 @Component({
   selector: 'app-bodegas',
@@ -22,7 +23,7 @@ export class Bodegas implements OnInit {
   negocioId: number | null = null;
   rolUsuario: string = '';
   terminoBusqueda: string = '';
-  private apiUrl = 'https://dilo-backend-mxlu.onrender.com/api/v1';
+  private apiUrl = environment.apiUrl;
 
   ngOnInit(): void {
     const userStr = localStorage.getItem('usuario');

@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import Swal from 'sweetalert2';
+import { environment } from "../../../environments/environment";
 
 @Component({
   selector: 'app-admin-negocios', 
@@ -13,8 +14,8 @@ import Swal from 'sweetalert2';
 })
 export class AdminNegocios implements OnInit {
   private http = inject(HttpClient);
-  private cdr = inject(ChangeDetectorRef); // 🔥 Megáfono añadido
-  private apiUrl = 'https://dilo-backend-mxlu.onrender.com/api/v1';
+  private cdr = inject(ChangeDetectorRef); 
+  private apiUrl = environment.apiUrl;
 
   isLoading = false;
   negocios: any[] = [];

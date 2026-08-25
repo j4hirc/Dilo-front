@@ -4,6 +4,7 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import Swal from 'sweetalert2';
+import { environment } from "../../../environments/environment";
 
 @Component({
   selector: 'app-configuracion',
@@ -19,7 +20,7 @@ export class Configuracion implements OnInit {
   
   isLoading = true;
   negocioId: number | null = null;
-  private apiUrl = 'https://dilo-backend-mxlu.onrender.com/api/v1';
+  private apiUrl = environment.apiUrl;
 
   selectedFile: File | null = null;
   imagenActual: string | null = null; 

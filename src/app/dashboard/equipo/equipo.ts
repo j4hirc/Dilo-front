@@ -5,6 +5,7 @@ import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators'; 
 import Swal from 'sweetalert2';
 import { FormsModule } from '@angular/forms';
+import {environment} from "../../../environments/environment";
 
 @Component({
   selector: 'app-equipo',
@@ -24,7 +25,7 @@ export class Equipo implements OnInit {
   negocioId: number | null = null;
   codigoInvitacion: string = 'Cargando...'; 
 
-  private apiUrl = 'https://dilo-backend-mxlu.onrender.com/api/v1';
+  private apiUrl = environment.apiUrl;
 
   searchTerm: string = '';
 

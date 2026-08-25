@@ -5,6 +5,7 @@ import { AuthService } from '../auth.service';
 import { CommonModule } from '@angular/common';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import Swal from 'sweetalert2'; 
+import { environment } from "../../../environments/environment";
 
 @Component({
   selector: 'app-login',
@@ -19,7 +20,7 @@ export class Login {
   private http = inject(HttpClient);
   private router = inject(Router);
 
-  private apiUrl = 'https://dilo-backend-mxlu.onrender.com/api/v1';
+  private apiUrl = environment.apiUrl;
 
   loginForm: FormGroup = this.fb.group({
     email: ['', [Validators.required, Validators.email]],

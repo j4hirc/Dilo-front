@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import Swal from 'sweetalert2';
+import { environment } from "../../../environments/environment";
 
 @Component({
   selector: 'app-clientes',
@@ -19,7 +20,7 @@ export class Clientes implements OnInit {
   clientesFiltrados: any[] = []; 
   isLoading = true;
   negocioId: number | null = null;
-  private apiUrl = 'https://dilo-backend-mxlu.onrender.com/api/v1';
+  private apiUrl = environment.apiUrl;
 
   searchTerm: string = '';
 

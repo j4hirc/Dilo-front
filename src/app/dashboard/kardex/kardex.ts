@@ -72,10 +72,7 @@ export class Kardex implements OnInit {
     return new HttpHeaders().set('Authorization', `Bearer ${cleanToken}`);
   }
 
-  /**
-   * Formatea montos sin ceros de más:
-   * 10.0000 -> 10.00 | 25.6700 -> 25.67 | 1000.0000 -> 1000.00
-   */
+
   formatCosto(valor: any): string {
     const n = Number(valor);
     if (!isFinite(n)) return '0.00';

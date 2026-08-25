@@ -3,11 +3,13 @@ import { CommonModule } from '@angular/common';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import Swal from 'sweetalert2';
+import {environment} from "../../../environments/environment";
+import { NgSelectModule } from '@ng-select/ng-select';
 
 @Component({
   selector: 'app-proveedores',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, NgSelectModule],
   templateUrl: './proveedores.html',
   styleUrls: ['./proveedores.css'],
 })
@@ -25,7 +27,7 @@ export class Proveedores implements OnInit {
 
   isLoading = true;
   negocioId: number | null = null;
-  private apiUrl = 'https://dilo-backend-mxlu.onrender.com/api/v1';
+  private apiUrl = environment.apiUrl;
 
   searchTerm: string = '';
   
