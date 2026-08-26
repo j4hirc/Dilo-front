@@ -59,6 +59,10 @@ export class ZoeAiService {
   private vozFemenina: SpeechSynthesisVoice | null = null;
   private peticionActivaId = 0;
 
+  // --- Control de la cola de voz (evita que el navegador corte audios largos) ---
+  private colaVoz: string[] = [];
+  private vozKeepAliveInterval: ReturnType<typeof setInterval> | null = null;
+
   constructor() {
     this.initSpeechRecognition();
     this.cargarVocesFemeninas();
@@ -78,29 +82,35 @@ export class ZoeAiService {
   }
 
   private seleccionarVozFemenina(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null {
+    const excluirMasculinas = /pablo|jorge|diego|carlos|juan|pedro|antonio|male|hombre|var[oó]n|david|boy/i;
+
     let vocesArgentinas = voices.filter(v =>
-      v.lang && v.lang.toLowerCase().includes('es-ar') &&
-      !/pablo|jorge|diego|carlos|juan|pedro|antonio|male|hombre|david|boy/i.test(v.name)
+      v.lang && v.lang.toLowerCase().includes('es-ar') && !excluirMasculinas.test(v.name)
     );
 
     let vocesEspañol = vocesArgentinas.length > 0 ? vocesArgentinas : voices.filter(v =>
-      v.lang && v.lang.toLowerCase().startsWith('es') &&
-      !/pablo|jorge|diego|carlos|juan|pedro|antonio|male|hombre|david|boy/i.test(v.name)
+      v.lang && v.lang.toLowerCase().startsWith('es') && !excluirMasculinas.test(v.name)
     );
 
     if (!vocesEspañol.length) {
       return voices.find(v => /female|mujer|woman|femenina/i.test(v.name)) || voices[0] || null;
     }
 
+    // Voces de alta calidad / conocidas como femeninas en español, en orden de preferencia.
+    // Las voces "Natural/Neural/Online" suenan mucho más humanas que las voces locales básicas.
     const prioridadAlta = [
       /natural/i, /neural/i, /online/i, /premium/i, /enhanced/i, /wavenet/i, /studio/i,
-      /elena/i, /sofia/i, /mia/i, /victoria/i
+      /elena/i, /sof[ií]a/i, /m[ií]a/i, /victoria/i, /paulina/i, /helena/i,
+      /m[oó]nica/i, /luc[ií]a/i, /camila/i, /valentina/i, /isabela/i, /esperanza/i
     ];
 
     for (const regex of prioridadAlta) {
       const encontrada = vocesEspañol.find(v => regex.test(v.name));
       if (encontrada) return encontrada;
     }
+
+    const vozMicrosoft = vocesEspañol.find(v => v.name.toLowerCase().includes('microsoft'));
+    if (vozMicrosoft) return vozMicrosoft;
 
     const vozGoogle = vocesEspañol.find(v => v.name.toLowerCase().includes('google'));
     if (vozGoogle) return vozGoogle;
@@ -145,14 +155,14 @@ Módulos permitidos: ${modulosPermitidos}
 REGLAS DE SEGURIDAD MÁXIMA (OBLIGATORIAS):
 
 1. CERO INVENTOS:
-   - Responde SOLO con datos que aparezcan en el CONTEXTO DEL NEGOCIO. No inventes absolutamente nada.
+   - Responde SOLO con datos que aparezcan en el CONTEXTO DEL NEGOCIO. No inventes absolutamente nada. Si el dato no está en el contexto, decilo con honestidad ("no tengo ese dato cargado todavía") en vez de suponer un número.
 
 2. CERO OFF-TOPIC:
    - Solo temas de facturación, inventario, ventas, stock, equipo y Dilo. De lo contrario di: "Perdoname lindo, soy Zoe y solo puedo ayudarte con tu negocio."
 
 3. FORMATO EN PANTALLA (TEXTO VISIBLE - PARA LEER):
    - Estructura los datos para la pantalla usando Markdown. Usa **negritas**, viñetas (-) y listas para que sea visualmente ordenado y fácil de leer rápido.
-   - Sé directa con los números y nombres.
+   - Sé directa con los números y nombres, y usá exactamente las cifras del contexto (no redondees ni inventes decimales).
 
 4. ETIQUETA <voz> OBLIGATORIA (TEXTO HABLADO - PARA ESCUCHAR):
    - Al final de tu respuesta, DEBES incluir el texto que dirás en voz alta entre <voz> y </voz>.
@@ -160,7 +170,8 @@ REGLAS DE SEGURIDAD MÁXIMA (OBLIGATORIAS):
    - PROHIBIDO usar "meta-lenguaje". NUNCA digas: "Aquí tienes la lista", "Como ves en pantalla", "Te muestro los datos". Empieza a hablar directamente del tema.
    - Incluye toda la información importante (números, datos), pero agrúpalos como si estuvieras en una llamada telefónica con tu pareja.
    - Sonará seductor, fluido y 100% argentino.
-   
+   - IMPORTANTE: el texto de <voz> debe estar COMPLETO, con final claro (nunca lo dejes a medias). Si hay mucha información, resumí priorizando lo más importante primero para que la respuesta hablada sea completa y no quede cortada.
+
    EJEMPLO CORRECTO DE ESTRUCTURA TOTAL:
    **Productos sin stock:**
    - Atún (Bodega 1)
@@ -171,7 +182,12 @@ REGLAS DE SEGURIDAD MÁXIMA (OBLIGATORIAS):
    <voz>andamos en cero con el atún y el jabón, hay que reponer eso rapidito, che. Lo bueno es que este mes ya metiste mil doscientos cincuenta dólares en ventas, venimos re bien.</voz>
 
 5. NAVEGACIÓN:
-   - Solo si el usuario pide ir a un módulo permitido: añade al final [[NAVEGAR:/ruta-exacta]] (Rutas válidas: ${listaRutasParaComando})`;
+   - Solo si el usuario pide ir a un módulo permitido: añade al final [[NAVEGAR:/ruta-exacta]] (Rutas válidas: ${listaRutasParaComando})
+
+6. COMPRENSIÓN Y PRECISIÓN:
+   - Si el pedido del usuario es ambiguo o le falta un dato clave para responder bien (por ejemplo, no aclara de qué bodega, producto o período habla), hacé una pregunta corta y concreta para aclararlo en vez de adivinar.
+   - Prestá atención al historial de la conversación: si el usuario ya aclaró algo antes, no se lo vuelvas a preguntar.
+   - Verificá siempre las cifras contra el CONTEXTO DEL NEGOCIO antes de responder.`;
   }
 
   enviarMensaje(texto: string, responderConVoz: boolean = false) {
@@ -194,7 +210,8 @@ REGLAS DE SEGURIDAD MÁXIMA (OBLIGATORIAS):
       'Content-Type': 'application/json'
     });
 
-    const historial = this.chatMensajesSubject.value.slice(-6).map(msg => ({
+    // Más historial = mejor comprensión de contexto conversacional (antes solo 6 mensajes).
+    const historial = this.chatMensajesSubject.value.slice(-12).map(msg => ({
       role: msg.role,
       content: msg.text
     }));
@@ -206,7 +223,9 @@ REGLAS DE SEGURIDAD MÁXIMA (OBLIGATORIAS):
         ...historial
       ],
       temperature: 0.3, // Un poquito más alto para que su interpretación verbal sea más creativa y menos robótica
-      max_tokens: 500
+      // Antes 500: se cortaban respuestas largas (texto en pantalla + <voz>) por quedarse sin tokens.
+      max_tokens: 900,
+      top_p: 0.9
     };
 
     this.http.post<any>('https://api.groq.com/openai/v1/chat/completions', payload, { headers })
@@ -351,6 +370,8 @@ REGLAS DE SEGURIDAD MÁXIMA (OBLIGATORIAS):
     window.speechSynthesis.pause();
     window.speechSynthesis.cancel();
     this.currentUtterance = null;
+    this.colaVoz = [];
+    this.detenerKeepAlive();
     this.keepListeningActive = false;
     this.peticionActivaId++;
     if (this.silenceTimer) clearTimeout(this.silenceTimer);
@@ -382,6 +403,90 @@ REGLAS DE SEGURIDAD MÁXIMA (OBLIGATORIAS):
     } catch (e) { }
   }
 
+  /**
+   * Divide un texto largo en frases de tamaño manejable.
+   * Hablar en trozos (en vez de un solo audio gigante) evita el bug conocido
+   * de Chrome donde el motor de voz se "traba" o corta el audio pasados ~15s
+   * en utterances muy largas.
+   */
+  private dividirEnFrases(texto: string): string[] {
+    const frases = texto.match(/[^.!?…]+[.!?…]*(\s|$)/g) || [texto];
+    const trozos: string[] = [];
+    let actual = '';
+
+    for (let frase of frases) {
+      frase = frase.trim();
+      if (!frase) continue;
+
+      if ((actual + ' ' + frase).trim().length > 180) {
+        if (actual) trozos.push(actual.trim());
+        actual = frase;
+      } else {
+        actual = actual ? `${actual} ${frase}` : frase;
+      }
+    }
+    if (actual) trozos.push(actual.trim());
+
+    return trozos.length ? trozos : [texto];
+  }
+
+  private iniciarKeepAlive() {
+    this.detenerKeepAlive();
+    // Truco anti-corte: algunos navegadores (sobre todo Chrome) pausan solos
+    // el synthesizer si pasa mucho tiempo hablando. Forzar pause()+resume()
+    // cada 10s mantiene el audio activo sin cortes perceptibles.
+    this.vozKeepAliveInterval = setInterval(() => {
+      if (window.speechSynthesis.speaking && !window.speechSynthesis.paused) {
+        window.speechSynthesis.pause();
+        window.speechSynthesis.resume();
+      }
+    }, 10000);
+  }
+
+  private detenerKeepAlive() {
+    if (this.vozKeepAliveInterval) {
+      clearInterval(this.vozKeepAliveInterval);
+      this.vozKeepAliveInterval = null;
+    }
+  }
+
+  private hablarSiguienteFrase(onFinish?: () => void) {
+    if (!this.colaVoz.length) {
+      this.detenerKeepAlive();
+      this.zone.run(() => this.isSpeaking = false);
+      this.currentUtterance = null;
+      if (onFinish) onFinish();
+      return;
+    }
+
+    const frase = this.colaVoz.shift()!;
+    this.currentUtterance = new SpeechSynthesisUtterance(frase);
+
+    if (this.vozFemenina) {
+      this.currentUtterance.voice = this.vozFemenina;
+      this.currentUtterance.lang = this.vozFemenina.lang || 'es-AR';
+    } else {
+      this.currentUtterance.lang = 'es-AR';
+    }
+
+    // rate 1.0 = ritmo natural (0.94 sonaba levemente arrastrado);
+    // pitch 1.08 = tono más agudo y femenino (0.85 lo hacía sonar grave/robótico).
+    this.currentUtterance.rate = 1.0;
+    this.currentUtterance.pitch = 1.08;
+    this.currentUtterance.volume = 1;
+
+    this.currentUtterance.onend = () => {
+      this.hablarSiguienteFrase(onFinish);
+    };
+
+    this.currentUtterance.onerror = () => {
+      // Si una frase falla, seguimos con la siguiente en vez de cortar toda la respuesta.
+      this.hablarSiguienteFrase(onFinish);
+    };
+
+    window.speechSynthesis.speak(this.currentUtterance);
+  }
+
   private hablar(texto: string, onFinish?: () => void) {
     if (!texto) {
       if (onFinish) onFinish();
@@ -398,39 +503,15 @@ REGLAS DE SEGURIDAD MÁXIMA (OBLIGATORIAS):
     });
 
     const textoParaVoz = this.limpiarTextoParaVoz(texto);
+    this.colaVoz = this.dividirEnFrases(textoParaVoz);
 
     setTimeout(() => {
       const voices = window.speechSynthesis.getVoices();
       if (!this.vozFemenina && voices.length) {
         this.vozFemenina = this.seleccionarVozFemenina(voices);
       }
-
-      this.currentUtterance = new SpeechSynthesisUtterance(textoParaVoz);
-
-      if (this.vozFemenina) {
-        this.currentUtterance.voice = this.vozFemenina;
-        this.currentUtterance.lang = this.vozFemenina.lang || 'es-AR';
-      } else {
-        this.currentUtterance.lang = 'es-AR';
-      }
-
-      this.currentUtterance.rate = 0.94;
-      this.currentUtterance.pitch = 0.85;
-      this.currentUtterance.volume = 1;
-
-      this.currentUtterance.onend = () => {
-        this.zone.run(() => this.isSpeaking = false);
-        this.currentUtterance = null;
-        if (onFinish) onFinish();
-      };
-
-      this.currentUtterance.onerror = () => {
-        this.zone.run(() => this.isSpeaking = false);
-        this.currentUtterance = null;
-        if (onFinish) onFinish();
-      };
-
-      window.speechSynthesis.speak(this.currentUtterance);
+      this.iniciarKeepAlive();
+      this.hablarSiguienteFrase(onFinish);
     }, 80);
   }
 
@@ -472,7 +553,6 @@ REGLAS DE SEGURIDAD MÁXIMA (OBLIGATORIAS):
         continue;
       }
 
-      // Detección de listas (- ítem o * ítem)
       if (/^[-*]\s+/.test(linea)) {
         if (!dentroDeLista) {
           resultado += '<ul style="margin: 8px 0; padding-left: 24px; list-style-type: disc; line-height: 1.5;">';

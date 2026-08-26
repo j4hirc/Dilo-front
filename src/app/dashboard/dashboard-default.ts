@@ -305,14 +305,16 @@ export class DashboardDefault implements OnInit, OnDestroy, AfterViewChecked {
   inventario: any[], facturas: any[], bodegas: any[], miembros: any[],
   cuentasPorCobrar: any[], negocioInfo: any
 ): string {
-  const listaProductos = productos.slice(0, 25).map(p => {
+  // Se amplían los límites de muestra para que Zoe tenga más información real
+  // del negocio disponible (antes 25 productos / 15 categorías / 18 ítems por bodega).
+  const listaProductos = productos.slice(0, 40).map(p => {
     const costo = Number(p.costoPromedioActual ?? p.costoPromedio ?? 0).toFixed(2);
     const cat = p.categoriaNombre || p.categoria?.nombre || '';
     return `${p.nombre}${cat ? ' [' + cat + ']' : ''} (costo:$${costo})`;
   }).join('; ');
-  const avisoMasProductos = productos.length > 25 ? ` ...(+${productos.length - 25} productos más en el catálogo)` : '';
+  const avisoMasProductos = productos.length > 40 ? ` ...(+${productos.length - 40} productos más en el catálogo)` : '';
 
-  const listaCategorias = categorias.slice(0, 15).map(c => c.nombre).filter(Boolean).join(', ') || 'Ninguna';
+  const listaCategorias = categorias.slice(0, 25).map(c => c.nombre).filter(Boolean).join(', ') || 'Ninguna';
 
   const bodegasMap = new Map<string, { items: string[]; bajos: string[]; ceros: string[] }>();
   const bajosGlobal: string[] = [];
@@ -345,14 +347,14 @@ export class DashboardDefault implements OnInit, OnDestroy, AfterViewChecked {
     inventarioPorBodegaTexto = '\n       (Sin registros de inventario todavía)';
   } else {
     bodegasMap.forEach((data, bodega) => {
-      const itemsSeguros = data.items.slice(0, 18);
-      const avisoMas = data.items.length > 18 ? ` ...(+${data.items.length - 18} más)` : '';
+      const itemsSeguros = data.items.slice(0, 30);
+      const avisoMas = data.items.length > 30 ? ` ...(+${data.items.length - 30} más)` : '';
       inventarioPorBodegaTexto += `\n       • ${bodega} (${data.items.length} productos): ${itemsSeguros.join(' | ')}${avisoMas}`;
       if (data.bajos.length) {
-        inventarioPorBodegaTexto += `\n         ⚠ Stock bajo en esta bodega: ${data.bajos.slice(0, 8).join('; ')}`;
+        inventarioPorBodegaTexto += `\n         ⚠ Stock bajo en esta bodega: ${data.bajos.slice(0, 10).join('; ')}`;
       }
       if (data.ceros.length) {
-        inventarioPorBodegaTexto += `\n         ✖ Sin stock (0): ${data.ceros.slice(0, 8).join('; ')}`;
+        inventarioPorBodegaTexto += `\n         ✖ Sin stock (0): ${data.ceros.slice(0, 10).join('; ')}`;
       }
     });
   }
@@ -362,14 +364,14 @@ export class DashboardDefault implements OnInit, OnDestroy, AfterViewChecked {
     resumenFaltantes = 'Ningún producto con stock 0 ni por debajo del mínimo según los datos cargados.';
   } else {
     if (cerosGlobal.length) {
-      resumenFaltantes += `SIN STOCK (0 unidades): ${cerosGlobal.slice(0, 15).join('; ')}${cerosGlobal.length > 15 ? ` ...(+${cerosGlobal.length - 15} más)` : ''}. `;
+      resumenFaltantes += `SIN STOCK (0 unidades): ${cerosGlobal.slice(0, 20).join('; ')}${cerosGlobal.length > 20 ? ` ...(+${cerosGlobal.length - 20} más)` : ''}. `;
     }
     if (bajosGlobal.length) {
-      resumenFaltantes += `STOCK BAJO (≤ mínimo): ${bajosGlobal.slice(0, 15).join('; ')}${bajosGlobal.length > 15 ? ` ...(+${bajosGlobal.length - 15} más)` : ''}.`;
+      resumenFaltantes += `STOCK BAJO (≤ mínimo): ${bajosGlobal.slice(0, 20).join('; ')}${bajosGlobal.length > 20 ? ` ...(+${bajosGlobal.length - 20} más)` : ''}.`;
     }
   }
 
-  // ========== SECCIÓN DE VENTAS MEJORADA ==========
+  // ========== SECCIÓN DE VENTAS ==========
   const facturasOrdenadas = [...facturas]
     .filter(f => f && (f.totalFactura != null || f.total != null))
     .sort((a, b) => {
@@ -382,7 +384,7 @@ export class DashboardDefault implements OnInit, OnDestroy, AfterViewChecked {
   const cantidadFacturas = facturasOrdenadas.length;
   const ticketPromedio = cantidadFacturas > 0 ? totalVentas / cantidadFacturas : 0;
 
-  const ultimasFacturas = facturasOrdenadas.slice(0, 8).map(f => {
+  const ultimasFacturas = facturasOrdenadas.slice(0, 10).map(f => {
     const total = Number(f.totalFactura || f.total || 0).toFixed(2);
     const cliente = f.clienteNombre || f.cliente?.nombre || f.nombreCliente || 'Cliente';
     const fechaRaw = f.fechaEmision || f.fecha || f.createdAt || '';
@@ -426,7 +428,7 @@ BODEGAS REGISTRADAS: ${nombresBodegas}
 Total productos en catálogo: ${productos.length}
 Categorías: ${listaCategorias}
 
-CATÁLOGO (muestra de hasta 25): ${listaProductos || 'Sin productos'}${avisoMasProductos}
+CATÁLOGO (muestra de hasta 40): ${listaProductos || 'Sin productos'}${avisoMasProductos}
 
 STOCK POR BODEGA (cantidadActual y stockMinimo):
 ${inventarioPorBodegaTexto}
