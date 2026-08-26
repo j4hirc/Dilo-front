@@ -1818,7 +1818,24 @@ export class Facturas implements OnInit, OnDestroy {
         items: Array.isArray(datos.items) ? datos.items : []
       };
       this.itemsVozPendientes = Array.isArray(datos.items) ? [...datos.items] : [];
-      this.iniciarDesambiguacion('CLIENTE', requiereDesambiguacionCli, "Varios clientes parecidos. Di el número o toca en pantalla.");
+
+      // 🔥 NUEVO: Generar el texto para que Zoe lea las opciones de clientes diferenciados por Cédula
+      const totalOps = requiereDesambiguacionCli.length;
+      const muestra = requiereDesambiguacionCli.slice(0, 5); // Leer máximo 5 opciones para no aburrir
+      const nombresCli = muestra.map((c, idx) => {
+        const nom = c.nombreCompleto || `${c.primerNombre || ''} ${c.apellidoPaterno || ''}`.trim() || 'Cliente';
+        const doc = c.dni || c.identificacion || '';
+        const ultimos = doc.length >= 3 ? doc.slice(-3) : doc;
+        return `${idx + 1}) ${nom}${ultimos ? ' termina en ' + ultimos : ''}`;
+      }).join('. ');
+
+      const extraCli = totalOps > 5 ? ` (${totalOps} en total)` : '';
+      
+      this.iniciarDesambiguacion(
+        'CLIENTE',
+        requiereDesambiguacionCli,
+        `Hay ${totalOps} clientes parecidos${extraCli}: ${nombresCli}. Di el número o su cédula.`
+      );
       return;
     }
 
@@ -2439,16 +2456,44 @@ export class Facturas implements OnInit, OnDestroy {
         return;
       }
     }
-    if (this.tipoOpciones === 'CLIENTE' && t.length >= 3) {
-      const porNombre = this.opcionesVoz.filter(c => {
-        const nom = this.limpiarTexto(c.nombreCompleto || `${c.primerNombre || ''} ${c.apellidoPaterno || ''}`);
-        return nom.includes(t) || t.includes(nom);
-      });
-      if (porNombre.length === 1) {
-        this.seleccionEnCurso = true;
-        this.pausarMicYVoz();
-        this.procesarSeleccionDesambiguacion(porNombre[0]);
-        return;
+   if (this.tipoOpciones === 'CLIENTE') {
+      // 1) Intentar buscar si el usuario dijo parte de la cédula (ej: "termina en 123" o solo "123")
+      const soloNumeros = t.replace(/\D/g, '');
+      if (soloNumeros.length >= 2) {
+        const porDoc = this.opcionesVoz.filter(c => {
+          const doc = String(c.dni || c.identificacion || '').replace(/\D/g, '');
+          return doc.includes(soloNumeros) || doc.endsWith(soloNumeros);
+        });
+        
+        if (porDoc.length === 1) {
+          this.seleccionEnCurso = true;
+          this.pausarMicYVoz();
+          this.procesarSeleccionDesambiguacion(porDoc[0]);
+          return;
+        }
+      }
+
+      // 2) Intentar buscar por nombre si dijo letras
+      if (t.length >= 3 && !/^\d+$/.test(t)) {
+        const porNombre = this.opcionesVoz.filter(c => {
+          const nom = this.limpiarTexto(c.nombreCompleto || `${c.primerNombre || ''} ${c.apellidoPaterno || ''}`);
+          return nom.includes(t) || t.includes(nom);
+        });
+        
+        if (porNombre.length === 1) {
+          this.seleccionEnCurso = true;
+          this.pausarMicYVoz();
+          this.procesarSeleccionDesambiguacion(porNombre[0]);
+          return;
+        } else if (porNombre.length > 1) {
+          // Si el usuario repite el mismo nombre y siguen habiendo varios
+          this.hablar("Siguen habiendo varios. Di el número de la lista, uno, dos, o el final de su cédula.", () => {
+            this.bloqueoEscucha = false;
+            this.isThinking = false;
+            this.escuchar();
+          });
+          return;
+        }
       }
     }
 
