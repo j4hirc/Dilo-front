@@ -2498,14 +2498,30 @@ export class Facturas implements OnInit, OnDestroy {
     }
 
     if (this.tipoOpciones === 'BODEGA' && t.length >= 2) {
+      // 1. Limpiamos palabras de relleno comunes que el usuario dice por inercia
+      const tLimpio = t.replace(/\b(de|la|el|en|bodega|desde|quiero|sacar|toma)\b/g, ' ').replace(/\s+/g, ' ').trim();
+
       const porNombre = this.opcionesVoz.filter(b => {
         const nom = this.limpiarTexto(b.nombre);
-        return nom === t || nom.startsWith(t) || (t.length >= 3 && nom.includes(t));
+        // Validamos todas las combinaciones posibles
+        return nom === t || 
+               nom.startsWith(t) || 
+               (t.length >= 3 && nom.includes(t)) || 
+               (nom.length >= 3 && t.includes(nom)) || // 🔥 Esto atrapa "bodega central" si el nombre es "central"
+               (tLimpio.length >= 3 && nom.includes(tLimpio));
       });
+
       if (porNombre.length === 1) {
         this.seleccionEnCurso = true;
         this.pausarMicYVoz();
         this.procesarSeleccionDesambiguacion(porNombre[0]);
+        return;
+      } else if (porNombre.length > 1) {
+        this.hablar("Tengo varias bodegas que coinciden. Por favor di el número exacto.", () => {
+          this.bloqueoEscucha = false;
+          this.isThinking = false;
+          this.escuchar();
+        });
         return;
       }
     }
