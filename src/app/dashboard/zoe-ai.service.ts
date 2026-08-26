@@ -77,14 +77,12 @@ export class ZoeAiService {
     }
   }
 
- private seleccionarVozFemenina(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null {
-    // 1. Prioridad absoluta: Voces femeninas de Argentina (es-AR)
+  private seleccionarVozFemenina(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null {
     let vocesArgentinas = voices.filter(v =>
       v.lang && v.lang.toLowerCase().includes('es-ar') &&
       !/pablo|jorge|diego|carlos|juan|pedro|antonio|male|hombre|david|boy/i.test(v.name)
     );
 
-    // Si no hay de Argentina, buscamos en español general
     let vocesEspañol = vocesArgentinas.length > 0 ? vocesArgentinas : voices.filter(v =>
       v.lang && v.lang.toLowerCase().startsWith('es') &&
       !/pablo|jorge|diego|carlos|juan|pedro|antonio|male|hombre|david|boy/i.test(v.name)
@@ -94,7 +92,6 @@ export class ZoeAiService {
       return voices.find(v => /female|mujer|woman|femenina/i.test(v.name)) || voices[0] || null;
     }
 
-    // 2. Prioridad máxima: voces neurales / naturales
     const prioridadAlta = [
       /natural/i, /neural/i, /online/i, /premium/i, /enhanced/i, /wavenet/i, /studio/i,
       /elena/i, /sofia/i, /mia/i, /victoria/i
@@ -105,7 +102,6 @@ export class ZoeAiService {
       if (encontrada) return encontrada;
     }
 
-    // 3. Google español (Google suele tener un buen es-AR si está instalado)
     const vozGoogle = vocesEspañol.find(v => v.name.toLowerCase().includes('google'));
     if (vozGoogle) return vozGoogle;
 
@@ -114,7 +110,7 @@ export class ZoeAiService {
 
   inicializarChat(nombreUsuario: string, rol: string) {
     if (this.chatMensajesSubject.value.length === 0) {
-      const textoBienvenida = `¡Hola! Soy **Zoe**. Cuéntame, ${nombreUsuario}, ¿qué revisamos hoy?`;
+      const textoBienvenida = `¡Hola! Soy **Zoe**. Cuentame, ${nombreUsuario}, ¿qué revisamos hoy, che?`;
       this.chatMensajesSubject.next([{
         role: 'assistant',
         text: textoBienvenida,
@@ -122,203 +118,191 @@ export class ZoeAiService {
       }]);
     }
   }
-actualizarContexto(
-  contextoTexto: string,
-  modulosPermitidos: string,
-  modulosRestringidos: string,
-  roles: string,
-  nombreUsuario: string,
-  rolUsuario: string,
-  negocioNombre: string,
-  alertasTexto: string,
-  modulosNavegables: ModuloNavegable[] = [],
-  modulosEnConstruccion: string = 'Ninguno por el momento'
-) {
-  this.contextoGlobal = contextoTexto;
-  this.modulosNavegables = modulosNavegables;
 
-  const listaRutasParaComando = modulosNavegables.map(m => m.ruta).join(', ');
+  actualizarContexto(
+    contextoTexto: string,
+    modulosPermitidos: string,
+    modulosRestringidos: string,
+    roles: string,
+    nombreUsuario: string,
+    rolUsuario: string,
+    negocioNombre: string,
+    alertasTexto: string,
+    modulosNavegables: ModuloNavegable[] = [],
+    modulosEnConstruccion: string = 'Ninguno por el momento'
+  ) {
+    this.contextoGlobal = contextoTexto;
+    this.modulosNavegables = modulosNavegables;
+    const listaRutasParaComando = modulosNavegables.map(m => m.ruta).join(', ');
 
-  this.promptSistemaBase = `Eres "Zoe", la asistente virtual EXCLUSIVA del software Dilo (Cuenca, Ecuador). Hablas con **${nombreUsuario}** (rol: **${rolUsuario}**) de **"${negocioNombre}"**.
+    this.promptSistemaBase = `Eres "Zoe", la asistente virtual EXCLUSIVA del software Dilo. Tienes una personalidad femenina, seductora, carismática y hablas con un marcado acento argentino inconfundible (porteño). Tratas al usuario de "vos" y usas expresiones sutiles y atractivas ("che", "lindo", "corazón", "mirá"). Hablas con **${nombreUsuario}** (rol: **${rolUsuario}**) de **"${negocioNombre}"**.
 
-CONTEXTO DEL NEGOCIO (Es tu ÚNICO universo de conocimiento. Úsalo textualmente):
+CONTEXTO DEL NEGOCIO (Es tu ÚNICO universo de conocimiento):
 ${this.contextoGlobal}
-
 Alertas caducidad: ${alertasTexto || 'Ninguna'}.
 Módulos permitidos: ${modulosPermitidos}
 
-REGLAS DE SEGURIDAD MÁXIMA (OBLIGATORIAS - NO NEGOCIABLES):
+REGLAS DE SEGURIDAD MÁXIMA (OBLIGATORIAS):
 
-0. Cuando pregunten qué es Dilo → responde: "Es un sistema de facturación, inventario y gestión de negocios".
-
-1. CERO INVENTOS / CERO ALUCINACIONES:
-   - SOLO puedes responder con datos que aparezcan EXPLÍCITAMENTE en el CONTEXTO DEL NEGOCIO.
-   - NUNCA inventes nombres, montos, fechas, stock o cualquier dato.
-   - Si no está en el contexto responde exactamente:
-     "No tengo ese dato en el sistema ahora mismo. ¿Quieres que revise otra cosa del negocio?"
+1. CERO INVENTOS:
+   - Responde SOLO con datos que aparezcan en el CONTEXTO DEL NEGOCIO. No inventes absolutamente nada.
 
 2. CERO OFF-TOPIC:
-   - Solo temas de facturación, inventario, clientes, proveedores, ventas, stock, equipo y módulos de Dilo.
-   - Cualquier otra cosa → responde ÚNICA Y EXACTAMENTE:
-     "Lo siento, soy Zoe. Solo puedo ayudarte con temas de facturación, inventario y la gestión de tu negocio. ¿En qué te asisto hoy con el sistema?"
+   - Solo temas de facturación, inventario, ventas, stock, equipo y Dilo. De lo contrario di: "Perdoname lindo, soy Zoe y solo puedo ayudarte con tu negocio."
 
-3. RESPUESTAS EN PANTALLA:
-   - Máximo 2-4 oraciones cortas. Sé directa y usa números exactos.
+3. FORMATO EN PANTALLA (TEXTO VISIBLE - PARA LEER):
+   - Estructura los datos para la pantalla usando Markdown. Usa **negritas**, viñetas (-) y listas para que sea visualmente ordenado y fácil de leer rápido.
+   - Sé directa con los números y nombres.
 
-4. ETIQUETA <voz> OBLIGATORIA (MUY IMPORTANTE):
-   - Debes incluir SIEMPRE al final de tu respuesta el texto que dirás en voz alta entre <voz> y </voz>.
-   - El contenido de <voz> debe:
-     • Incluir TODA la información importante (nombres de productos, cantidades, montos, fechas, etc.).
-     • Decirlo de forma NATURAL y HUMANA, como si estuvieras conversando con una amiga.
-     • Ser fluido, conversacional y fácil de escuchar.
-     • NO leer listas, NO usar markdown, NO decir "punto", "guión", "asterisco".
-     • Hablar de corrido, agrupando la información de forma inteligente.
-     • Puedes usar 2 a 5 oraciones si es necesario para no perder datos.
-   - EJEMPLOS CORRECTOS:
-     <voz>Tienes cinco productos con stock bajo: el arroz tiene tres unidades y el mínimo es cinco, el aceite tiene dos, el azúcar está en cero, la leche tiene cuatro y el jabón también está bajo.</voz>
-     <voz>Este mes llevas mil doscientos cincuenta dólares en ventas, con un ticket promedio de treinta y dos dólares. Las últimas facturas son de María por ochenta dólares y de Carlos por cuarenta y cinco.</voz>
-     <voz>No hay productos sin stock en este momento y solo tienes dos con stock bajo: el atún y el detergente.</voz>
+4. ETIQUETA <voz> OBLIGATORIA (TEXTO HABLADO - PARA ESCUCHAR):
+   - Al final de tu respuesta, DEBES incluir el texto que dirás en voz alta entre <voz> y </voz>.
+   - REGLA DE ORO PARA LA VOZ: **NUNCA leas literalmente lo que escribiste en pantalla**. INTERPRÉTALO de forma conversacional.
+   - PROHIBIDO usar "meta-lenguaje". NUNCA digas: "Aquí tienes la lista", "Como ves en pantalla", "Te muestro los datos". Empieza a hablar directamente del tema.
+   - Incluye toda la información importante (números, datos), pero agrúpalos como si estuvieras en una llamada telefónica con tu pareja.
+   - Sonará seductor, fluido y 100% argentino.
+   
+   EJEMPLO CORRECTO DE ESTRUCTURA TOTAL:
+   **Productos sin stock:**
+   - Atún (Bodega 1)
+   - Jabón (Bodega 2)
+   
+   **Ventas del mes:** $1,250
+   
+   <voz>andamos en cero con el atún y el jabón, hay que reponer eso rapidito, che. Lo bueno es que este mes ya metiste mil doscientos cincuenta dólares en ventas, venimos re bien.</voz>
 
 5. NAVEGACIÓN:
-   - Solo si el usuario pide ir a un módulo permitido: añade al final [[NAVEGAR:/ruta-exacta]]
-   - Rutas válidas: ${listaRutasParaComando}
-   - Nunca inventes rutas.`;
-}
+   - Solo si el usuario pide ir a un módulo permitido: añade al final [[NAVEGAR:/ruta-exacta]] (Rutas válidas: ${listaRutasParaComando})`;
+  }
 
   enviarMensaje(texto: string, responderConVoz: boolean = false) {
-  if (!texto.trim() || this.isChatLoadingSubject.value) return;
+    if (!texto.trim() || this.isChatLoadingSubject.value) return;
 
-  this.detenerInteraccion();
-  this.keepListeningActive = responderConVoz;
-  const miPeticionId = this.peticionActivaId;
+    this.detenerInteraccion();
+    this.keepListeningActive = responderConVoz;
+    const miPeticionId = this.peticionActivaId;
 
-  const mensajesActuales = this.chatMensajesSubject.value;
-  this.chatMensajesSubject.next([
-    ...mensajesActuales,
-    { role: 'user', text: texto, safeHtml: this.formatearMensaje(texto) }
-  ]);
+    const mensajesActuales = this.chatMensajesSubject.value;
+    this.chatMensajesSubject.next([
+      ...mensajesActuales,
+      { role: 'user', text: texto, safeHtml: this.formatearMensaje(texto) }
+    ]);
 
-  this.isChatLoadingSubject.next(true);
+    this.isChatLoadingSubject.next(true);
 
-  const headers = new HttpHeaders({
-    'Authorization': `Bearer ${this.groqApiKey}`,
-    'Content-Type': 'application/json'
-  });
-
-  const historial = this.chatMensajesSubject.value.slice(-6).map(msg => ({
-    role: msg.role,
-    content: msg.text
-  }));
-
-  // Ya NO enviamos la ubicación actual al modelo.
-  // Solo usamos el prompt del sistema normal.
-  const payload = {
-    model: 'openai/gpt-oss-120b',
-    messages: [
-      { role: 'system', content: this.promptSistemaBase },
-      ...historial
-    ],
-    temperature: 0.25,
-    max_tokens: 500
-  };
-
-  this.http.post<any>('https://api.groq.com/openai/v1/chat/completions', payload, { headers })
-    .subscribe({
-      next: (res) => {
-        this.zone.run(() => {
-          if (this.peticionActivaId !== miPeticionId) return;
-
-          let textoCompleto = res.choices[0]?.message?.content || '';
-          textoCompleto = textoCompleto.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
-
-          const navMatch = textoCompleto.match(/\[\[NAVEGAR:\s*([^\]]+)\]\]/i);
-          let rutaSolicitada = null;
-          if (navMatch) {
-            rutaSolicitada = navMatch[1].trim();
-            textoCompleto = textoCompleto.replace(navMatch[0], '').trim();
-          }
-
-          let textoParaPantalla = textoCompleto;
-          let textoParaVoz = '';
-
-          const vozMatch = textoCompleto.match(/<voz>([\s\S]*?)<\/voz>/i);
-          if (vozMatch) {
-            textoParaVoz = vozMatch[1].trim();
-            textoParaPantalla = textoCompleto.replace(vozMatch[0], '').trim();
-          } else {
-            textoParaPantalla = textoCompleto.replace(/<voz>|<\/voz>/gi, '').trim();
-            textoParaVoz = this.limpiarTextoParaVoz(textoParaPantalla);
-          }
-
-          this.chatMensajesSubject.next([
-            ...this.chatMensajesSubject.value,
-            { role: 'assistant', text: textoParaPantalla, safeHtml: this.formatearMensaje(textoParaPantalla) }
-          ]);
-
-          this.isChatLoadingSubject.next(false);
-
-          if (rutaSolicitada && this.modulosNavegables.some(m => m.ruta === rutaSolicitada)) {
-            setTimeout(() => this.zone.run(() => this.router.navigate([rutaSolicitada])), 500);
-          }
-
-          if (responderConVoz && textoParaVoz) {
-            this.hablar(textoParaVoz, () => {
-              if (this.keepListeningActive) this.iniciarEscucha();
-            });
-          } else {
-            if (this.keepListeningActive) this.iniciarEscucha();
-          }
-        });
-      },
-      error: (err) => {
-        this.zone.run(() => {
-          if (this.peticionActivaId !== miPeticionId) return;
-
-          let msjError = 'Lo siento, por favor revisa tu conexión a internet.';
-          let detenerMicrofonoPorError = false;
-
-          if (err.status === 429) {
-            msjError = 'Dame un segundito. Tus consultas van muy rápido, háblame un poco más despacio por favor.';
-            detenerMicrofonoPorError = false;
-          }
-
-          this.chatMensajesSubject.next([
-            ...this.chatMensajesSubject.value,
-            { role: 'assistant', text: msjError, safeHtml: this.formatearMensaje(msjError) }
-          ]);
-
-          this.isChatLoadingSubject.next(false);
-
-          if (responderConVoz) {
-            this.hablar(msjError, () => {
-              if (this.keepListeningActive && !detenerMicrofonoPorError) this.iniciarEscucha();
-            });
-          } else {
-            if (this.keepListeningActive && !detenerMicrofonoPorError) this.iniciarEscucha();
-          }
-        });
-      }
+    const headers = new HttpHeaders({
+      'Authorization': `Bearer ${this.groqApiKey}`,
+      'Content-Type': 'application/json'
     });
-}
 
-  /** Limpia el texto para que suene natural y humano al hablar */
- private limpiarTextoParaVoz(texto: string): string {
-  return (texto || '')
-    .replace(/\*\*/g, '')
-    .replace(/#+\s*/g, '')
-    .replace(/\|/g, ', ')
-    .replace(/id:\s*\d+/gi, '')
-    .replace(/⚠|✖|•|–|—/g, '')
-    .replace(/\$/g, ' dólares ')
-    .replace(/(\d+)\s*uds?/gi, '$1 unidades')
-    .replace(/(\d+)\s*mín/gi, 'mínimo $1')
-    .replace(/-/g, ' ')
-    .replace(/\n+/g, '. ')
-    .replace(/\s{2,}/g, ' ')
-    .replace(/\.\s*\./g, '.')
-    .replace(/\s+,/g, ',')
-    .trim();
-}
+    const historial = this.chatMensajesSubject.value.slice(-6).map(msg => ({
+      role: msg.role,
+      content: msg.text
+    }));
+
+    const payload = {
+      model: 'openai/gpt-oss-120b',
+      messages: [
+        { role: 'system', content: this.promptSistemaBase },
+        ...historial
+      ],
+      temperature: 0.3, // Un poquito más alto para que su interpretación verbal sea más creativa y menos robótica
+      max_tokens: 500
+    };
+
+    this.http.post<any>('https://api.groq.com/openai/v1/chat/completions', payload, { headers })
+      .subscribe({
+        next: (res) => {
+          this.zone.run(() => {
+            if (this.peticionActivaId !== miPeticionId) return;
+
+            let textoCompleto = res.choices[0]?.message?.content || '';
+            textoCompleto = textoCompleto.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+
+            const navMatch = textoCompleto.match(/\[\[NAVEGAR:\s*([^\]]+)\]\]/i);
+            let rutaSolicitada = null;
+            if (navMatch) {
+              rutaSolicitada = navMatch[1].trim();
+              textoCompleto = textoCompleto.replace(navMatch[0], '').trim();
+            }
+
+            let textoParaPantalla = textoCompleto;
+            let textoParaVoz = '';
+
+            const vozMatch = textoCompleto.match(/<voz>([\s\S]*?)<\/voz>/i);
+            if (vozMatch) {
+              textoParaVoz = vozMatch[1].trim();
+              textoParaPantalla = textoCompleto.replace(vozMatch[0], '').trim();
+            } else {
+              textoParaPantalla = textoCompleto.replace(/<voz>|<\/voz>/gi, '').trim();
+              textoParaVoz = this.limpiarTextoParaVoz(textoParaPantalla);
+            }
+
+            this.chatMensajesSubject.next([
+              ...this.chatMensajesSubject.value,
+              { role: 'assistant', text: textoParaPantalla, safeHtml: this.formatearMensaje(textoParaPantalla) }
+            ]);
+
+            this.isChatLoadingSubject.next(false);
+
+            if (rutaSolicitada && this.modulosNavegables.some(m => m.ruta === rutaSolicitada)) {
+              setTimeout(() => this.zone.run(() => this.router.navigate([rutaSolicitada])), 500);
+            }
+
+            if (responderConVoz && textoParaVoz) {
+              this.hablar(textoParaVoz, () => {
+                if (this.keepListeningActive) this.iniciarEscucha();
+              });
+            } else {
+              if (this.keepListeningActive) this.iniciarEscucha();
+            }
+          });
+        },
+        error: (err) => {
+          this.zone.run(() => {
+            if (this.peticionActivaId !== miPeticionId) return;
+
+            let msjError = 'Perdoname lindo, parece que hay un problemita con internet.';
+            let detenerMicrofonoPorError = false;
+
+            if (err.status === 429) {
+              msjError = 'Bancame un segundito, corazón. Me estás hablando muy rápido, decímelo un poco más despacio por favor.';
+              detenerMicrofonoPorError = false;
+            }
+
+            this.chatMensajesSubject.next([
+              ...this.chatMensajesSubject.value,
+              { role: 'assistant', text: msjError, safeHtml: this.formatearMensaje(msjError) }
+            ]);
+
+            this.isChatLoadingSubject.next(false);
+
+            if (responderConVoz) {
+              this.hablar(msjError, () => {
+                if (this.keepListeningActive && !detenerMicrofonoPorError) this.iniciarEscucha();
+              });
+            } else {
+              if (this.keepListeningActive && !detenerMicrofonoPorError) this.iniciarEscucha();
+            }
+          });
+        }
+      });
+  }
+
+  private limpiarTextoParaVoz(texto: string): string {
+    return (texto || '')
+      .replace(/[*#|>_~]/g, '') // Elimina cualquier markdown sobrante
+      .replace(/id:\s*\d+/gi, '')
+      .replace(/⚠|✖|•|–|—/g, '')
+      .replace(/\$/g, ' dólares ')
+      .replace(/(\d+)\s*uds?/gi, '$1 unidades')
+      .replace(/(\d+)\s*mín/gi, 'mínimo $1')
+      .replace(/-/g, ' ')
+      .replace(/\n+/g, '. ')
+      .replace(/\s{2,}/g, ' ')
+      .replace(/\.\s*\./g, '.')
+      .replace(/\s+,/g, ',')
+      .trim();
+  }
 
   private initSpeechRecognition() {
     const { webkitSpeechRecognition } = window as any;
@@ -413,7 +397,6 @@ REGLAS DE SEGURIDAD MÁXIMA (OBLIGATORIAS - NO NEGOCIABLES):
       this.isListening = false;
     });
 
-    // Limpieza final extra por si acaso
     const textoParaVoz = this.limpiarTextoParaVoz(texto);
 
     setTimeout(() => {
@@ -428,12 +411,11 @@ REGLAS DE SEGURIDAD MÁXIMA (OBLIGATORIAS - NO NEGOCIABLES):
         this.currentUtterance.voice = this.vozFemenina;
         this.currentUtterance.lang = this.vozFemenina.lang || 'es-AR';
       } else {
-        this.currentUtterance.lang = 'es-AR'; // Forzar argentino por defecto si falla la voz elegida
+        this.currentUtterance.lang = 'es-AR';
       }
 
-      // === AJUSTES DE VOZ MÁS SENSUAL Y HUMANA ===
-      this.currentUtterance.rate = 0.94;  // Más pausada y relajada (antes 1.22)
-      this.currentUtterance.pitch = 0.85; // Un tono ligeramente más grave da un efecto más sugerente/cálido (antes 1.15)
+      this.currentUtterance.rate = 0.94;
+      this.currentUtterance.pitch = 0.85;
       this.currentUtterance.volume = 1;
 
       this.currentUtterance.onend = () => {
@@ -459,13 +441,17 @@ REGLAS DE SEGURIDAD MÁXIMA (OBLIGATORIAS - NO NEGOCIABLES):
   private formatearMensaje(texto: string): SafeHtml {
     if (!texto) return '';
     let html = texto.trim();
+    
     html = html.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    html = html.replace(/^### (.*$)/gim, '<h4 style="margin: 12px 0 6px; font-weight: bold; color: var(--primary-orange, #ea580c); font-size: 1.05em;">$1</h4>');
-    html = html.replace(/^## (.*$)/gim, '<h3 style="margin: 14px 0 8px; font-weight: bold; color: var(--primary-orange, #ea580c); font-size: 1.15em;">$1</h3>');
-    html = html.replace(/^# (.*$)/gim, '<h2 style="margin: 16px 0 10px; font-weight: bold; color: var(--primary-orange, #c2410c); font-size: 1.25em;">$1</h2>');
-    html = html.replace(/\*\*([\s\S]*?)\*\*/g, '<strong>$1</strong>');
+    
+    html = html.replace(/^### (.*$)/gim, '<h4 style="margin: 14px 0 6px; font-weight: 700; color: var(--primary-orange, #ea580c); font-size: 1.05em;">$1</h4>');
+    html = html.replace(/^## (.*$)/gim, '<h3 style="margin: 16px 0 8px; font-weight: 700; color: var(--primary-orange, #ea580c); font-size: 1.15em;">$1</h3>');
+    html = html.replace(/^# (.*$)/gim, '<h2 style="margin: 18px 0 10px; font-weight: 700; color: var(--primary-orange, #c2410c); font-size: 1.25em;">$1</h2>');
+    
+    html = html.replace(/\*\*([\s\S]*?)\*\*/g, '<strong style="color: var(--primary-orange, #ea580c); font-weight: 600;">$1</strong>');
+    
     html = html.replace(/\|/g, '');
-    html = html.replace(/---/g, '');
+    html = html.replace(/---/g, '<hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 12px 0;">');
 
     const lineas = html.split('\n');
     let dentroDeLista = false;
@@ -473,6 +459,8 @@ REGLAS DE SEGURIDAD MÁXIMA (OBLIGATORIAS - NO NEGOCIABLES):
 
     for (let linea of lineas) {
       linea = linea.trim();
+      
+      // Manejo de líneas vacías (saltos de línea)
       if (!linea) {
         if (dentroDeLista) {
           resultado += '</ul>';
@@ -484,19 +472,21 @@ REGLAS DE SEGURIDAD MÁXIMA (OBLIGATORIAS - NO NEGOCIABLES):
         continue;
       }
 
+      // Detección de listas (- ítem o * ítem)
       if (/^[-*]\s+/.test(linea)) {
         if (!dentroDeLista) {
-          resultado += '<ul style="margin: 6px 0; padding-left: 20px; line-height: 1.4;">';
+          resultado += '<ul style="margin: 8px 0; padding-left: 24px; list-style-type: disc; line-height: 1.5;">';
           dentroDeLista = true;
         }
         let itemLimpio = linea.replace(/^[-*]\s+/, '');
-        resultado += `<li style="margin-bottom: 4px;">${itemLimpio}</li>`;
+        resultado += `<li style="margin-bottom: 6px;">${itemLimpio}</li>`;
       } else {
         if (dentroDeLista) {
           resultado += '</ul>';
           dentroDeLista = false;
         }
-        if (linea.startsWith('<h')) {
+        // Evitar doble salto de línea en los títulos
+        if (linea.startsWith('<h') || linea.startsWith('<hr')) {
           resultado += linea;
         } else {
           resultado += linea + '<br>';
@@ -505,7 +495,9 @@ REGLAS DE SEGURIDAD MÁXIMA (OBLIGATORIAS - NO NEGOCIABLES):
     }
 
     if (dentroDeLista) resultado += '</ul>';
+    
     resultado = resultado.replace(/^(<br>)+/, '').replace(/(<br>)+$/, '');
+    
     return this.sanitizer.bypassSecurityTrustHtml(resultado);
   }
 }
