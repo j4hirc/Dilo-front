@@ -186,10 +186,15 @@
 
             <div class="checkbox-group">
                 <input type="checkbox" id="terminos" formControlName="terminos">
-                <label for="terminos">Acepto los <span>términos y condiciones</span> de Dilo</label>
+                <label for="terminos">Acepto los <a href="javascript:void(0)" (click)="mostrarTerminos()" class="terms-link">términos y condiciones</a> de Dilo</label>
             </div>
-            <span class="error-text" style="margin-top: -15px; margin-bottom: 20px; display: block;" *ngIf="registerForm.get('terminos')?.invalid && registerForm.get('terminos')?.touched">Debes aceptar los términos para continuar.</span>
+            
+            <div class="business-notice">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                <span><strong>Nota para negocios:</strong> Se aplicará un cargo de <strong>$0.45</strong> por cada factura realizada en la plataforma.</span>
+            </div>
 
+            <span class="error-text" style="margin-bottom: 20px; display: block;" *ngIf="registerForm.get('terminos')?.invalid && registerForm.get('terminos')?.touched">Debes aceptar los términos para continuar.</span>
             <button type="submit" class="btn-primary" [disabled]="isLoading">
                 <span *ngIf="!isLoading">Crear cuenta</span>
                 <span *ngIf="isLoading" class="loader"></span>

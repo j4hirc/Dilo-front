@@ -289,4 +289,45 @@ export class AdminUsuarios implements OnInit {
       });
     }, 150);
   }
+
+  toggleSuspension(usuario: any) {
+    const nuevoEstado = !usuario.suspendido;
+    const accionTexto = nuevoEstado ? 'suspender' : 'activar';
+    const tituloAlerta = nuevoEstado ? '¿Suspender usuario?' : '¿Activar usuario?';
+    const descAlerta = nuevoEstado 
+      ? `El usuario ${usuario.primerNombre} ${usuario.apellidoPaterno} ya no podrá acceder al sistema.`
+      : `Se reactivará el acceso para ${usuario.primerNombre} ${usuario.apellidoPaterno}.`;
+
+    Swal.fire({
+      title: tituloAlerta,
+      text: descAlerta,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: nuevoEstado ? '#e53e3e' : '#319795',
+      cancelButtonColor: '#718096',
+      confirmButtonText: nuevoEstado ? 'Sí, suspender' : 'Sí, activar',
+      cancelButtonText: 'Cancelar'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        Swal.fire({ title: 'Actualizando estado...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+        this.http.patch(`${this.apiUrl}/usuarios/${usuario.id}/suspension?estado=${nuevoEstado}`, {}, { headers: this.getAuthHeaders() })
+          .subscribe({
+            next: (response: any) => {
+              Swal.fire('¡Éxito!', `La cuenta ha sido ${nuevoEstado ? 'suspendida' : 'activada'} correctamente.`, 'success');
+              // Actualizamos el estado localmente o recargamos la lista
+              this.cargarUsuarios();
+            },
+            error: (err) => {
+              console.error(err);
+              let errorMsg = 'No se pudo cambiar el estado de la cuenta.';
+              if (err.error && err.error.message) {
+                errorMsg = err.error.message;
+              }
+              Swal.fire('Error', errorMsg, 'error');
+            }
+          });
+      }
+    });
+  }
 }

@@ -350,3 +350,52 @@
         width: 60px; height: 60px; font-size: 20px;
     }
 }
+.user-status-badge {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 2;
+}
+
+.status-pill {
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 12px;
+    text-transform: uppercase;
+}
+
+.badge-active {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+
+.badge-suspended {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+.user-card.card-suspended {
+    opacity: 0.75;
+    border: 1px solid #f87171;
+}
+
+.btn-suspend {
+    background-color: #fff5f5;
+    color: #c53030;
+    border: 1px solid #feb2b2;
+}
+
+.btn-suspend:hover {
+    background-color: #fed7d7;
+}
+
+.btn-activate {
+    background-color: #f0fff4;
+    color: #276749;
+    border: 1px solid #c6f6d5;
+}
+
+.btn-activate:hover {
+    background-color: #e6fffa;
+}

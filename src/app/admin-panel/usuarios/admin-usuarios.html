@@ -28,8 +28,15 @@
 
     <!-- CUADRÍCULA DE PERFILES -->
     <div class="cards-grid" *ngIf="!isLoading && usuariosFiltrados.length > 0">
-        <div class="user-card" *ngFor="let user of usuariosFiltrados; let i = index" [style.animation-delay]="(i * 0.05) + 's'">
+        <div class="user-card" *ngFor="let user of usuariosFiltrados; let i = index" [style.animation-delay]="(i * 0.05) + 's'" [class.card-suspended]="user.suspendido">
             
+            <!-- Insignia de Estado -->
+            <div class="user-status-badge">
+                <span class="status-pill" [ngClass]="user.suspendido ? 'badge-suspended' : 'badge-active'">
+                    {{ user.suspendido ? 'Suspendido' : 'Activo' }}
+                </span>
+            </div>
+
             <div class="card-header-user">
                 <div class="user-avatar-profile shadow-md" [ngClass]="{'orange-bg': !user.fotoPerfil}">
                     <img *ngIf="user.fotoPerfil" [src]="user.fotoPerfil" alt="Foto">
@@ -53,10 +60,15 @@
                 </div>
             </div>
 
-            <div class="card-footer-user">
+            <div class="card-footer-user" style="display: flex; gap: 8px; flex-direction: column;">
                 <button class="btn-action view full-width" (click)="verUsuario(user)">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                     Ver Detalles Completos
+                </button>
+                <button class="btn-action full-width" [ngClass]="user.suspendido ? 'btn-activate' : 'btn-suspend'" (click)="toggleSuspension(user)">
+                    <svg *ngIf="!user.suspendido" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
+                    <svg *ngIf="user.suspendido" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                    {{ user.suspendido ? 'Activar Cuenta' : 'Suspender Cuenta' }}
                 </button>
             </div>
         </div>

@@ -7,6 +7,7 @@ import { forkJoin, of, Subject } from 'rxjs';
 import { catchError, takeUntil } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 import { ZoeAiService } from './zoe-ai.service';
+import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-dashboard-default',
@@ -210,10 +211,62 @@ export class DashboardDefault implements OnInit, OnDestroy, AfterViewChecked {
           this.cdr.detectChanges();
         },
         error: (err) => {
-          if (err.status === 401) this.cerrarSesionForzada();
-          else if (err.status === 403) {
-            this.negocioNombre = 'Mi Negocio'; 
-            this.cdr.detectChanges();
+          // 🔥 EXTRAER EL MENSAJE SIN IMPORTAR EL FORMATO NI EL CÓDIGO (403 o 500)
+          const mensajeError = err.error?.message || err.error?.error || (typeof err.error === 'string' ? err.error : err.message || '');
+          const msjLower = mensajeError.toLowerCase();
+          
+          // CASO 1: Si el PROPIETARIO o el NEGOCIO fue suspendido
+          if (msjLower.includes('propietario') || msjLower.includes('negocio suspendido')) {
+             Swal.fire({
+                icon: 'warning',
+                title: 'Negocio Suspendido',
+                text: 'La cuenta del dueño de este negocio ha sido suspendida. ¿Deseas desvincularte para unirte a otro, o prefieres cerrar sesión?',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, abandonar negocio',
+                cancelButtonText: 'Cerrar sesión',
+                confirmButtonColor: '#e53e3e',
+                cancelButtonColor: '#64748b',
+                allowOutsideClick: false
+             }).then((result) => {
+                if (result.isConfirmed) {
+                     this.http.put(`${this.apiUrl}/negocios/${this.negocioId}/abandonar`, {}, { headers: this.authHeaders })
+                       .subscribe({
+                         next: () => {
+                           Swal.fire('Desvinculado', 'Has abandonado el negocio exitosamente.', 'success').then(() => {
+                             const user = JSON.parse(localStorage.getItem('usuario') || '{}');
+                             user.negocioId = null;
+                             user.selectedBusinessId = null;
+                             localStorage.setItem('usuario', JSON.stringify(user));
+                             this.router.navigate(['/onboarding-business']);
+                           });
+                         },
+                         error: () => {
+                           Swal.fire('Error', 'No se pudo desvincular en este momento. Cerrando sesión...', 'error').then(() => {
+                             this.cerrarSesionForzada();
+                           });
+                         }
+                       });
+                  } else {
+                   this.cerrarSesionForzada();
+                }
+             });
+          } 
+          // CASO 2: Si el EMPLEADO fue suspendido o el token expiró (401/403)
+          else if (msjLower.includes('suspendida') || err.status === 401 || err.status === 403) {
+             Swal.fire({
+                icon: 'error',
+                title: 'Acceso Denegado',
+                text: 'Tu acceso ha sido revocado o tu sesión expiró. Contacta al administrador.',
+                confirmButtonColor: '#e53e3e',
+                allowOutsideClick: false
+             }).then(() => {
+                this.cerrarSesionForzada();
+             });
+          } 
+          // CASO 3: Error de conexión normal (backend caído, etc.)
+          else {
+             this.negocioNombre = 'Mi Negocio'; 
+             this.cdr.detectChanges();
           }
         }
       });

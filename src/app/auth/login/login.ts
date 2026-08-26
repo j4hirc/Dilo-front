@@ -106,6 +106,19 @@ export class Login {
         this.isLoading = false;
         console.error("Error en el login:", err);
         
+        const mensajeError = typeof err.error === 'string' ? err.error : (err.error?.message || '');
+
+        // 🔥 NUEVA VALIDACIÓN: Si la cuenta está suspendida (Error 403)
+        if (err.status === 403 || mensajeError.includes('suspendida')) {
+          Swal.fire({
+            icon: 'error',
+            title: 'Cuenta Suspendida',
+            html: 'Tu cuenta ha sido suspendida por un administrador.<br><br>Por favor, contáctanos a <b>dilo@dilo-ec.app</b> para más información.',
+            confirmButtonColor: '#e53e3e' // Color rojo para indicar severidad
+          });
+          return; 
+        }
+
         this.failedAttempts++;
 
         if (this.failedAttempts >= 3) {
@@ -113,8 +126,6 @@ export class Login {
           return; 
         }
 
-        const mensajeError = typeof err.error === 'string' ? err.error : (err.error?.message || '');
-        
         Swal.fire({
           icon: 'error',
           title: 'Acceso Denegado',

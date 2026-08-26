@@ -426,3 +426,29 @@
   font-weight: 500;
   animation: slideUpFade 0.3s ease-out forwards;
 }
+
+.terms-link {
+    color: #ed8936;
+    text-decoration: underline;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.business-notice {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    background-color: #fff3cd;
+    color: #856404;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    margin-bottom: 15px;
+    margin-top: 10px;
+    border: 1px solid #ffeeba;
+}
+
+.business-notice svg {
+    flex-shrink: 0;
+    margin-top: 2px;
+}
