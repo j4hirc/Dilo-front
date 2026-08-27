@@ -477,7 +477,6 @@ export class DashboardDefault implements OnInit, OnDestroy, AfterViewChecked {
     return `#${num} ${cliente} $${total}${fechaCorta ? ' (' + fechaCorta + ')' : ''}`;
   }).join(' | ');
 
-  // 🔥 2. Calculamos los Últimos 30 días para Zoe
    const ahoraRef = new Date();
   const hace30Dias = new Date(
     ahoraRef.getFullYear(),
