@@ -1,6 +1,6 @@
 import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import Swal from 'sweetalert2';
 
@@ -141,14 +141,28 @@ export class AdminParroquias implements OnInit {
     });
   }
 
-  private manejarErrorBackend(err: any) {
+  private manejarErrorBackend(err: HttpErrorResponse) {
     this.showModal = true;
     this.cdr.detectChanges();
-    let errorMsg = 'Ocurrió un error inesperado.';
-    if (err.error) {
-       if (typeof err.error === 'string') errorMsg = err.error;
-       else if (err.error.message) errorMsg = err.error.message;
+    
+    console.error('Error completo del backend:', err); 
+
+    let errorMsg = 'Ocurrió un error inesperado al comunicarse con el servidor.';
+
+    if (err.status === 0) {
+      errorMsg = 'No se pudo conectar con el servidor. Verifica tu conexión o posibles errores de CORS.';
+    } 
+   
+    else if (err.error) {
+       if (typeof err.error === 'string') {
+           errorMsg = err.error;
+       } else if (err.error.message) {
+           errorMsg = err.error.message; 
+       } else if (err.error.error) {
+           errorMsg = err.error.error; 
+       }
     }
+
     Swal.fire('Error', errorMsg, 'error');
   }
 }
