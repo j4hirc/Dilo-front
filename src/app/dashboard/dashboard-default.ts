@@ -478,9 +478,13 @@ export class DashboardDefault implements OnInit, OnDestroy, AfterViewChecked {
   }).join(' | ');
 
   // 🔥 2. Calculamos los Últimos 30 días para Zoe
-  const hace30Dias = new Date();
-  hace30Dias.setDate(hace30Dias.getDate() - 30);
-  hace30Dias.setHours(0, 0, 0, 0);
+   const ahoraRef = new Date();
+  const hace30Dias = new Date(
+    ahoraRef.getFullYear(),
+    ahoraRef.getMonth(),
+    ahoraRef.getDate() - 29,
+    0, 0, 0, 0
+  );
 
   const ventasUltimos30Dias = facturasOrdenadas
     .filter(f => obtenerFechaSaneada(f.fechaEmision || f.fecha || f.createdAt) >= hace30Dias)
