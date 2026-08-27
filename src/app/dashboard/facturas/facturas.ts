@@ -1446,8 +1446,9 @@ export class Facturas implements OnInit, OnDestroy {
       cantidad: this.normalizarCantidadVoz(it.cantidad)
     }));
 
+    // 🔥 SOLUCIÓN 1: Mejor detección de verbos para eliminar TODO un producto
     if (out.eliminarProducto && out.eliminarProducto !== 'null') {
-      const diceQuitar = /\b(quita|quitar|borra|borrar|elimina|eliminar|saca|sacar)\b/.test(f);
+      const diceQuitar = /(quita|quitame|borra|elimina|eliminame|saca|sacame)/i.test(f);
       if (!diceQuitar) out.eliminarProducto = null;
       else {
         // Quitar y agregar en la misma frase se buguea → solo quitar
@@ -1455,7 +1456,7 @@ export class Facturas implements OnInit, OnDestroy {
       }
     }
     // Si la frase es de quitar/restar unidades, no agregar productos
-    if (/\b(quita|quitar|borra|borrar|elimina|eliminar|saca|sacar)\b/.test(f)) {
+    if (/(quita|quitame|borra|elimina|eliminame|saca|sacame)/i.test(f)) {
       out.items = [];
     }
 
@@ -1475,11 +1476,11 @@ export class Facturas implements OnInit, OnDestroy {
       }
     }
 
-    // Quitar N unidades / todo el producto
-    // "quita 5 unidades de mouse", "elimina 2 del colchón", "saca el mouse"
+    // 🔥 SOLUCIÓN 2: Mejor detección de verbos para restar N unidades
+    // "quita 5 unidades de mouse", "eliminame 2 del colchón", "sacame el mouse"
     {
       const mRestar = f.match(
-        /\b(?:quita|quitar|borra|borrar|elimina|eliminar|saca|sacar)\s+(\d{1,3}|un|una|uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez)\s*(?:unidades?|unds?|uds?)?\s*(?:de\s+|del\s+|de\s+la\s+)?(.+?)(?:\s+y\s+|\s*,\s*|$)/
+        /(?:quita|quitar|quitame|borra|borrar|elimina|eliminar|eliminame|saca|sacar|sacame)\s+(\d{1,3}|un|una|uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez)\s*(?:unidades?|unds?|uds?)?\s*(?:de\s+|del\s+|de\s+la\s+)?(.+?)(?:\s+y\s+|\s*,\s*|$)/i
       );
       if (mRestar) {
         const cantR = this.parseCantidadToken(mRestar[1]) || this.normalizarCantidadVoz(mRestar[1]);
@@ -1494,7 +1495,7 @@ export class Facturas implements OnInit, OnDestroy {
         }
       } else if (!out.eliminarProducto || out.eliminarProducto === 'null') {
         const mQ = f.match(
-          /\b(?:quita|quitar|borra|borrar|elimina|eliminar|saca|sacar)\s+(?:el|la|los|las|todo\s+el|toda\s+la)?\s*(.+?)(?:\s+y\s+(?:agrega|añade|pon|dame)|$)/
+          /(?:quita|quitar|quitame|borra|borrar|elimina|eliminar|eliminame|saca|sacar|sacame)\s+(?:el|la|los|las|todo\s+el|toda\s+la)?\s*(.+?)(?:\s+y\s+(?:agrega|añade|pon|dame)|$)/i
         );
         if (mQ) {
           const nom = mQ[1].replace(/\b(del ticket|de la factura|por favor)\b/g, '').trim();
@@ -2289,29 +2290,27 @@ export class Facturas implements OnInit, OnDestroy {
     }).sort((a, b) => b.score - a.score);
   }
 
-  /** Si hay empate o varios con score casi igual → opciones; si no, el ganador. */
+ /** Si hay empate o varios con score casi igual → opciones; si no, el ganador. */
   private decidirMatchOpciones(scored: { p: any; score: number; nom: string }[]): any[] {
     if (!scored.length) return [];
     const top = scored[0];
     const segundo = scored[1];
-    // Varios con el mismo nombre limpio → siempre opciones
-    const mismoNombre = scored.filter(s => s.nom === top.nom);
-    if (mismoNombre.length > 1) {
-      return this.dedupProductos(mismoNombre.map(s => s.p)).slice(0, 10);
+    
+    // 🔥 NUEVO: Si el top es un MATCH EXACTO (100+ puntos), ganamos, no hay que preguntar.
+    if (top.score >= 100) {
+      // Pero si el segundo también es match exacto (misma palabra pero diferente ID), dar opciones
+      if (segundo && segundo.score >= 100 && top.nom === segundo.nom) {
+        return this.dedupProductos(scored.filter(s => s.score >= 100).map(s => s.p)).slice(0, 10);
+      }
+      return [top.p];
     }
-    // Empate cercano (diferencia < 8) → opciones
-    if (segundo && (top.score - segundo.score) < 8) {
-      const empateMin = top.score - 6;
-      return this.dedupProductos(
-        scored.filter(s => s.score >= empateMin).map(s => s.p)
-      ).slice(0, 10);
+
+    // 🔥 NUEVO: Si NO hay match exacto y hay varios candidatos, SIEMPRE dar opciones.
+    // Esto evita que agregue productos "así nomás" cuando hay muchos similares.
+    if (scored.length > 1) {
+      return this.dedupProductos(scored.map(s => s.p)).slice(0, 10);
     }
-    // Ganador claro
-    if (top.score >= 15) return [top.p];
-    // Scores bajos pero varios → opciones por si acaso
-    if (scored.length > 1 && top.score >= 8) {
-      return this.dedupProductos(scored.slice(0, 6).map(s => s.p));
-    }
+
     return [top.p];
   }
 
@@ -2792,20 +2791,27 @@ export class Facturas implements OnInit, OnDestroy {
   }
 
   private buscarIndiceEnCarrito(nombreBuscado: string): number {
-    const t = this.limpiarTexto(nombreBuscado);
+    let t = this.limpiarTexto(nombreBuscado);
     if (!t) return -1;
+
+    // 🔥 NUEVO: Limpiamos palabras de relleno que confunden la búsqueda ("quita EL producto mouse")
+    t = t.replace(/\b(el|la|los|las|un|una|unos|unas|producto|del|ticket|factura|por|favor)\b/g, ' ').replace(/\s+/g, ' ').trim();
+    if (!t) return -1;
+
     let idx = this.nuevaFactura.detalles.findIndex((d: any) =>
       this.limpiarTexto(d.productoNombre).includes(t) || t.includes(this.limpiarTexto(d.productoNombre))
     );
     if (idx !== -1) return idx;
-    const pals = t.split(/\s+/).filter(p => p.length > 2);
+
+    // Búsqueda cruzada por palabras sueltas
+    const pals = t.split(/\s+/).filter(p => p.length >= 2); // 🔥 Permitimos palabras de 2 letras (PC, TV)
     if (pals.length === 0) return -1;
+    
     return this.nuevaFactura.detalles.findIndex((d: any) => {
       const nom = this.limpiarTexto(d.productoNombre);
       return pals.every(p => nom.includes(p));
     });
   }
-
 
   private modificarCantidadEnCarrito(nombreProducto: string, nuevaCantidad: number): boolean {
     const idx = this.buscarIndiceEnCarrito(nombreProducto);
