@@ -56,6 +56,10 @@ export class ZoeAiService {
   private transcriptAcumulado = '';
   keepListeningActive = false;
 
+  // Reintento controlado del reconocimiento de voz (evita loops de "InvalidStateError" en Chrome).
+  private restartRecognitionTimer: ReturnType<typeof setTimeout> | null = null;
+  private permisoMicrofonoDenegado = false;
+
   private vozFemenina: SpeechSynthesisVoice | null = null;
   private peticionActivaId = 0;
 
@@ -167,8 +171,9 @@ REGLAS DE SEGURIDAD MÁXIMA (OBLIGATORIAS):
 
 4. ETIQUETA <voz> OBLIGATORIA (TEXTO HABLADO - PARA ESCUCHAR):
    - Al final de tu respuesta, DEBES incluir el texto que dirás en voz alta entre <voz> y </voz>.
-   - REGLA DE ORO PARA LA VOZ: **NUNCA leas literalmente lo que escribiste en pantalla**. INTERPRÉTALO de forma conversacional.
+   - REGLA DE ORO PARA LA VOZ: **NUNCA leas literalmente lo que escribiste en pantalla**. INTERPRÉTALO de forma conversacional, con tus propias palabras, como si nunca hubiera existido el texto en Markdown.
    - PROHIBIDO usar "meta-lenguaje". NUNCA digas: "Aquí tienes la lista", "Como ves en pantalla", "Te muestro los datos". Empieza a hablar directamente del tema.
+   - Escribí los números SIEMPRE en palabras, tal como se dirían al hablar (ej: "$1,250.00" → "mil doscientos cincuenta dólares", nunca dejes símbolos como "$", "%" o "#" sueltos en el texto de voz).
    - Incluye toda la información importante (números, datos), pero agrúpalos como si estuvieras en una llamada telefónica con tu pareja.
    - Sonará seductor, fluido y 100% argentino.
    - IMPORTANTE: el texto de <voz> debe estar COMPLETO, con final claro (nunca lo dejes a medias). Si hay mucha información, resumí priorizando lo más importante primero para que la respuesta hablada sea completa y no quede cortada.
@@ -186,6 +191,7 @@ REGLAS DE SEGURIDAD MÁXIMA (OBLIGATORIAS):
    - Solo si el usuario pide ir a un módulo permitido: añade al final [[NAVEGAR:/ruta-exacta]] (Rutas válidas: ${listaRutasParaComando})
 
 6. COMPRENSIÓN Y PRECISIÓN:
+   - Antes de responder, releé mentalmente el pedido del usuario y compará las cifras con el CONTEXTO DEL NEGOCIO: si algo no cierra o falta, priorizá la honestidad antes que "sonar completa".
    - Si el pedido del usuario es ambiguo o le falta un dato clave para responder bien (por ejemplo, no aclara de qué bodega, producto o período habla), hacé una pregunta corta y concreta para aclararlo en vez de adivinar.
    - Prestá atención al historial de la conversación: si el usuario ya aclaró algo antes, no se lo vuelvas a preguntar.
    - Verificá siempre las cifras contra el CONTEXTO DEL NEGOCIO antes de responder.`;
@@ -314,6 +320,7 @@ REGLAS DE SEGURIDAD MÁXIMA (OBLIGATORIAS):
       .replace(/id:\s*\d+/gi, '')
       .replace(/⚠|✖|•|–|—/g, '')
       .replace(/\$/g, ' dólares ')
+      .replace(/%/g, ' por ciento ')
       .replace(/(\d+)\s*uds?/gi, '$1 unidades')
       .replace(/(\d+)\s*mín/gi, 'mínimo $1')
       .replace(/-/g, ' ')
@@ -355,16 +362,52 @@ REGLAS DE SEGURIDAD MÁXIMA (OBLIGATORIAS):
     this.recognition.onend = () => {
       this.zone.run(() => {
         this.isListening = false;
-        if (this.keepListeningActive && !this.isChatLoadingSubject.value && !this.isSpeaking) {
-          try {
-            this.recognition.start();
-            this.isListening = true;
-          } catch (e) { }
-        }
+        this.intentarReiniciarEscucha();
       });
     };
 
-    this.recognition.onerror = () => this.zone.run(() => this.isListening = false);
+    // Distingue errores recuperables (no-speech, network, aborted) de errores
+    // fatales (permiso de micrófono denegado) para no insistir en vano.
+    this.recognition.onerror = (event: any) => {
+      this.zone.run(() => {
+        this.isListening = false;
+        const codigo = event?.error;
+
+        if (codigo === 'not-allowed' || codigo === 'service-not-allowed') {
+          this.permisoMicrofonoDenegado = true;
+          this.keepListeningActive = false;
+          return;
+        }
+
+        // 'no-speech', 'network', 'aborted', etc.: son recuperables.
+        // El propio onend ya se dispara después de onerror y reintentará.
+        this.permisoMicrofonoDenegado = false;
+      });
+    };
+  }
+
+  /**
+   * Reintenta iniciar el reconocimiento de voz con un pequeño margen de tiempo.
+   * Evita el error típico de Chrome ("recognition already started" / arranques
+   * en seco) cuando onend y un nuevo enviarMensaje se disparan casi al mismo tiempo.
+   */
+  private intentarReiniciarEscucha() {
+    if (this.restartRecognitionTimer) {
+      clearTimeout(this.restartRecognitionTimer);
+      this.restartRecognitionTimer = null;
+    }
+
+    if (this.permisoMicrofonoDenegado) return;
+    if (!this.keepListeningActive || this.isChatLoadingSubject.value || this.isSpeaking) return;
+
+    this.restartRecognitionTimer = setTimeout(() => {
+      this.restartRecognitionTimer = null;
+      if (!this.keepListeningActive || this.isChatLoadingSubject.value || this.isSpeaking) return;
+      try {
+        this.recognition.start();
+        this.zone.run(() => this.isListening = true);
+      } catch (e) { }
+    }, 250);
   }
 
   detenerInteraccion() {
@@ -376,6 +419,10 @@ REGLAS DE SEGURIDAD MÁXIMA (OBLIGATORIAS):
     this.keepListeningActive = false;
     this.peticionActivaId++;
     if (this.silenceTimer) clearTimeout(this.silenceTimer);
+    if (this.restartRecognitionTimer) {
+      clearTimeout(this.restartRecognitionTimer);
+      this.restartRecognitionTimer = null;
+    }
     try { this.recognition.abort(); } catch (e) { }
     this.zone.run(() => {
       this.isSpeaking = false;
@@ -388,6 +435,7 @@ REGLAS DE SEGURIDAD MÁXIMA (OBLIGATORIAS):
     if (this.keepListeningActive) {
       this.detenerInteraccion();
     } else {
+      this.permisoMicrofonoDenegado = false;
       this.keepListeningActive = true;
       this.iniciarEscucha();
     }
@@ -404,14 +452,14 @@ REGLAS DE SEGURIDAD MÁXIMA (OBLIGATORIAS):
     } catch (e) { }
   }
 
-  /**
-   * Divide un texto largo en frases de tamaño manejable.
-   * Hablar en trozos (en vez de un solo audio gigante) evita el bug conocido
-   * de Chrome donde el motor de voz se "traba" o corta el audio pasados ~15s
-   * en utterances muy largas.
-   */
+  
   private dividirEnFrases(texto: string): string[] {
-    const frases = texto.match(/[^.!?…]+[.!?…]*(\s|$)/g) || [texto];
+    // Protege los números decimales (ej: "1250.00") para que el punto no se
+    // confunda con un punto final y corte la oración en medio de una cifra.
+    const PLACEHOLDER_DECIMAL = '§DEC§';
+    const textoProtegido = texto.replace(/(\d)\.(\d)/g, `$1${PLACEHOLDER_DECIMAL}$2`);
+
+    const frases = textoProtegido.match(/[^.!?…]+[.!?…]*(\s|$)/g) || [textoProtegido];
     const trozos: string[] = [];
     let actual = '';
 
@@ -428,7 +476,10 @@ REGLAS DE SEGURIDAD MÁXIMA (OBLIGATORIAS):
     }
     if (actual) trozos.push(actual.trim());
 
-    return trozos.length ? trozos : [texto];
+    const trozosFinales = (trozos.length ? trozos : [textoProtegido])
+      .map(t => t.split(PLACEHOLDER_DECIMAL).join('.'));
+
+    return trozosFinales;
   }
 
   private iniciarKeepAlive() {
