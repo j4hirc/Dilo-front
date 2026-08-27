@@ -183,6 +183,48 @@ export class DashboardDefault implements OnInit, OnDestroy, AfterViewChecked {
     } catch(err) { }
   }
 
+  private inicioDiaZoe(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
+}
+
+private restarDiasZoe(d: Date, n: number): Date {
+  const r = new Date(d);
+  r.setDate(r.getDate() - n);
+  return r;
+}
+
+private calcularVentasPorPeriodo(
+  facturasOrdenadas: any[],
+  dias: number,
+  ahora: Date,
+  obtenerFechaSaneada: (f: any) => Date,
+  obtenerTotalFactura: (f: any) => number
+): { total: number; cantidad: number; variacionPct: number } {
+  const inicioPeriodo = this.inicioDiaZoe(this.restarDiasZoe(ahora, dias - 1));
+  const inicioAnterior = this.inicioDiaZoe(this.restarDiasZoe(inicioPeriodo, dias));
+  const finAnterior = this.inicioDiaZoe(this.restarDiasZoe(inicioPeriodo, 1));
+
+  const facturasPeriodo = facturasOrdenadas.filter(f => {
+    const d = obtenerFechaSaneada(f.fechaEmision || f.fecha || f.createdAt);
+    return d >= inicioPeriodo && d <= ahora;
+  });
+
+  const facturasAnterior = facturasOrdenadas.filter(f => {
+    const d = obtenerFechaSaneada(f.fechaEmision || f.fecha || f.createdAt);
+    return d >= inicioAnterior && d <= finAnterior;
+  });
+
+  const total = facturasPeriodo.reduce((acc, f) => acc + obtenerTotalFactura(f), 0);
+  const anterior = facturasAnterior.reduce((acc, f) => acc + obtenerTotalFactura(f), 0);
+  const cantidad = facturasPeriodo.length;
+
+  const variacionPct = anterior === 0
+    ? (total > 0 ? 100 : 0)
+    : Math.round(((total - anterior) / anterior) * 1000) / 10;
+
+  return { total, cantidad, variacionPct };
+}
+
   tieneRol(rolesPermitidos: string[]): boolean {
     return rolesPermitidos.includes(this.rolUsuario);
   }
@@ -477,6 +519,7 @@ export class DashboardDefault implements OnInit, OnDestroy, AfterViewChecked {
     return `#${num} ${cliente} $${total}${fechaCorta ? ' (' + fechaCorta + ')' : ''}`;
   }).join(' | ');
 
+
    const ahoraRef = new Date();
   const hace30Dias = new Date(
     ahoraRef.getFullYear(),
@@ -488,6 +531,13 @@ export class DashboardDefault implements OnInit, OnDestroy, AfterViewChecked {
   const ventasUltimos30Dias = facturasOrdenadas
     .filter(f => obtenerFechaSaneada(f.fechaEmision || f.fecha || f.createdAt) >= hace30Dias)
     .reduce((acc, f) => acc + obtenerTotalFactura(f), 0);
+
+  const periodosAConsultar = [7, 15, 30, 60, 90];
+  const resumenPorPeriodo = periodosAConsultar.map(dias => {
+    const r = this.calcularVentasPorPeriodo(facturasOrdenadas, dias, ahoraRef, obtenerFechaSaneada, obtenerTotalFactura);
+    const signo = r.variacionPct > 0 ? '+' : '';
+    return `Últimos ${dias} días: $${r.total.toFixed(2)} en ${r.cantidad} factura(s) (variación vs periodo anterior equivalente: ${signo}${r.variacionPct}%)`;
+  }).join('\n     - ');
   // =================================================================================
 
   const totalPorCobrar = cuentasPorCobrar.reduce((acc, c) => acc + Number(c.saldoPendiente || 0), 0);
@@ -506,6 +556,8 @@ NEGOCIO: "${this.negocioNombre}"${ruc ? ` | RUC: ${ruc}` : ''}${dir ? ` | Dir: $
 - Total histórico de ventas: $${totalVentas.toFixed(2)} (${cantidadFacturas} facturas)
 - Ticket promedio: $${ticketPromedio.toFixed(2)}
 - Ventas de los últimos 30 días: $${ventasUltimos30Dias.toFixed(2)}
+- Ventas por periodo (mismo cálculo que el módulo Rendimiento):
+     - ${resumenPorPeriodo}
 - Últimas facturas: ${ultimasFacturas || 'Sin facturas registradas'}
 - Cuentas por cobrar pendientes: $${totalPorCobrar.toFixed(2)}
 
