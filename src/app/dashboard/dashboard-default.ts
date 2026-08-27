@@ -45,7 +45,6 @@ export class DashboardDefault implements OnInit, OnDestroy, AfterViewChecked {
   hintChatOculto = false;
   private hintAutoHideTimer: ReturnType<typeof setTimeout> | null = null;
 
-  // DESCRIPCIONES DE MÓDULOS ORIENTADAS AL USUARIO (No a la IA)
   private readonly modulosSistema = [
     { nombre: 'Dashboard', ruta: '/dashboard/propietario', roles: ['PROPIETARIO'], descripcion: 'Pantalla donde el usuario puede ver estadísticas: ventas del mes, facturas, clientes, etc.', disponible: true },
     { nombre: 'Categorías', ruta: '/dashboard/categorias', roles: ['PROPIETARIO', 'BODEGUERO'], descripcion: 'Módulo para que el usuario cree, describa o edite las categorías.', disponible: true },
@@ -88,8 +87,6 @@ export class DashboardDefault implements OnInit, OnDestroy, AfterViewChecked {
     this.usuarioLogueado = JSON.parse(userStr);
     this.rolUsuario = this.usuarioLogueado?.rol || 'PROPIETARIO';
     this.fotoPerfilUrl = this.usuarioLogueado?.fotoPerfil || null;
-    
- 
     
     let nombreCompleto = '';
     
@@ -211,11 +208,9 @@ export class DashboardDefault implements OnInit, OnDestroy, AfterViewChecked {
           this.cdr.detectChanges();
         },
         error: (err) => {
-          // 🔥 EXTRAER EL MENSAJE SIN IMPORTAR EL FORMATO NI EL CÓDIGO (403 o 500)
           const mensajeError = err.error?.message || err.error?.error || (typeof err.error === 'string' ? err.error : err.message || '');
           const msjLower = mensajeError.toLowerCase();
           
-          // CASO 1: Si el PROPIETARIO o el NEGOCIO fue suspendido
           if (msjLower.includes('propietario') || msjLower.includes('negocio suspendido')) {
              Swal.fire({
                 icon: 'warning',
@@ -251,7 +246,6 @@ export class DashboardDefault implements OnInit, OnDestroy, AfterViewChecked {
                 }
              });
           } 
-          // CASO 2: Si el EMPLEADO fue suspendido o el token expiró (401/403)
           else if (msjLower.includes('suspendida') || err.status === 401 || err.status === 403) {
              Swal.fire({
                 icon: 'error',
@@ -263,7 +257,6 @@ export class DashboardDefault implements OnInit, OnDestroy, AfterViewChecked {
                 this.cerrarSesionForzada();
              });
           } 
-          // CASO 3: Error de conexión normal (backend caído, etc.)
           else {
              this.negocioNombre = 'Mi Negocio'; 
              this.cdr.detectChanges();
@@ -358,8 +351,6 @@ export class DashboardDefault implements OnInit, OnDestroy, AfterViewChecked {
   inventario: any[], facturas: any[], bodegas: any[], miembros: any[],
   cuentasPorCobrar: any[], negocioInfo: any
 ): string {
-  // Se amplían los límites de muestra para que Zoe tenga más información real
-  // del negocio disponible (antes 25 productos / 15 categorías / 18 ítems por bodega).
   const listaProductos = productos.slice(0, 40).map(p => {
     const costo = Number(p.costoPromedioActual ?? p.costoPromedio ?? 0).toFixed(2);
     const cat = p.categoriaNombre || p.categoria?.nombre || '';
@@ -424,39 +415,77 @@ export class DashboardDefault implements OnInit, OnDestroy, AfterViewChecked {
     }
   }
 
-  // ========== SECCIÓN DE VENTAS ==========
-  const facturasOrdenadas = [...facturas]
-    .filter(f => f && (f.totalFactura != null || f.total != null))
-    .sort((a, b) => {
-      const fechaA = new Date(a.fechaEmision || a.fecha || a.createdAt || 0).getTime();
-      const fechaB = new Date(b.fechaEmision || b.fecha || b.createdAt || 0).getTime();
-      return fechaB - fechaA;
-    });
+  // =================================================================================
+  // ========== SECCIÓN DE VENTAS - LÓGICA DE 30 DÍAS ALINEADA CON REPORTES ==========
+  // =================================================================================
+  const cleanNumber = (val: any): number => {
+    if (val == null) return 0;
+    if (typeof val === 'number') return val;
+    const parsed = parseFloat(String(val).replace(/,/g, ''));
+    return isNaN(parsed) ? 0 : parsed;
+  };
 
-  const totalVentas = facturasOrdenadas.reduce((acc, f) => acc + Number(f.totalFactura || f.total || 0), 0);
+  const obtenerTotalFactura = (f: any): number => {
+    return cleanNumber(f.importeTotal ?? f.valorTotal ?? f.totalFactura ?? f.total ?? f.montoTotal ?? 0);
+  };
+
+  const obtenerFechaSaneada = (fechaRaw: any): Date => {
+    if (!fechaRaw) return new Date(0);
+    // Formato array Spring Boot: [2026, 8, 27]
+    if (Array.isArray(fechaRaw) && fechaRaw.length >= 3) {
+      const d = new Date(Number(fechaRaw[0]), Number(fechaRaw[1]) - 1, Number(fechaRaw[2]), 12, 0, 0);
+      return isNaN(d.getTime()) ? new Date(0) : d;
+    }
+    
+    const s = String(fechaRaw).trim();
+    // Filtro ISO exacto para evitar el desfase de 5 horas a Ecuador
+    const isoMatch = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (isoMatch) {
+       const d = new Date(Number(isoMatch[1]), Number(isoMatch[2]) - 1, Number(isoMatch[3]), 12, 0, 0);
+       return isNaN(d.getTime()) ? new Date(0) : d;
+    }
+    
+    const d = new Date(s);
+    return isNaN(d.getTime()) ? new Date(0) : d;
+  };
+
+  // 1. Filtrar asegurándonos de ignorar las Anuladas
+  const facturasValidas = [...facturas].filter(f => 
+    f && (!f.estado || String(f.estado).toUpperCase() !== 'ANULADA') &&
+         (!f.estadoSri || String(f.estadoSri).toUpperCase() !== 'ANULADA')
+  );
+
+  const facturasOrdenadas = facturasValidas.sort((a, b) => {
+    const fechaA = obtenerFechaSaneada(a.fechaEmision || a.fecha || a.createdAt).getTime();
+    const fechaB = obtenerFechaSaneada(b.fechaEmision || b.fecha || b.createdAt).getTime();
+    return fechaB - fechaA;
+  });
+
+  const totalVentas = facturasOrdenadas.reduce((acc, f) => acc + obtenerTotalFactura(f), 0);
   const cantidadFacturas = facturasOrdenadas.length;
   const ticketPromedio = cantidadFacturas > 0 ? totalVentas / cantidadFacturas : 0;
 
   const ultimasFacturas = facturasOrdenadas.slice(0, 10).map(f => {
-    const total = Number(f.totalFactura || f.total || 0).toFixed(2);
+    const total = obtenerTotalFactura(f).toFixed(2);
     const cliente = f.clienteNombre || f.cliente?.nombre || f.nombreCliente || 'Cliente';
-    const fechaRaw = f.fechaEmision || f.fecha || f.createdAt || '';
-    const fechaCorta = fechaRaw
-      ? new Date(fechaRaw).toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: '2-digit' })
+    const fechaRaw = f.fechaEmision || f.fecha || f.createdAt;
+    const fechaSaneada = obtenerFechaSaneada(fechaRaw);
+    const fechaCorta = fechaSaneada.getTime() > 0 
+      ? fechaSaneada.toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: '2-digit' })
       : '';
     const num = f.numeroFactura || f.numero || f.id || '';
     return `#${num} ${cliente} $${total}${fechaCorta ? ' (' + fechaCorta + ')' : ''}`;
   }).join(' | ');
 
-  const ahora = new Date();
-  const mesActual = ahora.getMonth();
-  const anioActual = ahora.getFullYear();
-  const ventasMesActual = facturasOrdenadas
-    .filter(f => {
-      const d = new Date(f.fechaEmision || f.fecha || f.createdAt || 0);
-      return d.getMonth() === mesActual && d.getFullYear() === anioActual;
-    })
-    .reduce((acc, f) => acc + Number(f.totalFactura || f.total || 0), 0);
+  // 🔥 2. Calculamos los Últimos 30 días para Zoe
+  const hace30Dias = new Date();
+  hace30Dias.setDate(hace30Dias.getDate() - 30);
+  hace30Dias.setHours(0, 0, 0, 0);
+
+  const ventasUltimos30Dias = facturasOrdenadas
+    .filter(f => obtenerFechaSaneada(f.fechaEmision || f.fecha || f.createdAt) >= hace30Dias)
+    .reduce((acc, f) => acc + obtenerTotalFactura(f), 0);
+  // =================================================================================
 
   const totalPorCobrar = cuentasPorCobrar.reduce((acc, c) => acc + Number(c.saldoPendiente || 0), 0);
 
@@ -473,7 +502,7 @@ NEGOCIO: "${this.negocioNombre}"${ruc ? ` | RUC: ${ruc}` : ''}${dir ? ` | Dir: $
 === VENTAS (datos reales del sistema) ===
 - Total histórico de ventas: $${totalVentas.toFixed(2)} (${cantidadFacturas} facturas)
 - Ticket promedio: $${ticketPromedio.toFixed(2)}
-- Ventas del mes actual: $${ventasMesActual.toFixed(2)}
+- Ventas de los últimos 30 días: $${ventasUltimos30Dias.toFixed(2)}
 - Últimas facturas: ${ultimasFacturas || 'Sin facturas registradas'}
 - Cuentas por cobrar pendientes: $${totalPorCobrar.toFixed(2)}
 

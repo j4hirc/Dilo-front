@@ -30,7 +30,6 @@ interface Comparativa {
   variacion: number;
 }
 
-// 🔥 NUEVO: Interfaz para los productos dentro de la factura del cliente
 interface DetalleFacturaResumen {
   productoNombre: string;
   cantidad: number;
@@ -169,6 +168,48 @@ export class Reportes implements OnInit {
     return new HttpHeaders().set('Authorization', `Bearer ${cleanToken}`);
   }
 
+  // ==========================================
+  // HELPERS DE LIMPIEZA DE DATOS (EVITAN BUGS)
+  // ==========================================
+  private cleanNumber(val: any): number {
+    if (val == null) return 0;
+    if (typeof val === 'number') return val;
+    const parsed = parseFloat(String(val).replace(/,/g, ''));
+    return isNaN(parsed) ? 0 : parsed;
+  }
+
+  private obtenerTotalFactura(f: any): number {
+    return this.cleanNumber(f.importeTotal ?? f.valorTotal ?? f.totalFactura ?? f.total ?? f.montoTotal ?? f.monto ?? 0);
+  }
+
+  private parseFecha(val: any): Date | null {
+    if (val == null || val === '') return null;
+    if (val instanceof Date) return isNaN(val.getTime()) ? null : val;
+    
+    // Si viene en formato array desde Spring Boot: [año, mes, día...]
+    if (Array.isArray(val) && val.length >= 3) {
+      const d = new Date(Number(val[0]), Number(val[1]) - 1, Number(val[2]), 12, 0, 0);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    
+    const s = String(val).trim();
+    const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+    if (m) {
+      const d = new Date(+m[3], +m[2] - 1, +m[1], 12, 0, 0);
+      return isNaN(d.getTime()) ? null : d;
+    }
+
+    // Filtro ISO exacto para evitar el desfase de 5 horas a Ecuador
+    const isoMatch = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (isoMatch) {
+       const d = new Date(Number(isoMatch[1]), Number(isoMatch[2]) - 1, Number(isoMatch[3]), 12, 0, 0);
+       return isNaN(d.getTime()) ? null : d;
+    }
+
+    const d = new Date(s);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
   cargarDatos() {
     if (!this.negocioId) return;
     this.isLoading = true;
@@ -188,7 +229,14 @@ export class Reportes implements OnInit {
       .pipe(catchError(() => of([])));
 
     forkJoin([reqFacturas, reqNegocio, reqCuentas]).subscribe(([facData, negData, cxcData]) => {
-      this.facturasRaw = Array.isArray(facData) ? facData : [];
+      const rawF = Array.isArray(facData) ? facData : [];
+      
+      // 🔥 FILTRO GLOBAL: Quitamos anuladas de raíz para que no inflen los gráficos ni el total.
+      this.facturasRaw = rawF.filter(f => 
+         f && (!f.estado || String(f.estado).toUpperCase() !== 'ANULADA') && 
+              (!f.estadoSri || String(f.estadoSri).toUpperCase() !== 'ANULADA')
+      );
+
       this.cuentasRaw = Array.isArray(cxcData) ? cxcData : [];
       if (negData) {
         this.negocioNombre =
@@ -208,19 +256,16 @@ export class Reportes implements OnInit {
     const finAnterior = this.inicioDia(this.restarDias(inicioPeriodo, 1));
 
     const facturasPeriodo = this.facturasRaw.filter((f) => {
-      const d = this.parseFecha(f.fechaEmision);
+      const d = this.parseFecha(f.fechaEmision || f.fecha || f.createdAt);
       return d && d >= inicioPeriodo && d <= ahora;
     });
 
     const facturasAnterior = this.facturasRaw.filter((f) => {
-      const d = this.parseFecha(f.fechaEmision);
+      const d = this.parseFecha(f.fechaEmision || f.fecha || f.createdAt);
       return d && d >= inicioAnterior && d <= finAnterior;
     });
 
-    this.ventasPeriodo = facturasPeriodo.reduce(
-      (acc, f) => acc + Number(f.totalFactura || f.total || 0),
-      0
-    );
+    this.ventasPeriodo = facturasPeriodo.reduce((acc, f) => acc + this.obtenerTotalFactura(f), 0);
     this.facturasPeriodo = facturasPeriodo.length;
 
     const mapaDia = new Map<string, { total: number; cantidad: number }>();
@@ -230,11 +275,11 @@ export class Reportes implements OnInit {
     }
 
     facturasPeriodo.forEach((f) => {
-      const d = this.parseFecha(f.fechaEmision);
+      const d = this.parseFecha(f.fechaEmision || f.fecha || f.createdAt);
       if (!d) return;
       const key = this.keyFecha(d);
       const entry = mapaDia.get(key) || { total: 0, cantidad: 0 };
-      entry.total += Number(f.totalFactura || f.total || 0);
+      entry.total += this.obtenerTotalFactura(f);
       entry.cantidad += 1;
       mapaDia.set(key, entry);
     });
@@ -268,8 +313,8 @@ export class Reportes implements OnInit {
     const diasSem = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
     const acumDia = new Array(7).fill(0);
     facturasPeriodo.forEach((f) => {
-      const d = this.parseFecha(f.fechaEmision);
-      if (d) acumDia[d.getDay()] += Number(f.totalFactura || f.total || 0);
+      const d = this.parseFecha(f.fechaEmision || f.fecha || f.createdAt);
+      if (d) acumDia[d.getDay()] += this.obtenerTotalFactura(f);
     });
     const maxDiaSem = Math.max(...acumDia, 1);
     this.calorPorDiaSemana = diasSem.map((nombre, i) => ({
@@ -280,8 +325,8 @@ export class Reportes implements OnInit {
 
     const acumHora = new Array(24).fill(0);
     facturasPeriodo.forEach((f) => {
-      const d = this.parseFecha(f.fechaEmision);
-      if (d) acumHora[d.getHours()] += Number(f.totalFactura || f.total || 0);
+      const d = this.parseFecha(f.fechaEmision || f.fecha || f.createdAt);
+      if (d) acumHora[d.getHours()] += this.obtenerTotalFactura(f);
     });
     const maxHora = Math.max(...acumHora, 1);
     this.calorPorHora = acumHora.map((total, h) => ({
@@ -290,14 +335,11 @@ export class Reportes implements OnInit {
       intensidad: total / maxHora,
     }));
 
-    const ventasAnt = facturasAnterior.reduce(
-      (acc, f) => acc + Number(f.totalFactura || f.total || 0),
-      0
-    );
+    const ventasAnt = facturasAnterior.reduce((acc, f) => acc + this.obtenerTotalFactura(f), 0);
     const facturasAnt = facturasAnterior.length;
     const diasAntSet = new Set(
       facturasAnterior
-        .map((f) => this.parseFecha(f.fechaEmision))
+        .map((f) => this.parseFecha(f.fechaEmision || f.fecha || f.createdAt))
         .filter(Boolean)
         .map((d) => this.keyFecha(d!))
     );
@@ -327,12 +369,10 @@ export class Reportes implements OnInit {
     facturasPeriodo.forEach((f) => {
       const dets = Array.isArray(f.detalles) ? f.detalles : [];
       dets.forEach((d: any) => {
-        const nombre = d.productoNombre || 'Producto';
+        const nombre = d.productoNombre || d.nombre || 'Producto';
         const entry = mapProd.get(nombre) || { unidades: 0, ingresos: 0 };
         entry.unidades += Number(d.cantidad || 0);
-        entry.ingresos += Number(
-          d.subtotalItem || (d.cantidad || 0) * (d.precioUnitario || 0)
-        );
+        entry.ingresos += this.cleanNumber(d.subtotalItem || (Number(d.cantidad || 0) * Number(d.precioUnitario || 0)));
         mapProd.set(nombre, entry);
       });
     });
@@ -348,9 +388,9 @@ export class Reportes implements OnInit {
 
     const mapCli = new Map<string, { total: number; facturas: number }>();
     facturasPeriodo.forEach((f) => {
-      const nombre = f.clienteNombre || f.cliente?.nombre || 'Consumidor Final';
+      const nombre = f.clienteNombre || f.cliente?.nombre || f.nombreCliente || 'Consumidor Final';
       const entry = mapCli.get(nombre) || { total: 0, facturas: 0 };
-      entry.total += Number(f.totalFactura || f.total || 0);
+      entry.total += this.obtenerTotalFactura(f);
       entry.facturas += 1;
       mapCli.set(nombre, entry);
     });
@@ -367,8 +407,8 @@ export class Reportes implements OnInit {
 
     const mapPago = new Map<string, number>();
     facturasPeriodo.forEach((f) => {
-      const fp = (f.formaPago || 'Otro').toString();
-      mapPago.set(fp, (mapPago.get(fp) || 0) + Number(f.totalFactura || f.total || 0));
+      const fp = (f.formaPago || f.metodoPago || 'Otro').toString();
+      mapPago.set(fp, (mapPago.get(fp) || 0) + this.obtenerTotalFactura(f));
     });
     const totalPago = [...mapPago.values()].reduce((a, b) => a + b, 0) || 1;
     this.porFormaPago = [...mapPago.entries()]
@@ -686,7 +726,7 @@ export class Reportes implements OnInit {
         cantidad = mapaDia.get(key)!.cantidad;
       } else {
         cantidad = this.facturasRaw.filter((f) => {
-          const d = this.parseFecha(f.fechaEmision);
+          const d = this.parseFecha(f.fechaEmision || f.fecha || f.createdAt);
           return d && this.keyFecha(d) === key;
         }).length;
       }
@@ -701,23 +741,6 @@ export class Reportes implements OnInit {
 
     const conVenta = keys.filter((k) => (mapaDia.get(k)?.cantidad || 0) > 0);
     this.ultimoDiaVenta = conVenta.length ? conVenta[conVenta.length - 1] : null;
-  }
-
-  private parseFecha(val: any): Date | null {
-    if (val == null || val === '') return null;
-    if (val instanceof Date) return isNaN(val.getTime()) ? null : val;
-    if (Array.isArray(val) && val.length >= 3) {
-      const d = new Date(Number(val[0]), Number(val[1]) - 1, Number(val[2]), 12, 0, 0);
-      return isNaN(d.getTime()) ? null : d;
-    }
-    const s = String(val).trim();
-    const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
-    if (m) {
-      const d = new Date(+m[3], +m[2] - 1, +m[1], 12, 0, 0);
-      return isNaN(d.getTime()) ? null : d;
-    }
-    const d = new Date(s);
-    return isNaN(d.getTime()) ? null : d;
   }
 
   private keyFecha(d: Date): string {
@@ -881,7 +904,7 @@ export class Reportes implements OnInit {
       const cid = this.clienteIdDe(f);
       const ident = f.clienteIdentificacion || f.cliente?.dni || f.dni || null;
       const row = ensure(nombre, cid, ident);
-      const monto = Number(f.totalFactura ?? f.total ?? f.monto ?? 0);
+      const monto = this.obtenerTotalFactura(f);
 
       const num = f.numeroFactura || f.numero || String(f.id || '');
       if (row.facturas.some((x) => x.id === f.id || (num && x.numero === num))) return;
@@ -891,7 +914,7 @@ export class Reportes implements OnInit {
         cantidad: Number(det.cantidad || 0),
         precioUnitario: Number(det.precioUnitario || 0),
         descuento: Number(det.descuento || 0),
-        subtotalItem: Number(det.subtotalItem || 0)
+        subtotalItem: this.cleanNumber(det.subtotalItem || (Number(det.cantidad || 0) * Number(det.precioUnitario || 0)))
       }));
 
       row.facturas.push({
@@ -925,15 +948,16 @@ export class Reportes implements OnInit {
       const cid = c.clienteId ?? c.cliente?.id ?? null;
       const ident = c.clienteIdentificacion || c.clienteDni || c.dni || c.cliente?.dni || this.extraerIdentificacionDeTexto(nombre);
       const row = ensure(nombre, cid, ident);
-      const saldo = Number(c.saldoPendiente ?? 0);
-      const monto = Number(c.montoTotal ?? c.monto ?? 0);
+      
+      const saldo = this.cleanNumber(c.saldoPendiente ?? 0);
+      const monto = this.cleanNumber(c.montoTotal ?? c.monto ?? 0);
+      
       if (c.id != null && row.creditos.some((x) => x.id === c.id)) return;
       row.totalCredito += monto;
       row.saldoPendiente += saldo;
       if (saldo > 0) row.numCuentasCredito += 1;
       const fv = this.parseFecha(c.fechaVencimiento);
 
-      // 🔥 BUSCAMOS LA FACTURA ORIGINAL PARA EXTRAER LOS DETALLES A LA CUENTA DE CRÉDITO
       const numFacturaCredito = c.numeroFactura || c.facturaNumero || c.referencia || c.numero;
       const facturaOriginal = row.facturas.find(f => f.numero === numFacturaCredito);
       
@@ -955,7 +979,6 @@ export class Reportes implements OnInit {
         saldoPendiente: saldo,
         fechaVencimiento: fv ? fv.toLocaleDateString('es-EC') : '—',
         estado: saldo <= 0 ? 'Pagada' : (c.estado || 'Pendiente'),
-        // Añadimos datos para el desglose
         detalles: detallesClonados,
         subtotalIva0: sb0,
         subtotalIvaAplicado: sbAplicado,
@@ -1017,7 +1040,7 @@ export class Reportes implements OnInit {
     this.aplicarFiltroClientes();
   }
 
- aplicarFiltroClientes() {
+  aplicarFiltroClientes() {
     const term = this.busquedaClienteReporte.trim().toLowerCase();
     this.reporteClientesFiltrado = this.reporteClientes.filter((c) => {
       if (this.filtroSoloDeuda && !(c.saldoPendiente > 0)) return false;
@@ -1062,13 +1085,12 @@ export class Reportes implements OnInit {
       if (!match) return;
       const d = this.parseFecha(f.fechaEmision || f.fecha || f.createdAt);
       
-      // 🔥 AQUÍ MAPEO LOS PRODUCTOS EN EL DETALLE AL ABRIR
       const dets: DetalleFacturaResumen[] = (f.detalles || []).map((det: any) => ({
         productoNombre: det.productoNombre || det.nombre || 'Producto',
         cantidad: Number(det.cantidad || 0),
         precioUnitario: Number(det.precioUnitario || 0),
         descuento: Number(det.descuento || 0),
-        subtotalItem: Number(det.subtotalItem || 0)
+        subtotalItem: this.cleanNumber(det.subtotalItem || (Number(det.cantidad || 0) * Number(det.precioUnitario || 0)))
       }));
 
       facturas.push({
@@ -1076,7 +1098,7 @@ export class Reportes implements OnInit {
         numero: f.numeroFactura || f.numero || 'S/N',
         fecha: d ? d.toLocaleDateString('es-EC') : '—',
         tipo: String(f.formaPago || f.metodoPago || '—'),
-        monto: Number(f.totalFactura ?? f.total ?? f.monto ?? 0),
+        monto: this.obtenerTotalFactura(f),
         estado: String(f.estadoSri || f.estado || 'Emitida'),
         subtotalIva0: Number(f.subtotalIva0 || 0),
         subtotalIvaAplicado: Number(f.subtotalIvaAplicado || 0),
@@ -1110,7 +1132,6 @@ export class Reportes implements OnInit {
     this.modalTabCliente = 'facturas';
   }
 
-  // 🔥 NUEVO: Función para alternar el acordeón
   toggleDetallesFactura(f: FacturaClienteResumen) {
     f.showDetalles = !f.showDetalles;
     this.cdr.detectChanges();
@@ -1137,7 +1158,6 @@ export class Reportes implements OnInit {
       const margin = 14;
       let y = 16;
 
-      // 1. Cabecera (Banner Azul)
       doc.setFillColor(23, 42, 70);
       doc.rect(0, 0, pageW, 28, 'F');
       doc.setTextColor(255, 255, 255);
@@ -1152,7 +1172,6 @@ export class Reportes implements OnInit {
       y = 38;
       doc.setTextColor(15, 23, 42);
 
-      // 2. Datos del Cliente
       doc.setFontSize(14);
       doc.setFont('helvetica', 'bold');
       doc.text(this.clienteDetalle.nombre, margin, y);
@@ -1167,7 +1186,6 @@ export class Reportes implements OnInit {
 
       y += 2;
 
-      // 3. Tabla de Resumen (Métricas)
       autoTable(doc, {
         startY: y,
         margin: { left: margin, right: margin },
@@ -1186,7 +1204,6 @@ export class Reportes implements OnInit {
 
       y = (doc as any).lastAutoTable.finalY + 12;
 
-      // 4. Historial de Facturas
       if (this.clienteDetalle.facturas && this.clienteDetalle.facturas.length > 0) {
         this.ensureSpace(doc, y, 30);
         y = (doc as any)._rendimientoY ?? y;
@@ -1215,7 +1232,6 @@ export class Reportes implements OnInit {
         y = (doc as any).lastAutoTable.finalY + 12;
       }
 
-      // 5. Historial de Cuentas por Cobrar (Créditos)
       if (this.clienteDetalle.creditos && this.clienteDetalle.creditos.length > 0) {
         this.ensureSpace(doc, y, 30);
         y = (doc as any)._rendimientoY ?? y;
@@ -1243,7 +1259,6 @@ export class Reportes implements OnInit {
         });
       }
 
-      // 6. Paginación de fondo
       const totalPages = doc.getNumberOfPages();
       for (let i = 1; i <= totalPages; i++) {
         doc.setPage(i);

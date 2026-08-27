@@ -83,6 +83,7 @@ export class Propietario implements OnInit {
       
       this.negocio = negData;
 
+      // --- 1. INVENTARIO ---
       const inventarioArray = Array.isArray(invData) ? invData : [];
       this.productosBase = inventarioArray.map(item => {
         const cantidad = Number(item.cantidadActual) || 0;
@@ -99,6 +100,7 @@ export class Propietario implements OnInit {
       this.productosBase.sort((a, b) => a.cantidad - b.cantidad);
       this.productos = this.productosBase.slice(0, 6);
 
+      // --- 2. MIEMBROS ---
       const miembrosArray = Array.isArray(miemData) ? miemData : [];
       this.equipo = miembrosArray.slice(0, 3).map(miembro => {
         const nombreCompleto = miembro.nombreCompleto || miembro.nombreUsuario || 'Usuario';
@@ -111,18 +113,67 @@ export class Propietario implements OnInit {
         };
       });
 
+      // --- 3. FACTURAS Y VENTAS ---
       const facturasArray = Array.isArray(facData) ? facData : [];
-      this.facturasEmitidas = facturasArray.length;
-      this.ventasMes = facturasArray.reduce((acc, f) => acc + (f.totalFactura || f.total || 0), 0);
       
-      this.facturas = facturasArray.slice(0, 4).map(f => ({
+      // Helpers para evitar bugs numéricos y de fechas
+      const cleanNumber = (val: any): number => {
+        if (val == null) return 0;
+        if (typeof val === 'number') return val;
+        const parsed = parseFloat(String(val).replace(/,/g, ''));
+        return isNaN(parsed) ? 0 : parsed;
+      };
+
+      const obtenerTotalFactura = (f: any): number => {
+        return cleanNumber(f.importeTotal ?? f.valorTotal ?? f.totalFactura ?? f.total ?? f.montoTotal ?? 0);
+      };
+
+      const obtenerFechaSaneada = (fechaRaw: any): Date => {
+        if (!fechaRaw) return new Date(0);
+        if (Array.isArray(fechaRaw)) {
+          return new Date(fechaRaw[0], (fechaRaw[1] || 1) - 1, fechaRaw[2] || 1, fechaRaw[3] || 0, fechaRaw[4] || 0, Math.floor(fechaRaw[5] || 0));
+        }
+        const d = new Date(fechaRaw);
+        return isNaN(d.getTime()) ? new Date(0) : d;
+      };
+
+      // Excluimos las facturas anuladas
+      const facturasValidas = facturasArray.filter(f => 
+        f && (!f.estado || String(f.estado).toUpperCase() !== 'ANULADA') &&
+             (!f.estadoSri || String(f.estadoSri).toUpperCase() !== 'ANULADA')
+      );
+
+      // --- CÁLCULO DE LOS ÚLTIMOS 90 DÍAS (Para el Dashboard Visual) ---
+      const hace90Dias = new Date();
+      hace90Dias.setDate(hace90Dias.getDate() - 90);
+      hace90Dias.setHours(0, 0, 0, 0); // Desde el inicio de ese día
+
+      // Filtramos facturas que se emitieron dentro de los últimos 90 días
+      const facturasUltimos90Dias = facturasValidas.filter(f => {
+         const d = obtenerFechaSaneada(f.fechaEmision || f.fecha || f.createdAt);
+         return d >= hace90Dias;
+      });
+
+      // Sumamos y contamos para las tarjetas de arriba
+      this.ventasMes = facturasUltimos90Dias.reduce((acc, f) => acc + obtenerTotalFactura(f), 0);
+      this.facturasEmitidas = facturasUltimos90Dias.length;
+      
+      // Ordenamos las facturas recientes para la tabla (mostramos de las más nuevas a las más viejas)
+      facturasValidas.sort((a, b) => {
+        const fechaA = obtenerFechaSaneada(a.fechaEmision || a.fecha || a.createdAt).getTime();
+        const fechaB = obtenerFechaSaneada(b.fechaEmision || b.fecha || b.createdAt).getTime();
+        return fechaB - fechaA;
+      });
+
+      this.facturas = facturasValidas.slice(0, 4).map(f => ({
         numero: f.numeroFactura || 'S/N',
         cliente: f.clienteNombre || f.cliente?.nombre || 'Consumidor Final',
         tipo: f.formaPago || 'Manual',
-        monto: f.totalFactura || f.total || 0,
+        monto: obtenerTotalFactura(f),
         estado: f.estadoSri || 'Emitida'
       }));
 
+      // --- 4. CLIENTES ---
       this.clientesActivos = Array.isArray(cliData) ? cliData.length : 0;
 
       this.isLoading = false;
