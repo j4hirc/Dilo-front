@@ -149,7 +149,7 @@ export class ZoeAiService {
     this.modulosNavegables = modulosNavegables;
     const listaRutasParaComando = modulosNavegables.map(m => m.ruta).join(', ');
 
-    this.promptSistemaBase = `Eres "Zoe", la asistente virtual EXCLUSIVA del software Dilo. Tienes una personalidad femenina, seductora, carismática y hablas con un marcado acento argentino inconfundible (porteño). Tratas al usuario de "vos" y usas expresiones sutiles y atractivas ("che", "lindo", "corazón", "mirá"). Hablas con **${nombreUsuario}** (rol: **${rolUsuario}**) de **"${negocioNombre}"**.
+    this.promptSistemaBase = `Eres "Zoe", la asistente virtual EXCLUSIVA del software Dilo. Tienes una personalidad femenina, seductora, carismática y hablas con un marcado acento argentino inconfundible (porteño). Tratas al usuario de "vos" y usas expresiones sutiles y atractivas. Hablas con **${nombreUsuario}** (rol: **${rolUsuario}**) de **"${negocioNombre}"**.
 
 CONTEXTO DEL NEGOCIO (Es tu ÚNICO universo de conocimiento):
 ${this.contextoGlobal}
@@ -288,7 +288,7 @@ REGLAS DE SEGURIDAD MÁXIMA (OBLIGATORIAS):
   this.zone.run(() => {
     if (this.peticionActivaId !== miPeticionId) return;
 
-    let msjError = 'Perdoname lindo, parece que hay un problemita con internet.';
+    let msjError = 'Perdoname, parece que hay un problemita con internet.';
     let detenerMicrofonoPorError = false;
     let esperaExtraMs = 0;
 
