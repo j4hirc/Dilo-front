@@ -466,16 +466,17 @@
         </div>
 
         <div class="modal-cliente-body">
+
+          <!-- Pestaña FACTURAS -->
           <div *ngIf="modalTabCliente === 'facturas'">
             <div class="empty-modal" *ngIf="!(clienteDetalle?.facturas?.length)">
               <div class="empty-icon">📄</div>
               <p>Este cliente aún no tiene facturas registradas.</p>
             </div>
-            
-            <!-- 🔥 LISTA DE FACTURAS TIPO ACORDEÓN -->
+
             <div class="facturas-cliente-list" *ngIf="clienteDetalle?.facturas?.length">
               <div class="factura-item-card" *ngFor="let f of clienteDetalle?.facturas">
-                
+
                 <div class="fac-summary-row" (click)="toggleDetallesFactura(f)">
                   <div class="fac-left">
                     <strong class="fac-num">#{{ f.numero }}</strong>
@@ -483,13 +484,19 @@
                     <span class="tag-pago">{{ f.tipo }}</span>
                   </div>
                   <div class="fac-right">
-                    <span class="tag-estado" [ngClass]="{'pagada': f.estado === 'Autorizada' || f.estado === 'Pagada', 'debe': f.estado === 'Anulada'}">{{ f.estado }}</span>
+                    <span class="tag-estado"
+                          [ngClass]="{'pagada': f.estado === 'Autorizada' || f.estado === 'Pagada', 'debe': f.estado === 'Anulada'}">
+                      {{ f.estado }}
+                    </span>
                     <strong class="money">${{ f.monto | number:'1.2-2' }}</strong>
-                    <svg class="chevron-icon" [class.rotated]="f.showDetalles" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    <svg class="chevron-icon" [class.rotated]="f.showDetalles"
+                         xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                         viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
                   </div>
                 </div>
 
-                <!-- 🔥 DESPLIEGABLE CON LOS PRODUCTOS Y DESGLOSE -->
                 <div class="fac-details-dropdown fade-in" *ngIf="f.showDetalles">
                   <table class="sub-table-detalles">
                     <thead>
@@ -513,7 +520,6 @@
                     </tbody>
                   </table>
 
-                  <!-- Totales de la factura individual -->
                   <div class="fac-mini-totales">
                     <div *ngIf="f.subtotalIvaAplicado > 0">Subtotal Gravado: ${{ f.subtotalIvaAplicado | number:'1.2-2' }}</div>
                     <div *ngIf="f.subtotalIva0 > 0">Subtotal Exento: ${{ f.subtotalIva0 | number:'1.2-2' }}</div>
@@ -522,49 +528,89 @@
                     <div class="total-final">Total: ${{ f.monto | number:'1.2-2' }}</div>
                   </div>
                 </div>
-
               </div>
             </div>
           </div>
 
+          <!-- Pestaña CRÉDITO + HISTORIAL DE ABONOS -->
           <div *ngIf="modalTabCliente === 'credito'">
             <div class="empty-modal" *ngIf="!(clienteDetalle?.creditos?.length)">
               <div class="empty-icon">💳</div>
               <p>Sin cuentas de crédito para este cliente.</p>
             </div>
-            <div class="table-responsive" *ngIf="clienteDetalle?.creditos?.length">
-              <table class="data-table modal-table">
-                <thead>
-                  <tr>
-                    <th>Referencia</th>
-                    <th>Vence</th>
-                    <th>Estado</th>
-                    <th class="num">Monto</th>
-                    <th class="num">Saldo</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr *ngFor="let cr of clienteDetalle?.creditos">
-                    <td><strong>{{ cr.factura }}</strong></td>
-                    <td class="muted-cell">{{ cr.fechaVencimiento }}</td>
-                    <td>
-                      <span class="badge-estado" [class.pagada]="cr.saldoPendiente <= 0" [class.debe]="cr.saldoPendiente > 0">{{ cr.estado }}</span>
-                    </td>
-                    <td class="num">${{ cr.montoTotal | number:'1.2-2' }}</td>
-                    <td class="num money" [class.debt-val]="cr.saldoPendiente > 0" [class.ok-val]="!(cr.saldoPendiente > 0)">
+
+            <div class="facturas-cliente-list" *ngIf="clienteDetalle?.creditos?.length">
+              <div class="factura-item-card" *ngFor="let cr of clienteDetalle?.creditos">
+
+                <div class="fac-summary-row" (click)="toggleAbonosCredito(cr)">
+                  <div class="fac-left">
+                    <strong class="fac-num">{{ cr.factura }}</strong>
+                    <span class="muted-cell">Vence: {{ cr.fechaVencimiento }}</span>
+                    <span class="tag-pago"
+                          [class.debe]="cr.saldoPendiente > 0"
+                          [class.pagada]="cr.saldoPendiente <= 0">
+                      {{ cr.estado }}
+                    </span>
+                  </div>
+                  <div class="fac-right">
+                    <span class="muted-cell">Original: ${{ cr.montoTotal | number:'1.2-2' }}</span>
+                    <strong class="money"
+                            [class.debt-val]="cr.saldoPendiente > 0"
+                            [class.ok-val]="!(cr.saldoPendiente > 0)">
                       ${{ cr.saldoPendiente | number:'1.2-2' }}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+                    </strong>
+                    <svg class="chevron-icon" [class.rotated]="cr.showAbonos"
+                         xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                         viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                  </div>
+                </div>
+
+                <div class="fac-details-dropdown fade-in" *ngIf="cr.showAbonos">
+                  <div *ngIf="!(cr.historialAbonos?.length)" class="empty-mini" style="padding: 12px;">
+                    Aún no hay abonos registrados en esta cuenta.
+                  </div>
+
+                  <table class="sub-table-detalles" *ngIf="cr.historialAbonos?.length">
+                    <thead>
+                      <tr>
+                        <th>Fecha</th>
+                        <th>Método</th>
+                        <th>Referencia</th>
+                        <th class="num">Monto abonado</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let ab of cr.historialAbonos">
+                        <td>{{ ab.fecha }}</td>
+                        <td>{{ ab.metodoPago }}</td>
+                        <td class="muted-cell">{{ ab.referencia || '—' }}</td>
+                        <td class="num">
+                          <strong style="color:#16a34a">+${{ ab.monto | number:'1.2-2' }}</strong>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+
+                  <div class="fac-mini-totales" *ngIf="cr.historialAbonos?.length">
+                    <div>
+                      Total abonado:
+                      <strong>${{ (cr.montoTotal - cr.saldoPendiente) | number:'1.2-2' }}</strong>
+                    </div>
+                    <div class="total-final" [class.debt-val]="cr.saldoPendiente > 0">
+                      Saldo pendiente: ${{ cr.saldoPendiente | number:'1.2-2' }}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+
+        </div><!-- fin modal-cliente-body -->
 
         <div class="modal-cliente-footer" style="display: flex; justify-content: space-between; align-items: center;">
-          
-          <!-- Botón PDF mejorado con color Rojo y sombra -->
-          <button type="button" class="btn-primary" (click)="exportarPdfCliente()" 
+          <button type="button" class="btn-primary" (click)="exportarPdfCliente()"
                   style="display: flex; align-items: center; gap: 6px; padding: 8px 16px; font-size: 0.85rem; background-color: #dc2626; border-color: #dc2626; box-shadow: 0 4px 6px -1px rgba(220, 38, 38, 0.3);">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
