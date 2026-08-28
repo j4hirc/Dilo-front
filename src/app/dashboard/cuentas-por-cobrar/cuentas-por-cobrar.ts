@@ -93,17 +93,25 @@ export class CuentasPorCobrar implements OnInit {
       next: (data) => {
         setTimeout(() => {
           let mapeadas = Array.isArray(data)
-            ? data.map(c => {
-              const nombre = this.obtenerNombreCliente(c);
-              const identificacion = c.clienteIdentificacion || c.cliente?.dni || c.dni || '';
-              return {
-                ...c,
-                showCuotas: false,
-                clienteNombre: nombre || 'Sin nombre',
-                identificacionFinal: identificacion
-              };
-            })
-            : [];
+  ? data.map(c => {
+      const nombre = this.obtenerNombreCliente(c) || 'Sin nombre';
+      const identificacion = c.clienteIdentificacion || c.cliente?.dni || c.dni || '';
+      
+      // PRE-CALCULAMOS TODO AQUÍ PARA AHORRAR CPU LUEGO
+      return {
+        ...c,
+        showCuotas: false,
+        clienteNombre: nombre,
+        identificacionFinal: identificacion,
+        
+        // Optimizaciones de búsqueda y fechas (NUEVO)
+        _searchClienteNombre: this.limpiarTexto(nombre),
+        _searchFactura: this.limpiarTexto(c.numeroFactura ?? ''),
+        _searchIdentificacion: this.limpiarTexto(identificacion),
+        _fechaVencimientoTs: c.fechaVencimiento ? new Date(c.fechaVencimiento).getTime() : 0
+      };
+    })
+  : [];
             
           // 🔥 MAGIA: Filtramos y ELIMINAMOS a los "Consumidor Final" para siempre
           this.cuentasBase = mapeadas.filter(c => 
