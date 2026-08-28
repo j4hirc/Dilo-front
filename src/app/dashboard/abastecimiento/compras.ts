@@ -156,8 +156,9 @@ export class Compras implements OnInit {
   }
 
   agregarDetalle() {
-    if (!this.detalleTemp.productoId || this.detalleTemp.cantidad <= 0 || this.detalleTemp.costoUnitario < 0) {
-      Swal.fire('Atención', 'Selecciona un producto y verifica la cantidad/costo.', 'warning');
+    // CAMBIO AQUI: costoUnitario <= 0 (antes era < 0)
+    if (!this.detalleTemp.productoId || this.detalleTemp.cantidad <= 0 || this.detalleTemp.costoUnitario <= 0) {
+      Swal.fire('Atención', 'Selecciona un producto y verifica que la cantidad y el costo sean mayores a 0.', 'warning');
       return;
     }
 
