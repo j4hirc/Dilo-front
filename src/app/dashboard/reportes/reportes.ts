@@ -155,12 +155,12 @@ export class Reportes implements OnInit {
       this.cdr.detectChanges();
     }
   }
-
-  cambiarPeriodo(dias: number) {
-    this.periodoDias = dias;
-    this.procesarMetricas();
-    this.procesarReporteClientes();
-  }
+cambiarPeriodo(dias: number) {
+  this.periodoDias = dias;
+  this.procesarMetricas();
+  this.procesarReporteClientes();
+  this.cdr.detectChanges();   
+}
 
   private getHeaders(): HttpHeaders {
     const rawToken = localStorage.getItem('dilo_token') || '';
@@ -249,121 +249,131 @@ export class Reportes implements OnInit {
     });
   }
 
-  private procesarMetricas() {
-    const ahora = new Date();
-    const inicioPeriodo = this.inicioDia(this.restarDias(ahora, this.periodoDias - 1));
-    const inicioAnterior = this.inicioDia(this.restarDias(inicioPeriodo, this.periodoDias));
-    const finAnterior = this.inicioDia(this.restarDias(inicioPeriodo, 1));
+ private procesarMetricas() {
+  const ahora = new Date();
+  const inicioPeriodo = this.inicioDia(this.restarDias(ahora, this.periodoDias - 1));
+  const inicioAnterior = this.inicioDia(this.restarDias(inicioPeriodo, this.periodoDias));
+  const finAnterior = this.inicioDia(this.restarDias(inicioPeriodo, 1));
 
-    const facturasPeriodo = this.facturasRaw.filter((f) => {
-      const d = this.parseFecha(f.fechaEmision || f.fecha || f.createdAt);
-      return d && d >= inicioPeriodo && d <= ahora;
-    });
+  // ── Clave: comparamos solo la fecha (YYYY-MM-DD) ──
+  const hoyKey = this.keyFecha(ahora);
+  const inicioKey = this.keyFecha(inicioPeriodo);
+  const inicioAntKey = this.keyFecha(inicioAnterior);
+  const finAntKey = this.keyFecha(finAnterior);
 
-    const facturasAnterior = this.facturasRaw.filter((f) => {
-      const d = this.parseFecha(f.fechaEmision || f.fecha || f.createdAt);
-      return d && d >= inicioAnterior && d <= finAnterior;
-    });
+  const facturasPeriodo = this.facturasRaw.filter((f) => {
+    const d = this.parseFecha(f.fechaEmision || f.fecha || f.createdAt);
+    if (!d) return false;
+    const key = this.keyFecha(d);
+    return key >= inicioKey && key <= hoyKey;
+  });
 
-    this.ventasPeriodo = facturasPeriodo.reduce((acc, f) => acc + this.obtenerTotalFactura(f), 0);
-    this.facturasPeriodo = facturasPeriodo.length;
+  const facturasAnterior = this.facturasRaw.filter((f) => {
+    const d = this.parseFecha(f.fechaEmision || f.fecha || f.createdAt);
+    if (!d) return false;
+    const key = this.keyFecha(d);
+    return key >= inicioAntKey && key <= finAntKey;
+  });
 
-    const mapaDia = new Map<string, { total: number; cantidad: number }>();
-    for (let i = 0; i < this.periodoDias; i++) {
-      const d = this.restarDias(ahora, this.periodoDias - 1 - i);
-      mapaDia.set(this.keyFecha(d), { total: 0, cantidad: 0 });
-    }
+  this.ventasPeriodo = facturasPeriodo.reduce((acc, f) => acc + this.obtenerTotalFactura(f), 0);
+  this.facturasPeriodo = facturasPeriodo.length;
 
-    facturasPeriodo.forEach((f) => {
-      const d = this.parseFecha(f.fechaEmision || f.fecha || f.createdAt);
-      if (!d) return;
-      const key = this.keyFecha(d);
-      const entry = mapaDia.get(key) || { total: 0, cantidad: 0 };
-      entry.total += this.obtenerTotalFactura(f);
-      entry.cantidad += 1;
-      mapaDia.set(key, entry);
-    });
+  const mapaDia = new Map<string, { total: number; cantidad: number }>();
+  for (let i = 0; i < this.periodoDias; i++) {
+    const d = this.restarDias(ahora, this.periodoDias - 1 - i);
+    mapaDia.set(this.keyFecha(d), { total: 0, cantidad: 0 });
+  }
 
-    this.diasConVenta = [...mapaDia.values()].filter((v) => v.cantidad > 0).length;
+  facturasPeriodo.forEach((f) => {
+    const d = this.parseFecha(f.fechaEmision || f.fecha || f.createdAt);
+    if (!d) return;
+    const key = this.keyFecha(d);
+    const entry = mapaDia.get(key) || { total: 0, cantidad: 0 };
+    entry.total += this.obtenerTotalFactura(f);
+    entry.cantidad += 1;
+    mapaDia.set(key, entry);
+  });
 
-    const maxTotal = Math.max(...[...mapaDia.values()].map((v) => v.total), 1);
-    this.maxCalorDia = maxTotal;
-    this.heatmapDias = [...mapaDia.entries()].map(([fecha, v]) => {
-      const d = new Date(fecha + 'T12:00:00');
-      return {
-        fecha,
-        label: this.fmtDiaMes(d),
-        diaSemana: this.nombreDiaCorto(d),
-        total: v.total,
-        cantidad: v.cantidad,
-        intensidad: v.total / maxTotal,
-      };
-    });
+  this.diasConVenta = [...mapaDia.values()].filter((v) => v.cantidad > 0).length;
 
-    const ultimos = this.heatmapDias.slice(-Math.min(14, this.periodoDias));
-    const maxBarra = Math.max(...ultimos.map((d) => d.total), 1);
-    this.serieDiaria = ultimos.map((d) => ({
-      label: d.label,
-      total: d.total,
-      altura: Math.max(4, Math.round((d.total / maxBarra) * 100)),
-    }));
+  const maxTotal = Math.max(...[...mapaDia.values()].map((v) => v.total), 1);
+  this.maxCalorDia = maxTotal;
+  this.heatmapDias = [...mapaDia.entries()].map(([fecha, v]) => {
+    const d = new Date(fecha + 'T12:00:00');
+    return {
+      fecha,
+      label: this.fmtDiaMes(d),
+      diaSemana: this.nombreDiaCorto(d),
+      total: v.total,
+      cantidad: v.cantidad,
+      intensidad: v.total / maxTotal,
+    };
+  });
 
-    this.calcularRachas(mapaDia, ahora);
+  const ultimos = this.heatmapDias.slice(-Math.min(14, this.periodoDias));
+  const maxBarra = Math.max(...ultimos.map((d) => d.total), 1);
+  this.serieDiaria = ultimos.map((d) => ({
+    label: d.label,
+    total: d.total,
+    altura: Math.max(4, Math.round((d.total / maxBarra) * 100)),
+  }));
 
-    const diasSem = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-    const acumDia = new Array(7).fill(0);
-    facturasPeriodo.forEach((f) => {
-      const d = this.parseFecha(f.fechaEmision || f.fecha || f.createdAt);
-      if (d) acumDia[d.getDay()] += this.obtenerTotalFactura(f);
-    });
-    const maxDiaSem = Math.max(...acumDia, 1);
-    this.calorPorDiaSemana = diasSem.map((nombre, i) => ({
-      nombre,
-      total: acumDia[i],
-      intensidad: acumDia[i] / maxDiaSem,
-    }));
+  this.calcularRachas(mapaDia, ahora);
 
-    const acumHora = new Array(24).fill(0);
-    facturasPeriodo.forEach((f) => {
-      const d = this.parseFecha(f.fechaEmision || f.fecha || f.createdAt);
-      if (d) acumHora[d.getHours()] += this.obtenerTotalFactura(f);
-    });
-    const maxHora = Math.max(...acumHora, 1);
-    this.calorPorHora = acumHora.map((total, h) => ({
-      hora: `${h.toString().padStart(2, '0')}:00`,
-      total,
-      intensidad: total / maxHora,
-    }));
+  const diasSem = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+  const acumDia = new Array(7).fill(0);
+  facturasPeriodo.forEach((f) => {
+    const d = this.parseFecha(f.fechaEmision || f.fecha || f.createdAt);
+    if (d) acumDia[d.getDay()] += this.obtenerTotalFactura(f);
+  });
+  const maxDiaSem = Math.max(...acumDia, 1);
+  this.calorPorDiaSemana = diasSem.map((nombre, i) => ({
+    nombre,
+    total: acumDia[i],
+    intensidad: acumDia[i] / maxDiaSem,
+  }));
 
-    const ventasAnt = facturasAnterior.reduce((acc, f) => acc + this.obtenerTotalFactura(f), 0);
-    const facturasAnt = facturasAnterior.length;
-    const diasAntSet = new Set(
-      facturasAnterior
-        .map((f) => this.parseFecha(f.fechaEmision || f.fecha || f.createdAt))
-        .filter(Boolean)
-        .map((d) => this.keyFecha(d!))
-    );
+  const acumHora = new Array(24).fill(0);
+  facturasPeriodo.forEach((f) => {
+    const d = this.parseFecha(f.fechaEmision || f.fecha || f.createdAt);
+    if (d) acumHora[d.getHours()] += this.obtenerTotalFactura(f);
+  });
+  const maxHora = Math.max(...acumHora, 1);
+  this.calorPorHora = acumHora.map((total, h) => ({
+    hora: `${h.toString().padStart(2, '0')}:00`,
+    total,
+    intensidad: total / maxHora,
+  }));
 
-    this.comparativas = [
-      {
-        label: 'Ventas totales',
-        actual: this.ventasPeriodo,
-        anterior: ventasAnt,
-        variacion: this.variacionPct(this.ventasPeriodo, ventasAnt),
-      },
-      {
-        label: 'Facturas emitidas',
-        actual: this.facturasPeriodo,
-        anterior: facturasAnt,
-        variacion: this.variacionPct(this.facturasPeriodo, facturasAnt),
-      },
-      {
-        label: 'Días con venta',
-        actual: this.diasConVenta,
-        anterior: diasAntSet.size,
-        variacion: this.variacionPct(this.diasConVenta, diasAntSet.size),
-      },
-    ];
+  const ventasAnt = facturasAnterior.reduce((acc, f) => acc + this.obtenerTotalFactura(f), 0);
+  const facturasAnt = facturasAnterior.length;
+  const diasAntSet = new Set(
+    facturasAnterior
+      .map((f) => this.parseFecha(f.fechaEmision || f.fecha || f.createdAt))
+      .filter(Boolean)
+      .map((d) => this.keyFecha(d!))
+  );
+
+  this.comparativas = [
+    {
+      label: 'Ventas totales',
+      actual: this.ventasPeriodo,
+      anterior: ventasAnt,
+      variacion: this.variacionPct(this.ventasPeriodo, ventasAnt),
+    },
+    {
+      label: 'Facturas emitidas',
+      actual: this.facturasPeriodo,
+      anterior: facturasAnt,
+      variacion: this.variacionPct(this.facturasPeriodo, facturasAnt),
+    },
+    {
+      label: 'Días con venta',
+      actual: this.diasConVenta,
+      anterior: diasAntSet.size,
+      variacion: this.variacionPct(this.diasConVenta, diasAntSet.size),
+    },
+  ];
 
     const mapProd = new Map<string, { unidades: number; ingresos: number }>();
     facturasPeriodo.forEach((f) => {
