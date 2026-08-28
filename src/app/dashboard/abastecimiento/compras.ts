@@ -49,11 +49,20 @@ export class Compras implements OnInit {
   };
 
   productoRequiereCaducidad = false;
+  fechaMinimaCaducidad: string = ''; 
 
   ngOnInit(): void {
     const userStr = localStorage.getItem('usuario');
     const usuarioLogueado = userStr ? JSON.parse(userStr) : null;
     this.negocioId = usuarioLogueado?.negocioId;
+
+    const manana = new Date();
+    manana.setDate(manana.getDate() + 1); // Sumamos un día para que sea estrictamente mayor a hoy
+    // Formatear a YYYY-MM-DD ajustando a la zona horaria local (Ecuador)
+    const year = manana.getFullYear();
+    const month = (manana.getMonth() + 1).toString().padStart(2, '0');
+    const day = manana.getDate().toString().padStart(2, '0');
+    this.fechaMinimaCaducidad = `${year}-${month}-${day}`;
 
     if (this.negocioId) {
       this.cargarCompras(this.negocioId);
@@ -156,15 +165,29 @@ export class Compras implements OnInit {
   }
 
   agregarDetalle() {
-    // CAMBIO AQUI: costoUnitario <= 0 (antes era < 0)
     if (!this.detalleTemp.productoId || this.detalleTemp.cantidad <= 0 || this.detalleTemp.costoUnitario <= 0) {
       Swal.fire('Atención', 'Selecciona un producto y verifica que la cantidad y el costo sean mayores a 0.', 'warning');
       return;
     }
 
-    if (this.productoRequiereCaducidad && !this.detalleTemp.fechaCaducidad) {
-      Swal.fire('Caducidad Obligatoria', 'Este producto está marcado como perecedero. Debes ingresar su fecha de caducidad.', 'error');
-      return;
+    if (this.productoRequiereCaducidad) {
+      if (!this.detalleTemp.fechaCaducidad) {
+        Swal.fire('Caducidad Obligatoria', 'Este producto está marcado como perecedero. Debes ingresar su fecha de caducidad.', 'error');
+        return;
+      }
+      
+      // NUEVA VALIDACIÓN: Verificar que la fecha sea mayor a hoy
+      // Comparamos los strings 'YYYY-MM-DD' directamente, lo cual es seguro en este formato
+      const hoy = new Date();
+      const yearHoy = hoy.getFullYear();
+      const monthHoy = (hoy.getMonth() + 1).toString().padStart(2, '0');
+      const dayHoy = hoy.getDate().toString().padStart(2, '0');
+      const fechaHoyStr = `${yearHoy}-${monthHoy}-${dayHoy}`;
+
+      if (this.detalleTemp.fechaCaducidad <= fechaHoyStr) {
+        Swal.fire('Fecha Inválida', 'La fecha de caducidad debe ser mayor a la fecha actual.', 'error');
+        return;
+      }
     }
 
     const indexExistente = this.compraForm.detalles.findIndex(d => d.productoId === this.detalleTemp.productoId && d.costoUnitario === this.detalleTemp.costoUnitario);
