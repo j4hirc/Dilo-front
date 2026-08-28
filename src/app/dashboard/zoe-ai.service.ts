@@ -284,33 +284,56 @@ REGLAS DE SEGURIDAD MÁXIMA (OBLIGATORIAS):
           });
         },
         error: (err) => {
-          this.zone.run(() => {
-            if (this.peticionActivaId !== miPeticionId) return;
+  console.error('Error Groq API:', err.status, err.error);
+  this.zone.run(() => {
+    if (this.peticionActivaId !== miPeticionId) return;
 
-            let msjError = 'Perdoname lindo, parece que hay un problemita con internet.';
-            let detenerMicrofonoPorError = false;
+    let msjError = 'Perdoname lindo, parece que hay un problemita con internet.';
+    let detenerMicrofonoPorError = false;
+    let esperaExtraMs = 0;
 
-            if (err.status === 429) {
-              msjError = 'Bancame un segundito, corazón. Me estás hablando muy rápido, decímelo un poco más despacio por favor.';
-              detenerMicrofonoPorError = false;
-            }
+    if (err.status === 429) {
+      // Intenta usar el tiempo real que Groq pide esperar (header Retry-After, en segundos)
+      const retryAfterHeader = err.headers?.get ? err.headers.get('retry-after') : null;
+      const retryAfterSeg = retryAfterHeader ? parseInt(retryAfterHeader, 10) : null;
+      esperaExtraMs = retryAfterSeg && !isNaN(retryAfterSeg) ? retryAfterSeg * 1000 : 15000; // fallback 15s
 
-            this.chatMensajesSubject.next([
-              ...this.chatMensajesSubject.value,
-              { role: 'assistant', text: msjError, safeHtml: this.formatearMensaje(msjError) }
-            ]);
+      msjError = 'Bancame un segundito, corazón. Me estás hablando muy rápido, dame un respiro y volvé a hablarme en un ratito.';
+      // CLAVE: cortamos el ciclo de escucha automática para no encadenar más 429.
+      // El usuario tendrá que tocar el micrófono de nuevo cuando quiera reintentar.
+      detenerMicrofonoPorError = true;
+      this.keepListeningActive = false;
+    } else if (err.status === 400 || err.status === 413) {
+      msjError = 'Uy corazón, veníamos hablando tanto que se me llenó la cabeza jaja. ¿Podés repetirme más cortito?';
+    }
 
-            this.isChatLoadingSubject.next(false);
+    this.chatMensajesSubject.next([
+      ...this.chatMensajesSubject.value,
+      { role: 'assistant', text: msjError, safeHtml: this.formatearMensaje(msjError) }
+    ]);
 
-            if (responderConVoz) {
-              this.hablar(msjError, () => {
-                if (this.keepListeningActive && !detenerMicrofonoPorError) this.iniciarEscucha();
-              });
-            } else {
-              if (this.keepListeningActive && !detenerMicrofonoPorError) this.iniciarEscucha();
-            }
-          });
-        }
+    this.isChatLoadingSubject.next(false);
+
+    const reactivar = () => {
+      if (responderConVoz && !detenerMicrofonoPorError) {
+        this.hablar(msjError, () => {
+          if (this.keepListeningActive) this.iniciarEscucha();
+        });
+      } else if (responderConVoz) {
+        // Igual queremos que lo escuche, pero SIN reactivar el micrófono después
+        this.hablar(msjError);
+      } else {
+        if (this.keepListeningActive && !detenerMicrofonoPorError) this.iniciarEscucha();
+      }
+    };
+
+    if (esperaExtraMs > 0) {
+      setTimeout(reactivar, esperaExtraMs);
+    } else {
+      reactivar();
+    }
+  });
+}
       });
   }
 
@@ -452,7 +475,7 @@ REGLAS DE SEGURIDAD MÁXIMA (OBLIGATORIAS):
     } catch (e) { }
   }
 
-  
+
   private dividirEnFrases(texto: string): string[] {
     // Protege los números decimales (ej: "1250.00") para que el punto no se
     // confunda con un punto final y corte la oración en medio de una cifra.
@@ -574,15 +597,15 @@ REGLAS DE SEGURIDAD MÁXIMA (OBLIGATORIAS):
   private formatearMensaje(texto: string): SafeHtml {
     if (!texto) return '';
     let html = texto.trim();
-    
+
     html = html.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    
+
     html = html.replace(/^### (.*$)/gim, '<h4 style="margin: 14px 0 6px; font-weight: 700; color: var(--primary-orange, #ea580c); font-size: 1.05em;">$1</h4>');
     html = html.replace(/^## (.*$)/gim, '<h3 style="margin: 16px 0 8px; font-weight: 700; color: var(--primary-orange, #ea580c); font-size: 1.15em;">$1</h3>');
     html = html.replace(/^# (.*$)/gim, '<h2 style="margin: 18px 0 10px; font-weight: 700; color: var(--primary-orange, #c2410c); font-size: 1.25em;">$1</h2>');
-    
+
     html = html.replace(/\*\*([\s\S]*?)\*\*/g, '<strong style="color: var(--primary-orange, #ea580c); font-weight: 600;">$1</strong>');
-    
+
     html = html.replace(/\|/g, '');
     html = html.replace(/---/g, '<hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 12px 0;">');
 
@@ -592,7 +615,7 @@ REGLAS DE SEGURIDAD MÁXIMA (OBLIGATORIAS):
 
     for (let linea of lineas) {
       linea = linea.trim();
-      
+
       // Manejo de líneas vacías (saltos de línea)
       if (!linea) {
         if (dentroDeLista) {
@@ -627,9 +650,9 @@ REGLAS DE SEGURIDAD MÁXIMA (OBLIGATORIAS):
     }
 
     if (dentroDeLista) resultado += '</ul>';
-    
+
     resultado = resultado.replace(/^(<br>)+/, '').replace(/(<br>)+$/, '');
-    
+
     return this.sanitizer.bypassSecurityTrustHtml(resultado);
   }
 }
