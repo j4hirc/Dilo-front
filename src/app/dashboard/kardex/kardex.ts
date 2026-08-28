@@ -6,6 +6,8 @@ import { RouterLink } from '@angular/router';
 import { environment } from '../../../environments/environment';
 import Swal from 'sweetalert2';
 import { NgSelectModule } from '@ng-select/ng-select';
+import { Subject } from 'rxjs';
+import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 
 @Component({
   selector: 'app-kardex',
@@ -17,6 +19,10 @@ import { NgSelectModule } from '@ng-select/ng-select';
 export class Kardex implements OnInit {
   private http = inject(HttpClient);
   private cdr = inject(ChangeDetectorRef);
+  searchSubject = new Subject<string>();
+  paginaActual: number = 1;
+elementosPorPagina: number = 50;
+kardexPaginado: any[] = [];
 
   kardex: any[] = [];
   kardexFiltrado: any[] = [];
@@ -53,7 +59,10 @@ export class Kardex implements OnInit {
   ngOnInit(): void {
     const userStr = localStorage.getItem('usuario');
     const usuarioLogueado = userStr ? JSON.parse(userStr) : null;
+
     this.negocioId = usuarioLogueado?.negocioId;
+
+
 
     if (this.negocioId) {
       this.cargarKardex(this.negocioId);
@@ -64,6 +73,18 @@ export class Kardex implements OnInit {
         this.cdr.detectChanges();
       });
     }
+
+    this.searchSubject.pipe(
+      debounceTime(400), // Espera 400ms después de la última tecla
+      distinctUntilChanged() // Solo ejecuta si el texto realmente cambió
+    ).subscribe(term => {
+      this.searchTerm = term;
+      this.aplicarFiltros();
+    });
+  }
+
+  onSearchInput(event: any) {
+    this.searchSubject.next(event.target.value);
   }
 
   private getAuthHeaders(): HttpHeaders {
@@ -120,11 +141,19 @@ export class Kardex implements OnInit {
   }
 
   aplicarFiltros() {
+
+    let inicioTimeStamp: number | null = null;
+let finTimeStamp: number | null = null;
     let result = this.kardex;
+    this.kardexFiltrado = result;
 
     if (this.filtroTipo) {
       result = result.filter(k => k.tipo === this.filtroTipo);
     }
+
+    this.paginaActual = 1; // Volver a la página 1 tras filtrar
+  this.actualizarPaginacion();
+  this.cdr.detectChanges();
 
     if (this.bodegaFiltro && this.bodegaFiltro !== '') {
       const idBodegaBuscada = Number(this.bodegaFiltro);
@@ -147,6 +176,16 @@ export class Kardex implements OnInit {
       const finDate = new Date(this.fechaFin + 'T23:59:59');
       result = result.filter(k => new Date(k.fechaTransaccion).getTime() <= finDate.getTime());
     }
+
+    if (inicioTimeStamp || finTimeStamp) {
+    result = result.filter(k => {
+        const timeK = new Date(k.fechaTransaccion).getTime();
+        let pasaFiltro = true;
+        if (inicioTimeStamp) pasaFiltro = pasaFiltro && (timeK >= inicioTimeStamp);
+        if (finTimeStamp) pasaFiltro = pasaFiltro && (timeK <= finTimeStamp);
+        return pasaFiltro;
+    });
+}
 
     if (this.searchTerm.trim()) {
       const term = this.searchTerm.toLowerCase();
@@ -183,6 +222,21 @@ export class Kardex implements OnInit {
     this.showModal = false;
     this.cdr.detectChanges();
   }
+
+  actualizarPaginacion() {
+  const inicio = (this.paginaActual - 1) * this.elementosPorPagina;
+  const fin = inicio + this.elementosPorPagina;
+  this.kardexPaginado = this.kardexFiltrado.slice(inicio, fin);
+}
+
+cambiarPagina(incremento: number) {
+  this.paginaActual += incremento;
+  this.actualizarPaginacion();
+}
+
+get totalPaginas(): number {
+  return Math.ceil(this.kardexFiltrado.length / this.elementosPorPagina);
+}
 
   onTipoChange() {
     this.transaccionForm.bodegaOrigenId = null;
@@ -308,9 +362,9 @@ export class Kardex implements OnInit {
       { headers }
     ).subscribe({
       next: () => {
-        Swal.close(); 
-        
-        this.cerrarModal(); 
+        Swal.close();
+
+        this.cerrarModal();
 
         Swal.fire({
           title: '¡Éxito!',
@@ -387,22 +441,22 @@ export class Kardex implements OnInit {
       if (result.isConfirmed && this.negocioId) {
         const headers = this.getAuthHeaders();
         Swal.fire({ title: 'Guardando...', didOpen: () => Swal.showLoading() });
-        
+
         this.http.post<any>(`${this.apiUrl}/negocios/${this.negocioId}/bodegas`, result.value, { headers }).subscribe({
           next: (nuevaBodega) => {
             Swal.close();
             this.http.get<any[]>(`${this.apiUrl}/negocios/${this.negocioId}/bodegas`, { headers }).subscribe(res => {
               this.bodegas = res || [];
               this.bodegasOrigenDisponibles = [...this.bodegas]; // Actualizamos lista visual
-              
+
               const idBodegaCreada = nuevaBodega?.id || res[res.length - 1]?.id;
-              
+
               // Asignamos según qué botón presionó
               if (tipo === 'origen') {
-                  this.transaccionForm.bodegaOrigenId = idBodegaCreada;
-                  this.onBodegaOrigenChange();
+                this.transaccionForm.bodegaOrigenId = idBodegaCreada;
+                this.onBodegaOrigenChange();
               } else {
-                  this.transaccionForm.bodegaDestinoId = idBodegaCreada;
+                this.transaccionForm.bodegaDestinoId = idBodegaCreada;
               }
               this.cdr.detectChanges();
             });
@@ -419,15 +473,15 @@ export class Kardex implements OnInit {
   crearProductoRapido() {
     let opcionesCategorias = '<option value="">-- Selecciona una categoría --</option>';
     const headers = this.getAuthHeaders();
-    
+
     Swal.fire({ title: 'Preparando...', didOpen: () => Swal.showLoading() });
-    
+
     this.http.get<any[]>(`${this.apiUrl}/negocios/${this.negocioId}/categorias`, { headers }).subscribe({
       next: (categorias) => {
         const siguienteCodigo = this.generarSiguienteCodigo();
 
         categorias.forEach(cat => {
-            opcionesCategorias += `<option value="${cat.id}">${cat.nombre}</option>`;
+          opcionesCategorias += `<option value="${cat.id}">${cat.nombre}</option>`;
         });
 
         Swal.fire({
@@ -468,7 +522,7 @@ export class Kardex implements OnInit {
             const categoriaVal = (document.getElementById('swal-prod-cat') as HTMLSelectElement).value;
             const grabaIva = (document.getElementById('swal-prod-iva') as HTMLInputElement).checked;
             const tieneCaducidad = (document.getElementById('swal-prod-cad') as HTMLInputElement).checked;
-            
+
             if (!nombre || !categoriaVal) {
               Swal.showValidationMessage('Nombre y Categoría son obligatorios');
               return false;
@@ -477,35 +531,35 @@ export class Kardex implements OnInit {
             const codigoFinal = codigoRaw || 'S/C';
 
             return {
-              codigo: codigoFinal, 
-              codigoPrincipal: codigoFinal, 
-              nombre: nombre, 
-              marca: 'Sin marca', 
-              precio: 0, 
-              precioUnitario: 0, 
+              codigo: codigoFinal,
+              codigoPrincipal: codigoFinal,
+              nombre: nombre,
+              marca: 'Sin marca',
+              precio: 0,
+              precioUnitario: 0,
               categoriaId: Number(categoriaVal),
-              grabaIva: grabaIva, 
-              unidadMedida: 'UNIDADES', 
+              grabaIva: grabaIva,
+              unidadMedida: 'UNIDADES',
               tieneCaducidad: tieneCaducidad
             };
           }
         }).then((result) => {
           if (result.isConfirmed && this.negocioId) {
             Swal.fire({ title: 'Creando producto...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-            
+
             const formData = new FormData();
             formData.append('datos', new Blob([JSON.stringify(result.value)], { type: 'application/json' }));
-            
+
             this.http.post<any>(`${this.apiUrl}/negocios/${this.negocioId}/productos`, formData, { headers }).subscribe({
               next: () => {
                 Swal.close();
                 this.http.get<any[]>(`${this.apiUrl}/negocios/${this.negocioId}/productos`, { headers }).subscribe(res => {
                   this.productos = res || [];
-                  if(this.productos.length > 0) {
-                      const recienCreado = this.productos[this.productos.length - 1];
-                      // IMPORTANTE: En el Kardex se asigna a transaccionForm
-                      this.transaccionForm.productoId = recienCreado.id;
-                      this.onProductoChange();
+                  if (this.productos.length > 0) {
+                    const recienCreado = this.productos[this.productos.length - 1];
+                    // IMPORTANTE: En el Kardex se asigna a transaccionForm
+                    this.transaccionForm.productoId = recienCreado.id;
+                    this.onProductoChange();
                   }
                   this.cdr.detectChanges();
                 });
@@ -523,5 +577,9 @@ export class Kardex implements OnInit {
       }
     });
   }
+
+  trackByFn(index: number, item: any): any {
+  return item.id || index; // Si tu kardex tiene un 'id' único, úsalo, sino usa el index
+}
 
 }

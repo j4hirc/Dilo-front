@@ -124,7 +124,7 @@ export class ZoeAiService {
 
   inicializarChat(nombreUsuario: string, rol: string) {
     if (this.chatMensajesSubject.value.length === 0) {
-      const textoBienvenida = `¡Hola! Soy **Zoe**. Cuentame, ${nombreUsuario}, ¿qué revisamos hoy, che?`;
+      const textoBienvenida = `¡Hola! Soy **Zoe**. Cuentame, ${nombreUsuario}, ¿qué revisamos hoy?`;
       this.chatMensajesSubject.next([{
         role: 'assistant',
         text: textoBienvenida,

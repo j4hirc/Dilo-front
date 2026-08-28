@@ -24,8 +24,7 @@
                     <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                 </svg>
             </span>
-            <input type="text" placeholder="Buscar producto, motivo, ref o lote..." [(ngModel)]="searchTerm"
-                (input)="aplicarFiltros()">
+            <input type="text" placeholder="Buscar producto, motivo, ref o lote..." [value]="searchTerm" (input)="onSearchInput($event)">
         </div>
 
         <div class="filter-controls">
@@ -87,7 +86,7 @@
                             No hay movimientos registrados que coincidan con la búsqueda.
                         </td>
                     </tr>
-                    <tr *ngFor="let kx of kardexFiltrado">
+                    <tr *ngFor="let kx of kardexPaginado; trackBy: trackByFn">
                         <td>
                             <div style="font-weight: 700; color: #0f172a; font-size: 0.9rem;">{{ kx.fechaTransaccion |
                                 date:'dd/MM/yyyy' }}</div>
@@ -158,6 +157,18 @@
                     </tr>
                 </tbody>
             </table>
+            <div class="pagination-controls" *ngIf="kardexFiltrado.length > elementosPorPagina" style="display: flex; justify-content: space-between; align-items: center; padding: 15px;">
+    <span style="color: #64748b; font-size: 0.9rem;">
+        Mostrando {{ (paginaActual - 1) * elementosPorPagina + 1 }} - 
+        {{ (paginaActual * elementosPorPagina) > kardexFiltrado.length ? kardexFiltrado.length : (paginaActual * elementosPorPagina) }} 
+        de {{ kardexFiltrado.length }} movimientos
+    </span>
+    <div style="display: flex; gap: 10px;">
+        <button class="btn-secondary" [disabled]="paginaActual === 1" (click)="cambiarPagina(-1)">Anterior</button>
+        <span style="display: flex; align-items: center; font-weight: bold; padding: 0 10px;">Página {{ paginaActual }} de {{ totalPaginas }}</span>
+        <button class="btn-secondary" [disabled]="paginaActual === totalPaginas" (click)="cambiarPagina(1)">Siguiente</button>
+    </div>
+</div>
         </div>
     </div>
 </div>
