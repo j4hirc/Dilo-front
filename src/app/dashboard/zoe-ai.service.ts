@@ -223,18 +223,29 @@ REGLAS DE SEGURIDAD MÁXIMA (OBLIGATORIAS):
       content: msg.text
     }));
 
-    const payload = {
+        const payload = {
       model: 'openai/gpt-oss-120b',
       messages: [
         { role: 'system', content: this.promptSistemaBase },
         ...historial
       ],
-      temperature: 0.3, // Un poquito más alto para que su interpretación verbal sea más creativa y menos robótica
-      // Antes 500: se cortaban respuestas largas (texto en pantalla + <voz>) por quedarse sin tokens.
+      temperature: 0.3,
       max_tokens: 900,
       top_p: 0.9
     };
 
+    this.ejecutarPeticionGroq(payload, headers, miPeticionId, responderConVoz, 0);
+  }
+
+  private readonly MAX_REINTENTOS_429 = 3;
+
+  private ejecutarPeticionGroq(
+    payload: any,
+    headers: HttpHeaders,
+    miPeticionId: number,
+    responderConVoz: boolean,
+    intento: number
+  ) {
     this.http.post<any>('https://api.groq.com/openai/v1/chat/completions', payload, { headers })
       .subscribe({
         next: (res) => {
@@ -284,56 +295,56 @@ REGLAS DE SEGURIDAD MÁXIMA (OBLIGATORIAS):
           });
         },
         error: (err) => {
-  console.error('Error Groq API:', err.status, err.error);
-  this.zone.run(() => {
-    if (this.peticionActivaId !== miPeticionId) return;
+          console.error('Error Groq API:', err.status, err.error);
+          this.zone.run(() => {
+            if (this.peticionActivaId !== miPeticionId) return;
 
-    let msjError = 'Perdoname, parece que hay un problemita con internet.';
-    let detenerMicrofonoPorError = false;
-    let esperaExtraMs = 0;
+            // --- 429: reintentar en silencio antes de rendirse ---
+            if (err.status === 429 && intento < this.MAX_REINTENTOS_429) {
+              const retryAfterHeader = err.headers?.get ? err.headers.get('retry-after') : null;
+              const retryAfterSeg = retryAfterHeader ? parseInt(retryAfterHeader, 10) : null;
+              // Backoff: usa Retry-After si viene, si no exponencial (2s, 4s, 8s...)
+              const esperaMs = retryAfterSeg && !isNaN(retryAfterSeg)
+                ? retryAfterSeg * 1000
+                : 2000 * Math.pow(2, intento);
 
-    if (err.status === 429) {
-      // Intenta usar el tiempo real que Groq pide esperar (header Retry-After, en segundos)
-      const retryAfterHeader = err.headers?.get ? err.headers.get('retry-after') : null;
-      const retryAfterSeg = retryAfterHeader ? parseInt(retryAfterHeader, 10) : null;
-      esperaExtraMs = retryAfterSeg && !isNaN(retryAfterSeg) ? retryAfterSeg * 1000 : 15000; // fallback 15s
+              setTimeout(() => {
+                if (this.peticionActivaId !== miPeticionId) return;
+                this.ejecutarPeticionGroq(payload, headers, miPeticionId, responderConVoz, intento + 1);
+              }, esperaMs);
+              return; // No mostramos error todavía, seguimos "cargando"
+            }
 
-      msjError = 'Bancame un segundito, corazón. Me estás hablando muy rápido, dame un respiro y volvé a hablarme en un ratito.';
-      // CLAVE: cortamos el ciclo de escucha automática para no encadenar más 429.
-      // El usuario tendrá que tocar el micrófono de nuevo cuando quiera reintentar.
-      detenerMicrofonoPorError = true;
-      this.keepListeningActive = false;
-    } else if (err.status === 400 || err.status === 413) {
-      msjError = 'Uy corazón, veníamos hablando tanto que se me llenó la cabeza jaja. ¿Podés repetirme más cortito?';
-    }
+            // --- Se agotaron los reintentos (o es otro tipo de error) ---
+            let msjError = 'Perdoname, parece que hay un problemita con internet.';
+            let detenerMicrofonoPorError = false;
 
-    this.chatMensajesSubject.next([
-      ...this.chatMensajesSubject.value,
-      { role: 'assistant', text: msjError, safeHtml: this.formatearMensaje(msjError) }
-    ]);
+            if (err.status === 429) {
+              msjError = 'Bancame un segundito, corazón. Me estás hablando muy rápido, dame un respiro y volvé a hablarme en un ratito.';
+              detenerMicrofonoPorError = true;
+              this.keepListeningActive = false;
+            } else if (err.status === 400 || err.status === 413) {
+              msjError = 'Uy corazón, veníamos hablando tanto que se me llenó la cabeza jaja. ¿Podés repetirme más cortito?';
+            }
 
-    this.isChatLoadingSubject.next(false);
+            this.chatMensajesSubject.next([
+              ...this.chatMensajesSubject.value,
+              { role: 'assistant', text: msjError, safeHtml: this.formatearMensaje(msjError) }
+            ]);
 
-    const reactivar = () => {
-      if (responderConVoz && !detenerMicrofonoPorError) {
-        this.hablar(msjError, () => {
-          if (this.keepListeningActive) this.iniciarEscucha();
-        });
-      } else if (responderConVoz) {
-        // Igual queremos que lo escuche, pero SIN reactivar el micrófono después
-        this.hablar(msjError);
-      } else {
-        if (this.keepListeningActive && !detenerMicrofonoPorError) this.iniciarEscucha();
-      }
-    };
+            this.isChatLoadingSubject.next(false);
 
-    if (esperaExtraMs > 0) {
-      setTimeout(reactivar, esperaExtraMs);
-    } else {
-      reactivar();
-    }
-  });
-}
+            if (responderConVoz && !detenerMicrofonoPorError) {
+              this.hablar(msjError, () => {
+                if (this.keepListeningActive) this.iniciarEscucha();
+              });
+            } else if (responderConVoz) {
+              this.hablar(msjError);
+            } else {
+              if (this.keepListeningActive && !detenerMicrofonoPorError) this.iniciarEscucha();
+            }
+          });
+        }
       });
   }
 
