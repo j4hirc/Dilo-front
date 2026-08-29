@@ -911,7 +911,16 @@ export class Facturas implements OnInit, OnDestroy {
   /** Público: botones del panel Zoe y reconocimiento de voz */
   procesarComandoVoz(transcript: string) {
     this.transcriptAcumulado = '';
-    const transcriptLimpio = this.limpiarTexto(transcript).replace(/[.,;:!?¡¿]+/g, ' ').replace(/\s+/g, ' ').trim();
+    let transcriptLimpio = this.limpiarTexto(transcript).replace(/[.,;:!?¡¿]+/g, ' ').replace(/\s+/g, ' ').trim();
+
+    // 🔥 NUEVO: Filtro agresivo de tartamudeos y muletillas conversacionales
+    transcriptLimpio = transcriptLimpio
+      .replace(/\b(un|una|uno)(?:\s+(?:un|una|uno))+\b/g, '$1') // Convierte "un un un" -> "un"
+      .replace(/\b(este|digamos|o sea|como que|tipo|no se|literalmente|basicamente|entonces|bueno|pues)\b/g, ' ')
+      .replace(/\bvarios productos\b/g, ' ') // Evita que busque un producto llamado "varios"
+      .replace(/\s+/g, ' ')
+      .trim();
+
     // Seguridad anti-eco
     if (this.esEcoDeLoHablado(transcriptLimpio)) {
       this.userTranscript = '';
@@ -1106,12 +1115,12 @@ export class Facturas implements OnInit, OnDestroy {
     });
 
     // Siempre permitir cambiar cliente por voz (null si no lo mencionó)
-    const instruccionCliente = `"cliente": "Extrae el nombre/cédula si lo dijo, o 'CONSUMIDOR_FINAL' si dijo consumidor final; si NO habló de cliente → null",`;
+    const instruccionCliente = `"cliente": "Nombre/cédula (si lo dijo), o 'CONSUMIDOR_FINAL' (solo si lo dice explícitamente). Si NO habló de clientes, ESTRICTAMENTE pon null",`;
 
     const listaNombresCli = this.clientesList.map(c => c.nombreCompleto || c.primerNombre).join(', ').substring(0, 800);
     const listaNombresProd = this.productosList.map(p => p.nombre).join(', ').substring(0, 900);
 
-    const promptSystem = `
+  const promptSystem = `
       Eres la IA de un POS en Ecuador. Extrae SOLO lo que el usuario dijo. JSON puro, sin markdown ni texto extra.
       Campos y valores en español.
       Clientes disponibles: [${listaNombresCli}]
@@ -1131,20 +1140,19 @@ export class Facturas implements OnInit, OnDestroy {
          "emitirFactura": false
       }
 
-      REGLAS (no inventes nada):
-      1. metodoPago: SOLO si dijo efectivo/contado, transferencia/depósito, o tarjeta/crédito/visa/mastercard. Si no habló de pago → null.
-      2. cuotas: número entero si dijo "N cuotas", "N meses", "en N", "a N cuotas", "cambia a N", "pon N cuotas". Puede ir solo (sin repetir tarjeta). Rango 1-48.
-      3. items: SOLO productos a AGREGAR. Si solo cambia cantidad o quita → items: [].
-         - Cantidad: un/una=1, dos=2…diez=10, docena=12. Solo dígitos 1–200 si los dijo junto al producto.
-         - NUNCA inventes cantidades grandes. Si no dijo cantidad → 1. No uses precios, cédulas ni códigos como cantidad.
-      4. eliminarProducto: nombre si dijo quita/borra/elimina/saca TODO el ítem. Si dijo "quita N unidades de X" → modificarCantidad con cantidad = actual-N o usa {"producto":"X","cantidad":N,"modo":"restar"}.
-      5. modificarCantidad: {"producto":"nombre","cantidad":N} cantidad FINAL deseada. Si dijo "quita 5 de mouse" → restar; si "deja 2 mouse" → cantidad 2.
-      6. emitirFactura: true SOLO si pide emitir/cobrar/guardar/finalizar de forma clara.
-      7. cliente "CONSUMIDOR_FINAL" solo si dijo consumidor final / sin datos / público en general.
-      8. descuentos: SOLO si los mencionó (porcentaje o monto).
-      9. Si la frase es larga, extrae TODO lo útil (cliente + pago + varios productos + cuotas) en un solo JSON.
+      REGLAS VITALES (no inventes nada):
+      1. items: EXTRAE ABSOLUTAMENTE TODOS los productos a agregar. 
+         - Si el usuario dice una lista (ej. "un producto A, un producto B"), extrae CADA UNO en un objeto separado dentro del array. ¡No agrupes ni omitas ninguno!
+         - Ignora ruido o frases genéricas. Solo extrae nombres de productos reales.
+         - Cantidad: Si el usuario tartamudea ("un un un mouse"), la cantidad es 1.
+      2. metodoPago: SOLO si dijo efectivo, transferencia, o tarjeta.
+      3. cuotas: número si dijo "N cuotas" o "N meses". Rango 1-48.
+      4. Cantidad de items: Si no dice cantidad, usa 1. No confundas códigos o precios con la cantidad.
+      5. eliminarProducto: nombre si dijo quita/borra/elimina todo el ítem.
+      6. modificarCantidad: {"producto":"nombre","cantidad":N} cantidad FINAL deseada.
+      7. emitirFactura: true SOLO si pide emitir/cobrar/guardar de forma clara.
+      8. cliente: "CONSUMIDOR_FINAL" solo si dijo 'consumidor final' o 'sin datos'. SI NO MENCIONA CLIENTE, USA null. NUNCA TE INVENTES "CONSUMIDOR_FINAL".
     `;
-
     const payload = {
       model: 'openai/gpt-oss-120b',
       messages: [
@@ -1342,6 +1350,13 @@ export class Facturas implements OnInit, OnDestroy {
   private sanearDatosVoz(datos: any, frase: string): any {
     const f = this.limpiarTexto(frase || this.ultimaFraseUsuario);
     const out: any = { ...(datos || {}) };
+
+
+    if (out.cliente && String(out.cliente).toUpperCase().includes('CONSUMIDOR')) {
+      if (!/\b(consumidor|final|sin\s*datos|publico|público)\b/.test(f)) {
+        out.cliente = null; 
+      }
+    }
 
     const diceTarjeta = /\b(tarjeta|credito|visa|mastercard|american\s*express)\b/.test(f);
     const diceTransfer = /\b(transferencia|transferir|deposito|deposito|banco)\b/.test(f);
@@ -1546,11 +1561,14 @@ export class Facturas implements OnInit, OnDestroy {
     const tokens = this.limpiarTexto(frase).split(/\s+/).filter(t => t.length >= 3);
     const stop = new Set([
       'agrega', 'agregue', 'agregar', 'añade', 'añadir', 'pon', 'poner', 'quiero', 'dame',
-      'factura', 'favor', 'porfa', 'descuento', 'cliente', 'consumidor', 'final',
-      'efectivo', 'tarjeta', 'credito', 'transferencia', 'emitir', 'cobrar', 'listo',
-      'con', 'del', 'los', 'las', 'por', 'para', 'que', 'tambien', 'también', 'mas', 'más',
-      'cuotas', 'meses', 'pago', 'pagar'
+      'agarra', 'agarrame', 'trae', 'traeme', 'buscame', 'selecciona', 'ponme',
+      'uno', 'una', 'unos', 'unas', 'dos', 'tres', 'cuatro', 'cinco', 'seis', 'siete',
+      'ocho', 'nueve', 'diez', 'del', 'de', 'la', 'el', 'los', 'las', 'un', 'al', 'con',
+      'por', 'para', 'y', 'o', 'que', 'me', 'te', 'le', 'se', 'producto', 'productos',
+      'factura', 'favor', 'porfa', 'descuento', 'bodega', 'central', 'principal',
+      'digamos', 'tipo', 'asi', 'así', 'no'
     ]);
+    this.bodegasList.forEach(b => stop.add(this.limpiarTexto(b.nombre)));
     return tokens.some(t =>
       !stop.has(t) &&
       this.productosList.some(p => this.limpiarTexto(p.nombre).includes(t))
@@ -1591,20 +1609,22 @@ export class Facturas implements OnInit, OnDestroy {
    */
   private extraerItemsDesdeFrase(frase: string): any[] {
     const f = this.limpiarTexto(frase || '');
-    const stop = new Set([
+  const stop = new Set([
       'agrega', 'agregue', 'agregar', 'añade', 'añadir', 'pon', 'poner', 'quiero', 'dame',
+      'agarra', 'agarrame', 'trae', 'traeme', 'buscame', 'selecciona', 'ponme',
       'factura', 'favor', 'porfa', 'descuento', 'cliente', 'consumidor', 'final',
       'efectivo', 'tarjeta', 'credito', 'transferencia', 'con', 'del', 'los', 'las',
       'por', 'para', 'que', 'tambien', 'también', 'mas', 'más', 'y', 'e', 'o',
       'cuotas', 'meses', 'pago', 'pagar', 'emite', 'emitir', 'cobra', 'cobrar',
       'listo', 'gracias', 'bodega', 'central', 'principal', 'tal', 'producto', 'productos',
       'cualquier', 'varios', 'unas', 'unos', 'siguientes', 'siguiente', 'agregame',
-      'agregame', 'añademe', 'deme', 'necesito', 'quiero', 'desde', 'hasta'
+      'añademe', 'deme', 'necesito', 'desde', 'hasta', 'digamos', 'tipo', 'asi', 'así', 'se', 'no'
     ]);
+    this.bodegasList.forEach(b => stop.add(this.limpiarTexto(b.nombre)));
 
     // Quitar preámbulos típicos para no ensuciar segmentos
     let cuerpo = f
-      .replace(/^.*?\b(?:agrega(?:me)?|añade(?:me)?|pon(?:me)?|dame|quiero|necesito)\b\s*/i, '')
+      .replace(/^.*?\b(?:agrega(?:me)?|añade(?:me)?|pon(?:me)?|dame|quiero|necesito|agarra(?:me)?|trae(?:me)?|selecciona|buscame)\b\s*/i, '')
       .replace(/\b(?:de\s+la\s+)?bodega\s+\w+\b/g, ' ')
       .replace(/\b(?:los|las)\s+siguientes\s+productos?\b/g, ' ')
       .replace(/\s+/g, ' ')
@@ -1938,59 +1958,74 @@ export class Facturas implements OnInit, OnDestroy {
         algoAgregado = true;
       }
     }
+const items = Array.isArray(datos.items) ? datos.items.filter((it: any) => it && it.producto && it.producto !== 'null') : [];
 
-    const items = Array.isArray(datos.items) ? datos.items.filter((it: any) => it && it.producto && it.producto !== 'null') : [];
+    const itemsClaros: { item: any, prod: any }[] = [];
+    const itemsAmbiguos: { item: any, matches: any[] }[] = [];
 
-    // Procesar productos: 1 match exacto → agregar; 2+ → opciones (nunca elegir al azar)
-    let requiereDesambiguacionProd: any[] | null = null;
-    let cantTemp = 1;
-    let descTemp = 0;
-    let descPctTemp = 0;
-    const itemsRestantes: any[] = [];
-
-    // Agregar todos los que tengan match claro; pausar en ambiguo o al pedir bodega
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i];
+    // 1. Separar los productos que entendió a la perfección de los dudosos
+    for (const item of items) {
       const matchesProd = this.resolverMatchesProductoVoz(String(item.producto), String(item.producto));
 
       if (matchesProd.length === 1) {
-        const ok = this.intentarAgregarProductoVoz(matchesProd[0], item, mensajesAlerta);
-        if (ok) algoAgregado = true;
-        // Esperando bodega → guardar el resto de la lista
-        if (this.esperandoBodega) {
-          for (let j = i + 1; j < items.length; j++) itemsRestantes.push(items[j]);
-          this.itemsVozPendientes = itemsRestantes;
-          this.quiereEmitirPendiente = quiereEmitir;
-          return; // iniciarDesambiguacion ya habló
-        }
+        itemsClaros.push({ item, prod: matchesProd[0] });
       } else if (matchesProd.length > 1) {
-        requiereDesambiguacionProd = matchesProd;
-        cantTemp = this.normalizarCantidadVoz(item.cantidad);
-        descTemp = Number(item.descuento || 0) || 0;
-        descPctTemp = Number(item.descuentoPorcentaje || 0) || 0;
-        for (let j = i + 1; j < items.length; j++) itemsRestantes.push(items[j]);
-        break;
+        itemsAmbiguos.push({ item, matches: matchesProd });
       } else {
         mensajesAlerta.push(`no tengo "${item.producto}" en el catálogo`);
       }
     }
+
+    // 2. Procesar y agregar TODOS los claros PRIMERO
+    for (let i = 0; i < itemsClaros.length; i++) {
+      const { item, prod } = itemsClaros[i];
+      const ok = this.intentarAgregarProductoVoz(prod, item, mensajesAlerta);
+      if (ok) algoAgregado = true;
+
+      // Si alguno de los claros necesita preguntar la bodega, pausamos aquí
+      if (this.esperandoBodega) {
+        const restantes = [];
+        // Guardamos los claros que faltaron y los ambiguos para después
+        for (let j = i + 1; j < itemsClaros.length; j++) restantes.push(itemsClaros[j].item);
+        for (const amb of itemsAmbiguos) restantes.push(amb.item);
+
+        this.itemsVozPendientes = restantes;
+        this.quiereEmitirPendiente = quiereEmitir;
+        return; // Zoe ya habló para pedir la bodega
+      }
+    }
+
     this.cdr.detectChanges();
 
-    if (requiereDesambiguacionProd) {
-      this.quiereEmitirPendiente = quiereEmitir;
-      this.itemsVozPendientes = itemsRestantes;
-      this.datosVozPendientes = { ...datos, items: itemsRestantes };
-      this.itemTemp.cantidad = cantTemp;
-      this.itemTemp.descuento = descTemp;
+    // 3. Procesar los ambiguos al final (uno por uno)
+    if (itemsAmbiguos.length > 0) {
+      const primero = itemsAmbiguos[0];
+      const requiereDesambiguacionProd = primero.matches;
+
+      // Guardar en itemTemp para cuando el usuario responda 1, 2 o 3
+      this.itemTemp.cantidad = this.normalizarCantidadVoz(primero.item.cantidad);
+      this.itemTemp.descuento = Number(primero.item.descuento || 0) || 0;
+      const descPctTemp = Number(primero.item.descuentoPorcentaje || 0) || 0;
       this.itemTemp.descuentoPorcentaje = descPctTemp > 0 ? descPctTemp : null;
+
+      // Guardar el RESTO de los productos ambiguos para la siguiente vuelta en la cola
+      const restantes = [];
+      for (let j = 1; j < itemsAmbiguos.length; j++) restantes.push(itemsAmbiguos[j].item);
+
+      this.itemsVozPendientes = restantes;
+      this.datosVozPendientes = { ...datos, items: restantes };
+      this.quiereEmitirPendiente = quiereEmitir;
+
       const totalOps = requiereDesambiguacionProd.length;
       const muestra = requiereDesambiguacionProd.slice(0, 6);
       const nombres = muestra.map((p, idx) => `${idx + 1}) ${p.nombre}`).join('. ');
       const extra = totalOps > 6 ? ` (${totalOps} en total)` : '';
+      
+      // 🔥 Mejoramos el mensaje para que indique exactamente QUÉ producto está preguntando
       this.iniciarDesambiguacion(
         'PRODUCTO',
         requiereDesambiguacionProd,
-        `${totalOps} opciones${extra}: ${nombres}. Di el número o toca.`
+        `Encontré varias opciones para ${primero.item.producto}${extra}: ${nombres}. Di el número o toca.`
       );
       return;
     }
@@ -2075,35 +2110,23 @@ export class Facturas implements OnInit, OnDestroy {
     const f = this.limpiarTexto(frase || '');
     if (!f || !this.bodegasList.length) return null;
 
-    // "bodega X" / "de la bodega X"
-    const m = f.match(/\bbodega\s+(?:de\s+)?([a-záéíóúñü0-9\s]{2,40}?)(?:\s*,|\s+agrega|\s+añade|\s+un\s|\s+una\s|\s+dos\s|\s+y\s|$)/);
-    let nombre = m ? m[1].trim() : '';
-
-    // También "desde central", "en principal"
-    if (!nombre) {
-      const m2 = f.match(/\b(?:desde|en)\s+(?:la\s+)?(?:bodega\s+)?([a-záéíóúñü0-9]{3,30})\b/);
-      if (m2) nombre = m2[1].trim();
-    }
-
-    if (!nombre) {
-      // ¿Algún nombre de bodega aparece completo en la frase?
-      for (const b of this.bodegasList) {
-        const bn = this.limpiarTexto(b.nombre);
-        if (bn.length >= 3 && f.includes(bn)) return b;
-      }
-      return null;
-    }
-
-    const hits = this.bodegasList.filter(b => {
+    // 1. Buscar de forma explícita "bodega X", "de la X", "en la X"
+    for (const b of this.bodegasList) {
       const bn = this.limpiarTexto(b.nombre);
-      return bn === nombre || bn.includes(nombre) || nombre.includes(bn);
-    });
-    if (hits.length === 1) return hits[0];
-    if (hits.length > 1) {
-      // Preferir match más exacto
-      const exact = hits.find(b => this.limpiarTexto(b.nombre) === nombre);
-      return exact || hits[0];
+      if (f.includes(`bodega ${bn}`) || f.includes(`de la ${bn}`) || f.includes(`en la ${bn}`) || f.includes(`desde la ${bn}`)) {
+        return b;
+      }
     }
+
+    // 2. Buscar el nombre suelto como palabra completa (si es suficientemente distintivo)
+    for (const b of this.bodegasList) {
+      const bn = this.limpiarTexto(b.nombre);
+      if (bn.length >= 3) {
+        const regex = new RegExp(`\\b${bn}\\b`);
+        if (regex.test(f)) return b;
+      }
+    }
+
     return null;
   }
 
@@ -2207,11 +2230,14 @@ export class Facturas implements OnInit, OnDestroy {
 
     const stop = new Set([
       'agrega', 'agregue', 'agregar', 'añade', 'añadir', 'pon', 'poner', 'quiero', 'dame',
+      'agarra', 'agarrame', 'trae', 'traeme', 'buscame', 'selecciona', 'ponme',
       'uno', 'una', 'unos', 'unas', 'dos', 'tres', 'cuatro', 'cinco', 'seis', 'siete',
       'ocho', 'nueve', 'diez', 'del', 'de', 'la', 'el', 'los', 'las', 'un', 'al', 'con',
       'por', 'para', 'y', 'o', 'que', 'me', 'te', 'le', 'se', 'producto', 'productos',
-      'factura', 'favor', 'porfa', 'descuento', 'bodega', 'central', 'principal'
+      'factura', 'favor', 'porfa', 'descuento', 'bodega', 'central', 'principal',
+      'digamos', 'tipo', 'asi', 'así', 'no'
     ]);
+    this.bodegasList.forEach(b => stop.add(this.limpiarTexto(b.nombre)));
 
     // 1) Nombre exacto idéntico (varias presentaciones / ids distintos)
     const exactos = this.dedupProductos(
