@@ -141,66 +141,61 @@ kardexPaginado: any[] = [];
   }
 
   aplicarFiltros() {
+  // 1. Partimos de la lista original completa
+  let result = this.kardex;
 
-    let inicioTimeStamp: number | null = null;
-let finTimeStamp: number | null = null;
-    let result = this.kardex;
-    this.kardexFiltrado = result;
+  // 2. Filtro por Tipo
+  if (this.filtroTipo) {
+    result = result.filter(k => k.tipo === this.filtroTipo);
+  }
 
-    if (this.filtroTipo) {
-      result = result.filter(k => k.tipo === this.filtroTipo);
+  // 3. Filtro por Bodega
+  if (this.bodegaFiltro && this.bodegaFiltro !== '') {
+    const idBodegaBuscada = Number(this.bodegaFiltro);
+    const bodegaEncontrada = this.bodegas.find(b => b.id === idBodegaBuscada);
+    
+    if (bodegaEncontrada) {
+      const nombreBodega = bodegaEncontrada.nombre;
+      result = result.filter(k => {
+        const esOrigen = k.bodegaOrigenNombre === nombreBodega;
+        const esDestino = k.bodegaDestinoNombre === nombreBodega;
+        return esOrigen || esDestino;
+      });
     }
+  }
 
-    this.paginaActual = 1; // Volver a la página 1 tras filtrar
+  // 4. Filtro por Fecha de Inicio
+  if (this.fechaInicio) {
+    const inicioTimeStamp = new Date(this.fechaInicio + 'T00:00:00').getTime();
+    result = result.filter(k => new Date(k.fechaTransaccion).getTime() >= inicioTimeStamp);
+  }
+
+  // 5. Filtro por Fecha de Fin
+  if (this.fechaFin) {
+    const finDate = new Date(this.fechaFin + 'T23:59:59').getTime();
+    result = result.filter(k => new Date(k.fechaTransaccion).getTime() <= finDate);
+  }
+
+  // 6. Filtro por Término de Búsqueda (Buscador general)
+  if (this.searchTerm && this.searchTerm.trim() !== '') {
+    const term = this.searchTerm.toLowerCase().trim();
+    result = result.filter(k =>
+      (k.productoNombre && k.productoNombre.toLowerCase().includes(term)) ||
+      (k.numeroLote && k.numeroLote.toLowerCase().includes(term)) ||
+      (k.documentoReferencia && k.documentoReferencia.toLowerCase().includes(term)) ||
+      (k.motivo && k.motivo.toLowerCase().includes(term)) ||
+      (k.usuarioResponsableNombre && k.usuarioResponsableNombre.toLowerCase().includes(term))
+    );
+  }
+
+  // 7. Guardar el resultado final YA FILTRADO
+  this.kardexFiltrado = result;
+
+  // 8. AHORA SÍ actualizamos la paginación basada en los resultados finales
+  this.paginaActual = 1; 
   this.actualizarPaginacion();
   this.cdr.detectChanges();
-
-    if (this.bodegaFiltro && this.bodegaFiltro !== '') {
-      const idBodegaBuscada = Number(this.bodegaFiltro);
-      const bodegaEncontrada = this.bodegas.find(b => b.id === idBodegaBuscada);
-      if (bodegaEncontrada) {
-        const nombreBodega = bodegaEncontrada.nombre;
-        result = result.filter(k => {
-          const esOrigen = k.bodegaOrigenNombre === nombreBodega;
-          const esDestino = k.bodegaDestinoNombre === nombreBodega;
-          return esOrigen || esDestino;
-        });
-      }
-    }
-
-    if (this.fechaInicio) {
-      const inicioTimeStamp = new Date(this.fechaInicio + 'T00:00:00').getTime();
-      result = result.filter(k => new Date(k.fechaTransaccion).getTime() >= inicioTimeStamp);
-    }
-    if (this.fechaFin) {
-      const finDate = new Date(this.fechaFin + 'T23:59:59');
-      result = result.filter(k => new Date(k.fechaTransaccion).getTime() <= finDate.getTime());
-    }
-
-    if (inicioTimeStamp || finTimeStamp) {
-    result = result.filter(k => {
-        const timeK = new Date(k.fechaTransaccion).getTime();
-        let pasaFiltro = true;
-        if (inicioTimeStamp) pasaFiltro = pasaFiltro && (timeK >= inicioTimeStamp);
-        if (finTimeStamp) pasaFiltro = pasaFiltro && (timeK <= finTimeStamp);
-        return pasaFiltro;
-    });
 }
-
-    if (this.searchTerm.trim()) {
-      const term = this.searchTerm.toLowerCase();
-      result = result.filter(k =>
-        (k.productoNombre && k.productoNombre.toLowerCase().includes(term)) ||
-        (k.numeroLote && k.numeroLote.toLowerCase().includes(term)) ||
-        (k.documentoReferencia && k.documentoReferencia.toLowerCase().includes(term)) ||
-        (k.motivo && k.motivo.toLowerCase().includes(term)) ||
-        (k.usuarioResponsableNombre && k.usuarioResponsableNombre.toLowerCase().includes(term))
-      );
-    }
-
-    this.kardexFiltrado = result;
-    this.cdr.detectChanges();
-  }
 
   abrirModalNuevo() {
     this.transaccionForm = {
