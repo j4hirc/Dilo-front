@@ -515,11 +515,17 @@ export class Facturas implements OnInit, OnDestroy {
       if (porFin.length > 0) return porFin;
     }
 
-    let exact = this.clientesList.filter(cli =>
-      this.limpiarTexto(cli.nombreCompleto) === txt || this.limpiarTexto(cli.primerNombre) === txt ||
-      this.limpiarTexto(cli.apellidoPaterno) === txt || this.limpiarTexto(cli.dni) === txt ||
-      this.limpiarTexto(cli.identificacion) === txt || this.limpiarTexto(cli.email) === txt || this.limpiarTexto(cli.correo) === txt
-    );
+    let exact = this.clientesList.filter(cli => {
+      const nombreArmado = this.limpiarTexto(`${cli.primerNombre || ''} ${cli.apellidoPaterno || ''}`);
+      return this.limpiarTexto(cli.nombreCompleto) === txt ||
+             (nombreArmado && nombreArmado === txt) ||
+             this.limpiarTexto(cli.primerNombre) === txt ||
+             this.limpiarTexto(cli.apellidoPaterno) === txt ||
+             this.limpiarTexto(cli.dni) === txt ||
+             this.limpiarTexto(cli.identificacion) === txt ||
+             this.limpiarTexto(cli.email) === txt ||
+             this.limpiarTexto(cli.correo) === txt;
+    });
     if (exact.length > 0) return exact;
 
     let partial = this.clientesList.filter(cli => {
