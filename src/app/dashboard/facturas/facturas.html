@@ -467,7 +467,7 @@
                     </svg>
                 </button>
 
-                <div class="zoe-header">
+                <div class="zoe-header" style="display: flex; align-items: center;">
                     <div class="mic-container-small" [ngClass]="{
                             'is-listening': isListening,
                             'is-thinking': isThinking,
@@ -486,17 +486,47 @@
                     </div>
                     <div style="flex:1;min-width:0;">
                         <h4 style="margin: 0; font-size: 1rem; color: #0f172a;">Zoe Activa ✨</h4>
+                        
                         <span class="listening-indicator" *ngIf="isListening && !isThinking"
                             style="font-size: 0.75rem;">
                             Te escucho…
                         </span>
+                        
                         <span class="thinking-indicator" *ngIf="isThinking"
                             style="font-size: 0.75rem; color: #f59e0b;">Pensando…</span>
-                        <span *ngIf="voiceState === 'ELEGIR_OPCION' && !isThinking && !isListening"
+                            
+                        <!-- NUEVO: Indicador de pausa manual -->
+                        <span *ngIf="micPausadoManualmente && !isThinking"
+                            style="font-size: 0.75rem; color: #ef4444; font-weight: 600;">Micrófono pausado</span>
+                            
+                        <span *ngIf="voiceState === 'ELEGIR_OPCION' && !isThinking && !isListening && !micPausadoManualmente"
                             style="font-size: 0.75rem; color: #6366f1;">Elige una opción</span>
-                        <span *ngIf="voiceState === 'CONFIRMAR' && !isThinking"
+                            
+                        <span *ngIf="voiceState === 'CONFIRMAR' && !isThinking && !micPausadoManualmente"
                             style="font-size: 0.75rem; color: #ed8936; font-weight: 600;">¿Emitimos? Di sí o no</span>
                     </div>
+
+                    <!-- NUEVO: Botón para Pausar/Reanudar -->
+                    <button type="button" class="btn-action-icon" (click)="toggleMicrofono()" 
+    [title]="micPausadoManualmente ? 'Activar micrófono' : 'Pausar micrófono'"
+    style="color: #64748b; border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px; cursor: pointer; background: white; margin-left: 10px; margin-right: 35px; display: flex; align-items: center; justify-content: center; height: 36px; width: 36px; transition: all 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+    
+    <!-- Icono Micrófono Activo -->
+    <svg *ngIf="!micPausadoManualmente" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+        <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+        <line x1="12" y1="19" x2="12" y2="22"></line>
+    </svg>
+
+    <!-- Icono Micrófono Silenciado -->
+    <svg *ngIf="micPausadoManualmente" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="2" y1="2" x2="22" y2="22"></line>
+        <path d="M18.89 13.23A7.12 7.12 0 0 0 19 12v-2"></path>
+        <path d="M5 10v2a7 7 0 0 0 12 5l-1.5-1.5a5 5 0 0 1-9-3.5v-2"></path>
+        <path d="M12 19v3"></path>
+        <path d="M9.1 7.1a3 3 0 0 1 5.8 1.8l-5.8 5.8A3 3 0 0 1 9.1 7.1Z"></path>
+    </svg>
+</button>
                 </div>
 
                 <!-- Chip de estado rápido: cliente / método / cuotas / items -->
@@ -591,6 +621,8 @@
                         <div>• “Cliente Juan, un mouse y dos teclados, efectivo”</div>
                         <div>• “Tarjeta a 6 cuotas” o “cambia a 3 meses”</div>
                         <div>• “Emite” / “Cobra ya” cuando esté listo</div>
+                        <div>•  Primero di el cliente y el metodo de pago</div>
+                        <div>•  Puede agarrar los tres ultimos digitos de la cedula</div>
                     </div>
                 </div>
             </div>

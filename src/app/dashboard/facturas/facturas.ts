@@ -27,6 +27,7 @@ export class Facturas implements OnInit, OnDestroy {
   private http = inject(HttpClient);
   private cdr = inject(ChangeDetectorRef);
 
+  micPausadoManualmente: boolean = false;
   facturas: any[] = [];
   facturasBase: any[] = []; // Guarda la lista original para el buscador
   terminoBusqueda: string = ''; // La variable que pide el HTML
@@ -197,6 +198,22 @@ export class Facturas implements OnInit, OnDestroy {
     this.cancelarAsistenteVoz();
   }
 
+  toggleMicrofono() {
+    if (this.micPausadoManualmente) {
+      // Reanudar
+      this.micPausadoManualmente = false;
+      this.escuchar();
+    } else {
+      // Pausar
+      this.micPausadoManualmente = true;
+      this.isListening = false;
+      if (this.recognition) {
+        try { this.recognition.stop(); } catch (e) { }
+      }
+      this.cdr.detectChanges();
+    }
+  }
+
   private getAuthHeaders(): HttpHeaders {
     const rawToken = localStorage.getItem('dilo_token') || '';
     const cleanToken = rawToken.replace(/['"]+/g, '');
@@ -281,6 +298,7 @@ export class Facturas implements OnInit, OnDestroy {
 
     this.opcionesVoz = [];
     this.tipoOpciones = null;
+    this.micPausadoManualmente = false; //
     this.metodoPagoConfirmado = false;
     this.quiereEmitirPendiente = false;
     this.itemsVozPendientes = [];
@@ -652,10 +670,11 @@ export class Facturas implements OnInit, OnDestroy {
         return;
       }
       if (
-        this.voiceState !== VoiceStep.OFF &&
+       this.voiceState !== VoiceStep.OFF &&
         !this.isThinking &&
         !this.bloqueoEscucha &&
         !this.seleccionEnCurso &&
+        !this.micPausadoManualmente && // <-- AÑADIR ESTA LÍNEA AQUÍ
         this.isListening
       ) {
         try { this.recognition.start(); } catch (e) { }
@@ -898,7 +917,8 @@ export class Facturas implements OnInit, OnDestroy {
       this.voiceState === VoiceStep.OFF ||
       this.voiceState === VoiceStep.INICIANDO ||
       this.bloqueoEscucha ||
-      this.seleccionEnCurso
+      this.seleccionEnCurso ||
+      this.micPausadoManualmente // <-- AÑADIR ESTA LÍNEA
     ) {
       return;
     }
