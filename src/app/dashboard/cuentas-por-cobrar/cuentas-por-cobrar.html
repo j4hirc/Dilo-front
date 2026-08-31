@@ -119,14 +119,23 @@
         </div>
     </div>
 
-    <div class="date-filters-row">
+   <div class="date-filters-row">
+        <!-- NUEVO: Selector de tipo de fecha -->
         <div class="date-filter-group">
-            <label>Vencimiento desde</label>
+            <label>Filtrar fechas por:</label>
+            <select class="modern-input" [(ngModel)]="tipoFiltroFecha" (change)="aplicarFiltros()">
+                <option value="emision">Fecha de Creación (Emisión)</option>
+                <option value="vencimiento">Fecha de Vencimiento</option>
+            </select>
+        </div>
+
+        <div class="date-filter-group">
+            <label>Desde</label>
             <input type="date" class="modern-input date-input" [(ngModel)]="filtroFechaDesde"
                 (change)="aplicarFiltros()">
         </div>
         <div class="date-filter-group">
-            <label>Vencimiento hasta</label>
+            <label>Hasta</label>
             <input type="date" class="modern-input date-input" [(ngModel)]="filtroFechaHasta"
                 (change)="aplicarFiltros()">
         </div>

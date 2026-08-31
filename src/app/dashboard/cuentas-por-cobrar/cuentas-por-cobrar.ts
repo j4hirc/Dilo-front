@@ -20,6 +20,7 @@ export class CuentasPorCobrar implements OnInit {
 
   cuentas: any[] = [];
   cuentasBase: any[] = [];
+  tipoFiltroFecha: 'vencimiento' | 'emision' = 'emision';
   
   clientesAgrupados: any[] = [];
   clientesFiltrados: any[] = [];
@@ -92,28 +93,29 @@ export class CuentasPorCobrar implements OnInit {
     }).subscribe({
       next: (data) => {
         setTimeout(() => {
-          let mapeadas = Array.isArray(data)
-  ? data.map(c => {
-      const nombre = this.obtenerNombreCliente(c) || 'Sin nombre';
-      const identificacion = c.clienteIdentificacion || c.cliente?.dni || c.dni || '';
-      
-      // PRE-CALCULAMOS TODO AQUÍ PARA AHORRAR CPU LUEGO
-      return {
-        ...c,
-        showCuotas: false,
-        clienteNombre: nombre,
-        identificacionFinal: identificacion,
-        
-        // Optimizaciones de búsqueda y fechas (NUEVO)
-        _searchClienteNombre: this.limpiarTexto(nombre),
-        _searchFactura: this.limpiarTexto(c.numeroFactura ?? ''),
-        _searchIdentificacion: this.limpiarTexto(identificacion),
-        _fechaVencimientoTs: c.fechaVencimiento ? new Date(c.fechaVencimiento).getTime() : 0
-      };
-    })
-  : [];
+          let mapeadas = Array.isArray(data) ? data.map(c => {
+            const nombre = this.obtenerNombreCliente(c) || 'Sin nombre';
+            const identificacion = c.clienteIdentificacion || c.cliente?.dni || c.dni || '';
             
-          // 🔥 MAGIA: Filtramos y ELIMINAMOS a los "Consumidor Final" para siempre
+            // 🔥 BUSCAMOS ESTRICTAMENTE LA FECHA DE CREACIÓN DE LA FACTURA
+            // Cubrimos los nombres más comunes que podrías estar enviando desde Spring Boot
+            const fechaFactura = c.factura?.fechaEmision || c.fechaEmisionFactura || c.fechaEmision || c.fechaCreacion || null;
+
+            return {
+              ...c,
+              showCuotas: false,
+              clienteNombre: nombre,
+              identificacionFinal: identificacion,
+              
+              _searchClienteNombre: this.limpiarTexto(nombre),
+              _searchFactura: this.limpiarTexto(c.numeroFactura ?? ''),
+              _searchIdentificacion: this.limpiarTexto(identificacion),
+              _fechaVencimientoTs: c.fechaVencimiento ? new Date(c.fechaVencimiento).getTime() : 0,
+              _fechaCreacionFactura: fechaFactura // Guardamos la fecha aislada aquí
+            };
+          }) : [];
+            
+          // Filtramos y ELIMINAMOS a los "Consumidor Final"
           this.cuentasBase = mapeadas.filter(c => 
             c.clienteNombre.toLowerCase().indexOf('consumidor final') === -1
           );
@@ -258,7 +260,7 @@ export class CuentasPorCobrar implements OnInit {
     return (nombre && String(nombre).trim()) || '';
   }
 
-  aplicarFiltros() {
+ aplicarFiltros() {
     let filtradas = [...this.cuentasBase];
 
     if (this.filtroEstado !== 'TODAS') {
@@ -274,22 +276,33 @@ export class CuentasPorCobrar implements OnInit {
       });
     }
 
+    // 🔥 FILTRO ESTRICTO POR CREACIÓN DE FACTURA
     if (this.filtroFechaDesde) {
-      const desde = new Date(this.filtroFechaDesde);
-      desde.setHours(0, 0, 0, 0);
+      const [y, m, d] = this.filtroFechaDesde.split('-');
+      const desde = new Date(Number(y), Number(m) - 1, Number(d), 0, 0, 0, 0).getTime();
+
       filtradas = filtradas.filter(c => {
-        if (!c.fechaVencimiento) return false;
-        const fv = new Date(c.fechaVencimiento);
-        fv.setHours(0, 0, 0, 0);
+        // Si elige "emision", toma EXCLUSIVAMENTE la fecha de la factura
+        const fechaEvaluar = this.tipoFiltroFecha === 'emision' ? c._fechaCreacionFactura : c.fechaVencimiento;
+          
+        if (!fechaEvaluar) return false;
+        
+        const fv = new Date(fechaEvaluar).getTime();
         return fv >= desde;
       });
     }
+    
     if (this.filtroFechaHasta) {
-      const hasta = new Date(this.filtroFechaHasta);
-      hasta.setHours(23, 59, 59, 999);
+      const [y, m, d] = this.filtroFechaHasta.split('-');
+      const hasta = new Date(Number(y), Number(m) - 1, Number(d), 23, 59, 59, 999).getTime();
+
       filtradas = filtradas.filter(c => {
-        if (!c.fechaVencimiento) return false;
-        const fv = new Date(c.fechaVencimiento);
+        // Si elige "emision", toma EXCLUSIVAMENTE la fecha de la factura
+        const fechaEvaluar = this.tipoFiltroFecha === 'emision' ? c._fechaCreacionFactura : c.fechaVencimiento;
+          
+        if (!fechaEvaluar) return false;
+        
+        const fv = new Date(fechaEvaluar).getTime();
         return fv <= hasta;
       });
     }
@@ -297,9 +310,7 @@ export class CuentasPorCobrar implements OnInit {
     filtradas.sort((a, b) => {
       const aPagada = a.estado === 'PAGADA' ? 1 : 0;
       const bPagada = b.estado === 'PAGADA' ? 1 : 0;
-      if (aPagada !== bPagada) {
-          return aPagada - bPagada; 
-      }
+      if (aPagada !== bPagada) return aPagada - bPagada; 
 
       let valA: any, valB: any;
       switch (this.ordenCampo) {
