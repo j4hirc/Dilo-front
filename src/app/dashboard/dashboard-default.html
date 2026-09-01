@@ -352,6 +352,15 @@
                         </div>
                     </div>
 
+
+                    <!-- NUEVO: Burbuja en tiempo real de lo que el usuario está diciendo -->
+<div class="msg-wrapper user" *ngIf="zoeService.isListening && zoeService.transcriptEnVivo">
+    <div class="chat-bubble" style="opacity: 0.7; font-style: italic;">
+        {{ zoeService.transcriptEnVivo }}
+        <span style="display:inline-block; width:6px; height:6px; background:currentColor; border-radius:50%; margin-left:4px; animation: pulse 1s infinite;"></span>
+    </div>
+</div>
+
                     <!-- Indicador original de cuando la IA está pensando -->
                     <div class="msg-wrapper assistant" *ngIf="zoeService.isChatLoading && !isContextLoading">
                         <img src="images/IA.png" alt="Zoe" class="chat-bubble-avatar">
@@ -366,28 +375,37 @@
                         *ngIf="zoeService.isSpeaking || zoeService.isListening || zoeService.isChatLoading"
                         (click)="zoeService.detenerInteraccion()" title="Detener a Zoe"
                         style="color: #ef4444; background: #fee2e2; border: 1px solid #fca5a5; flex-shrink: 0; min-width: 44px;">
-                        <!-- ... icono ... -->
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                            fill="currentColor">
+                            <rect x="6" y="6" width="12" height="12" rx="1"></rect>
+                        </svg>
                     </button>
 
-                    <!-- MODIFICADO: Se bloquea y opaca si isContextLoading es true -->
                     <button type="button" class="mic-btn"
                         *ngIf="!zoeService.isSpeaking && !zoeService.isListening && !zoeService.isChatLoading"
                         (click)="zoeService.toggleEscucha()" title="Hablar con Zoe" style="flex-shrink: 0;"
                         [disabled]="isContextLoading" [style.opacity]="isContextLoading ? '0.5' : '1'"
                         [style.cursor]="isContextLoading ? 'not-allowed' : 'pointer'">
-                        <!-- ... icono ... -->
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+                            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                            <line x1="12" y1="19" x2="12" y2="22"></line>
+                        </svg>
                     </button>
 
-                    <!-- MODIFICADO: Se añade isContextLoading al [disabled] y cambia el placeholder -->
                     <input type="text" [(ngModel)]="nuevoMensajeTexto" (keyup.enter)="enviarMensajeDesdeInput()"
                         [placeholder]="isContextLoading ? 'Cargando datos...' : 'Pregúntame o háblame...'"
                         [disabled]="zoeService.isChatLoading || zoeService.isListening || isContextLoading">
 
-                    <!-- MODIFICADO: Se añade isContextLoading al [disabled] -->
                     <button type="button" class="send-btn" (click)="enviarMensajeDesdeInput()"
                         [disabled]="zoeService.isChatLoading || !nuevoMensajeTexto.trim() || isContextLoading"
                         aria-label="Enviar mensaje">
-                        <!-- ... icono ... -->
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="22" y1="2" x2="11" y2="13"></line>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                        </svg>
                     </button>
                 </div>
             </div>

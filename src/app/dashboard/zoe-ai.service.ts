@@ -38,7 +38,7 @@ export class ZoeAiService {
   private isChatLoadingSubject = new BehaviorSubject<boolean>(false);
   isChatLoading$ = this.isChatLoadingSubject.asObservable();
 
-  
+
   private actualizarContextoSubject = new Subject<void>();
   actualizarContexto$ = this.actualizarContextoSubject.asObservable();
 
@@ -53,6 +53,14 @@ export class ZoeAiService {
   get isChatLoading(): boolean {
     return this.isChatLoadingSubject.value;
   }
+
+
+  private transcriptEnVivoSubject = new BehaviorSubject<string>('');
+transcriptEnVivo$ = this.transcriptEnVivoSubject.asObservable();
+
+get transcriptEnVivo(): string {
+  return this.transcriptEnVivoSubject.value;
+}
 
   private contextoGlobal = '';
   private promptSistemaBase = '';
@@ -233,7 +241,7 @@ REGLAS DE SEGURIDAD MÁXIMA (OBLIGATORIAS):
       content: msg.text
     }));
 
-        const payload = {
+    const payload = {
       model: 'openai/gpt-oss-120b',
       messages: [
         { role: 'system', content: this.promptSistemaBase },
@@ -262,44 +270,66 @@ REGLAS DE SEGURIDAD MÁXIMA (OBLIGATORIAS):
           this.zone.run(() => {
             if (this.peticionActivaId !== miPeticionId) return;
 
-            let textoCompleto = res.choices[0]?.message?.content || '';
-            textoCompleto = textoCompleto.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+            try {
+              let textoCompleto = res?.choices?.[0]?.message?.content || '';
+              textoCompleto = textoCompleto.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
 
-            const navMatch = textoCompleto.match(/\[\[NAVEGAR:\s*([^\]]+)\]\]/i);
-            let rutaSolicitada = null;
-            if (navMatch) {
-              rutaSolicitada = navMatch[1].trim();
-              textoCompleto = textoCompleto.replace(navMatch[0], '').trim();
-            }
+              const navMatch = textoCompleto.match(/\[\[NAVEGAR:\s*([^\]]+)\]\]/i);
+              let rutaSolicitada = null;
+              if (navMatch) {
+                rutaSolicitada = navMatch[1].trim();
+                textoCompleto = textoCompleto.replace(navMatch[0], '').trim();
+              }
 
-            let textoParaPantalla = textoCompleto;
-            let textoParaVoz = '';
+              let textoParaPantalla = textoCompleto;
+              let textoParaVoz = '';
 
-            const vozMatch = textoCompleto.match(/<voz>([\s\S]*?)<\/voz>/i);
-            if (vozMatch) {
-              textoParaVoz = vozMatch[1].trim();
-              textoParaPantalla = textoCompleto.replace(vozMatch[0], '').trim();
-            } else {
-              textoParaPantalla = textoCompleto.replace(/<voz>|<\/voz>/gi, '').trim();
-              textoParaVoz = this.limpiarTextoParaVoz(textoParaPantalla);
-            }
+              const vozMatch = textoCompleto.match(/<voz>([\s\S]*?)<\/voz>/i);
+              if (vozMatch) {
+                textoParaVoz = vozMatch[1].trim();
+                textoParaPantalla = textoCompleto.replace(vozMatch[0], '').trim();
+              } else {
+                textoParaPantalla = textoCompleto.replace(/<voz>|<\/voz>/gi, '').trim();
+                textoParaVoz = this.limpiarTextoParaVoz(textoParaPantalla);
+              }
 
-            this.chatMensajesSubject.next([
-              ...this.chatMensajesSubject.value,
-              { role: 'assistant', text: textoParaPantalla, safeHtml: this.formatearMensaje(textoParaPantalla) }
-            ]);
+              // NUEVO: nunca dejar una burbuja vacía. Si el modelo solo devolvió <voz>,
+              // usamos ese texto también para pantalla; si todo vino vacío, mostramos
+              // un mensaje honesto en vez de nada.
+              if (!textoParaPantalla) {
+                textoParaPantalla = textoParaVoz || 'Perdoname, no pude armar bien la respuesta. ¿Podés repetirme la pregunta?';
+              }
+              if (!textoParaVoz) {
+                textoParaVoz = this.limpiarTextoParaVoz(textoParaPantalla);
+              }
 
-            this.isChatLoadingSubject.next(false);
+              this.chatMensajesSubject.next([
+                ...this.chatMensajesSubject.value,
+                { role: 'assistant', text: textoParaPantalla, safeHtml: this.formatearMensaje(textoParaPantalla) }
+              ]);
 
-            if (rutaSolicitada && this.modulosNavegables.some(m => m.ruta === rutaSolicitada)) {
-              setTimeout(() => this.zone.run(() => this.router.navigate([rutaSolicitada])), 500);
-            }
+              this.isChatLoadingSubject.next(false);
 
-            if (responderConVoz && textoParaVoz) {
-              this.hablar(textoParaVoz, () => {
+              if (rutaSolicitada && this.modulosNavegables.some(m => m.ruta === rutaSolicitada)) {
+                setTimeout(() => this.zone.run(() => this.router.navigate([rutaSolicitada])), 500);
+              }
+
+              if (responderConVoz && textoParaVoz) {
+                this.hablar(textoParaVoz, () => {
+                  if (this.keepListeningActive) this.iniciarEscucha();
+                });
+              } else {
                 if (this.keepListeningActive) this.iniciarEscucha();
-              });
-            } else {
+              }
+            } catch (e) {
+              // Si algo del parseo falla, NUNCA dejamos el chat colgado.
+              console.error('Error parseando respuesta de Groq:', e);
+              const msjError = 'Uy, se me cruzó un cable. ¿Me repetís eso?';
+              this.chatMensajesSubject.next([
+                ...this.chatMensajesSubject.value,
+                { role: 'assistant', text: msjError, safeHtml: this.formatearMensaje(msjError) }
+              ]);
+              this.isChatLoadingSubject.next(false);
               if (this.keepListeningActive) this.iniciarEscucha();
             }
           });
@@ -385,23 +415,33 @@ REGLAS DE SEGURIDAD MÁXIMA (OBLIGATORIAS):
     this.recognition.interimResults = true;
 
     this.recognition.onresult = (event: any) => {
-      let final = '';
-      for (let i = event.resultIndex; i < event.results.length; ++i) {
-        if (event.results[i].isFinal) final += event.results[i][0].transcript + ' ';
-      }
-      if (final) {
-        this.transcriptAcumulado += final;
-        this.zone.run(() => {
-          clearTimeout(this.silenceTimer);
-          this.silenceTimer = setTimeout(() => {
-            if (this.transcriptAcumulado.trim()) {
-              this.enviarMensaje(this.transcriptAcumulado.trim(), true);
-              this.transcriptAcumulado = '';
-            }
-          }, 1500);
-        });
-      }
-    };
+  let final = '';
+  let interim = '';
+  for (let i = event.resultIndex; i < event.results.length; ++i) {
+    if (event.results[i].isFinal) {
+      final += event.results[i][0].transcript + ' ';
+    } else {
+      interim += event.results[i][0].transcript;
+    }
+  }
+
+  this.zone.run(() => {
+    // Muestra en vivo lo que se va transcribiendo (final acumulado + interino actual)
+    this.transcriptEnVivoSubject.next((this.transcriptAcumulado + final + interim).trim());
+
+    if (final) {
+      this.transcriptAcumulado += final;
+      clearTimeout(this.silenceTimer);
+      this.silenceTimer = setTimeout(() => {
+        if (this.transcriptAcumulado.trim()) {
+          this.enviarMensaje(this.transcriptAcumulado.trim(), true);
+          this.transcriptAcumulado = '';
+          this.transcriptEnVivoSubject.next('');
+        }
+      }, 1500);
+    }
+  });
+};
 
     this.recognition.onend = () => {
       this.zone.run(() => {
@@ -436,44 +476,48 @@ REGLAS DE SEGURIDAD MÁXIMA (OBLIGATORIAS):
    * en seco) cuando onend y un nuevo enviarMensaje se disparan casi al mismo tiempo.
    */
   private intentarReiniciarEscucha() {
-    if (this.restartRecognitionTimer) {
-      clearTimeout(this.restartRecognitionTimer);
-      this.restartRecognitionTimer = null;
-    }
-
-    if (this.permisoMicrofonoDenegado) return;
-    if (!this.keepListeningActive || this.isChatLoadingSubject.value || this.isSpeaking) return;
-
-    this.restartRecognitionTimer = setTimeout(() => {
-      this.restartRecognitionTimer = null;
-      if (!this.keepListeningActive || this.isChatLoadingSubject.value || this.isSpeaking) return;
-      try {
-        this.recognition.start();
-        this.zone.run(() => this.isListening = true);
-      } catch (e) { }
-    }, 250);
+  if (this.restartRecognitionTimer) {
+    clearTimeout(this.restartRecognitionTimer);
+    this.restartRecognitionTimer = null;
   }
+
+  if (this.permisoMicrofonoDenegado) return;
+  if (!this.keepListeningActive || this.isChatLoadingSubject.value || this.isSpeaking) return;
+
+  this.restartRecognitionTimer = setTimeout(() => {
+    this.restartRecognitionTimer = null;
+    if (!this.keepListeningActive || this.isChatLoadingSubject.value || this.isSpeaking) return;
+    try {
+      this.recognition.start();
+      this.zone.run(() => this.isListening = true);
+    } catch (e) {
+      // Reintenta una vez más en vez de quedar mudo silenciosamente.
+      this.intentarReiniciarEscucha();
+    }
+  }, 250);
+}
 
   detenerInteraccion() {
-    window.speechSynthesis.pause();
-    window.speechSynthesis.cancel();
-    this.currentUtterance = null;
-    this.colaVoz = [];
-    this.detenerKeepAlive();
-    this.keepListeningActive = false;
-    this.peticionActivaId++;
-    if (this.silenceTimer) clearTimeout(this.silenceTimer);
-    if (this.restartRecognitionTimer) {
-      clearTimeout(this.restartRecognitionTimer);
-      this.restartRecognitionTimer = null;
-    }
-    try { this.recognition.abort(); } catch (e) { }
-    this.zone.run(() => {
-      this.isSpeaking = false;
-      this.isListening = false;
-      this.isChatLoadingSubject.next(false);
-    });
+  window.speechSynthesis.pause();
+  window.speechSynthesis.cancel();
+  this.currentUtterance = null;
+  this.colaVoz = [];
+  this.detenerKeepAlive();
+  this.keepListeningActive = false;
+  this.peticionActivaId++;
+  if (this.silenceTimer) clearTimeout(this.silenceTimer);
+  if (this.restartRecognitionTimer) {
+    clearTimeout(this.restartRecognitionTimer);
+    this.restartRecognitionTimer = null;
   }
+  try { this.recognition.abort(); } catch (e) { }
+  this.zone.run(() => {
+    this.isSpeaking = false;
+    this.isListening = false;
+    this.isChatLoadingSubject.next(false);
+    this.transcriptEnVivoSubject.next(''); // NUEVO: limpia el texto en vivo
+  });
+}
 
   toggleEscucha() {
     if (this.keepListeningActive) {
@@ -485,16 +529,23 @@ REGLAS DE SEGURIDAD MÁXIMA (OBLIGATORIAS):
     }
   }
 
-  private iniciarEscucha() {
-    if (!this.recognition) return;
-    this.transcriptAcumulado = '';
-    window.speechSynthesis.pause();
-    window.speechSynthesis.cancel();
-    try {
-      this.recognition.start();
-      this.isListening = true;
-    } catch (e) { }
+ private iniciarEscucha() {
+  if (!this.recognition) {
+    this.zone.run(() => {
+      this.keepListeningActive = false;
+      this.isListening = false;
+    });
+    return;
   }
+  this.transcriptAcumulado = '';
+  this.transcriptEnVivoSubject.next(''); // NUEVO
+  window.speechSynthesis.pause();
+  window.speechSynthesis.cancel();
+  try {
+    this.recognition.start();
+    this.isListening = true;
+  } catch (e) { }
+}
 
 
   private dividirEnFrases(texto: string): string[] {

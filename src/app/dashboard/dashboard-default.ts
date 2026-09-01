@@ -140,6 +140,12 @@ export class DashboardDefault implements OnInit, OnDestroy, AfterViewChecked {
         }
       });
 
+      this.zoeService.transcriptEnVivo$
+  .pipe(takeUntil(this.destroy$))
+  .subscribe(() => {
+    this.cdr.detectChanges();
+  });
+
     this.chatMinimizado = localStorage.getItem('dilo_chat_minimizado') === '1';
     this.hintChatOculto = localStorage.getItem('dilo_chat_hint_oculto') === '1';
 
