@@ -80,83 +80,85 @@ export class DashboardDefault implements OnInit, OnDestroy, AfterViewChecked {
   }
 
   ngOnInit() {
-    const token = localStorage.getItem('dilo_token');
-    const userStr = localStorage.getItem('usuario') || localStorage.getItem('dilo_user');
+  const token = localStorage.getItem('dilo_token');
+  const userStr = localStorage.getItem('usuario') || localStorage.getItem('dilo_user');
 
-    if (!token || !userStr) {
-      this.cerrarSesionForzada(); 
-      return; 
-    }
+  if (!token || !userStr) {
+    this.cerrarSesionForzada(); 
+    return; 
+  }
 
-    this.usuarioLogueado = JSON.parse(userStr);
-    this.rolUsuario = this.usuarioLogueado?.rol || 'PROPIETARIO';
-    this.fotoPerfilUrl = this.usuarioLogueado?.fotoPerfil || null;
-    
-    let nombreCompleto = '';
-    
-    if (this.usuarioLogueado?.nombreUsuario) {
-        nombreCompleto = this.usuarioLogueado.nombreUsuario;
-    } else if (this.usuarioLogueado?.primerNombre) {
-        nombreCompleto = this.usuarioLogueado.primerNombre + ' ' + (this.usuarioLogueado?.apellidoPaterno || '');
-    } else if (this.usuarioLogueado?.nombre) {
-        nombreCompleto = this.usuarioLogueado.nombre;
-    }
+  this.usuarioLogueado = JSON.parse(userStr);
+  this.rolUsuario = this.usuarioLogueado?.rol || 'PROPIETARIO';
+  this.fotoPerfilUrl = this.usuarioLogueado?.fotoPerfil || null;
+  
+  let nombreCompleto = '';
+  
+  if (this.usuarioLogueado?.nombreUsuario) {
+      nombreCompleto = this.usuarioLogueado.nombreUsuario;
+  } else if (this.usuarioLogueado?.primerNombre) {
+      nombreCompleto = this.usuarioLogueado.primerNombre + ' ' + (this.usuarioLogueado?.apellidoPaterno || '');
+  } else if (this.usuarioLogueado?.nombre) {
+      nombreCompleto = this.usuarioLogueado.nombre;
+  }
 
-    nombreCompleto = nombreCompleto.trim();
+  nombreCompleto = nombreCompleto.trim();
 
-    if (nombreCompleto) {
-        const partes = nombreCompleto.split(' ').filter(p => p.length > 0);
-        
-        if (partes.length >= 2) {
-            this.inicialesUsuario = (partes[0].charAt(0) + partes[1].charAt(0)).toUpperCase();
-        } else {
-            this.inicialesUsuario = partes[0].substring(0, 2).toUpperCase();
-        }
-    } else {
-        this.inicialesUsuario = 'US';
-    }
+  if (nombreCompleto) {
+      const partes = nombreCompleto.split(' ').filter(p => p.length > 0);
+      if (partes.length >= 2) {
+          this.inicialesUsuario = (partes[0].charAt(0) + partes[1].charAt(0)).toUpperCase();
+      } else {
+          this.inicialesUsuario = partes[0].substring(0, 2).toUpperCase();
+      }
+  } else {
+      this.inicialesUsuario = 'US';
+  }
 
-    this.negocioId = this.usuarioLogueado?.negocioId || this.usuarioLogueado?.idNegocio;
+  this.negocioId = this.usuarioLogueado?.negocioId || this.usuarioLogueado?.idNegocio;
 
-    this.zoeService.inicializarChat(this.usuarioLogueado?.primerNombre || this.usuarioLogueado?.nombreUsuario || 'Usuario', this.rolUsuario);
-
-    this.zoeService.chatMensajes$
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(() => {
-        this.cdr.detectChanges();
-      });
+  // ===== CAMBIO CLAVE: suscribirse ANTES de disparar cualquier emisión =====
+  this.zoeService.chatMensajes$
+    .pipe(takeUntil(this.destroy$))
+    .subscribe(() => {
+      this.cdr.detectChanges();
+    });
 
   this.zoeService.isChatLoading$
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(() => {
-        this.cdr.detectChanges();
-      });
+    .pipe(takeUntil(this.destroy$))
+    .subscribe(() => {
+      this.cdr.detectChanges();
+    });
 
-    this.zoeService.actualizarContexto$
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(() => {
-        if (this.negocioId) {
-          this.cargarContextoNegocioParaIA();
-        }
-      });
+  this.zoeService.actualizarContexto$
+    .pipe(takeUntil(this.destroy$))
+    .subscribe(() => {
+      if (this.negocioId) {
+        this.cargarContextoNegocioParaIA();
+      }
+    });
 
-      this.zoeService.transcriptEnVivo$
-  .pipe(takeUntil(this.destroy$))
-  .subscribe(() => {
-    this.cdr.detectChanges();
-  });
+  this.zoeService.transcriptEnVivo$
+    .pipe(takeUntil(this.destroy$))
+    .subscribe(() => {
+      this.cdr.detectChanges();
+    });
 
-    this.chatMinimizado = localStorage.getItem('dilo_chat_minimizado') === '1';
-    this.hintChatOculto = localStorage.getItem('dilo_chat_hint_oculto') === '1';
+  // Ahora sí, con todo ya suscrito, disparamos la inicialización del chat.
+  // El propio observable se encarga de refrescar la vista cuando llega el mensaje.
+  this.zoeService.inicializarChat(this.usuarioLogueado?.primerNombre || this.usuarioLogueado?.nombreUsuario || 'Usuario', this.rolUsuario);
 
-    if (this.negocioId) {
-       this.cargarDatosNegocio();
-       if (this.rolUsuario === 'PROPIETARIO' || this.rolUsuario === 'BODEGUERO') {
-           this.cargarAlertasCaducidad();
-       }
-       this.cargarContextoNegocioParaIA();
-    }
+  this.chatMinimizado = localStorage.getItem('dilo_chat_minimizado') === '1';
+  this.hintChatOculto = localStorage.getItem('dilo_chat_hint_oculto') === '1';
+
+  if (this.negocioId) {
+     this.cargarDatosNegocio();
+     if (this.rolUsuario === 'PROPIETARIO' || this.rolUsuario === 'BODEGUERO') {
+         this.cargarAlertasCaducidad();
+     }
+     this.cargarContextoNegocioParaIA();
   }
+}
   
 
   minimizarChat() {

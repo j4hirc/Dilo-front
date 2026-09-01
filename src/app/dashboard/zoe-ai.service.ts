@@ -139,15 +139,17 @@ get transcriptEnVivo(): string {
   }
 
   inicializarChat(nombreUsuario: string, rol: string) {
-    if (this.chatMensajesSubject.value.length === 0) {
-      const textoBienvenida = `¡Hola! Soy **Zoe**. Cuentame, ${nombreUsuario}, ¿qué revisamos hoy?`;
+  if (this.chatMensajesSubject.value.length === 0) {
+    const textoBienvenida = `¡Hola! Soy **Zoe**. Cuentame, ${nombreUsuario}, ¿qué revisamos hoy?`;
+    this.zone.run(() => {
       this.chatMensajesSubject.next([{
         role: 'assistant',
         text: textoBienvenida,
         safeHtml: this.formatearMensaje(textoBienvenida)
       }]);
-    }
+    });
   }
+}
 
   actualizarContexto(
     contextoTexto: string,
