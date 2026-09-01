@@ -2,7 +2,7 @@ import { Injectable, NgZone, inject } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { Router } from '@angular/router';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, Subject } from 'rxjs';
 import { environment } from '../../environments/environment';
 
 export interface ModuloNavegable {
@@ -37,6 +37,14 @@ export class ZoeAiService {
 
   private isChatLoadingSubject = new BehaviorSubject<boolean>(false);
   isChatLoading$ = this.isChatLoadingSubject.asObservable();
+
+  
+  private actualizarContextoSubject = new Subject<void>();
+  actualizarContexto$ = this.actualizarContextoSubject.asObservable();
+
+  pedirActualizacionContexto() {
+    this.actualizarContextoSubject.next();
+  }
 
   get chatMensajes(): ChatMessage[] {
     return this.chatMensajesSubject.value;

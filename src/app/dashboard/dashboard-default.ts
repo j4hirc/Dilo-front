@@ -122,10 +122,19 @@ export class DashboardDefault implements OnInit, OnDestroy, AfterViewChecked {
         this.cdr.detectChanges();
       });
 
-    this.zoeService.isChatLoading$
+  this.zoeService.isChatLoading$
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => {
         this.cdr.detectChanges();
+      });
+
+    // 🔥 NUEVO: Escuchar cuando un hijo (como Facturas) pide actualizar los datos de Zoe
+    this.zoeService.actualizarContexto$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        if (this.negocioId) {
+          this.cargarContextoNegocioParaIA();
+        }
       });
 
     this.chatMinimizado = localStorage.getItem('dilo_chat_minimizado') === '1';

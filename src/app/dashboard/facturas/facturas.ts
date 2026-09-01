@@ -7,6 +7,7 @@ import { catchError } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import Swal from 'sweetalert2';
 import { NgSelectModule } from '@ng-select/ng-select';
+import { ZoeAiService } from '../zoe-ai.service';
 
 enum VoiceStep {
   OFF = 'OFF',
@@ -26,6 +27,7 @@ enum VoiceStep {
 export class Facturas implements OnInit, OnDestroy {
   private http = inject(HttpClient);
   private cdr = inject(ChangeDetectorRef);
+  private zoeService = inject(ZoeAiService);
 
   micPausadoManualmente: boolean = false;
   facturas: any[] = [];
@@ -3015,6 +3017,9 @@ const items = Array.isArray(datos.items) ? datos.items.filter((it: any) => it &&
           timer: 900,
           showConfirmButton: false
         });
+
+        this.zoeService.pedirActualizacionContexto();
+
         // PDF un instante después para no retrasar el cierre del modal
         setTimeout(() => this.imprimirFacturaPDF(facturaParaPDF), 50);
         if (this.negocioId) this.cargarTodasLasFacturas(this.negocioId);
