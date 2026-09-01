@@ -21,10 +21,13 @@ export class DashboardDefault implements OnInit, OnDestroy, AfterViewChecked {
   private http = inject(HttpClient);
   private cdr = inject(ChangeDetectorRef);
   public zoeService = inject(ZoeAiService); 
+  isContextLoading: boolean = false;
   
   private destroy$ = new Subject<void>();
 
   @ViewChild('chatScroll') private chatScrollContainer!: ElementRef;
+
+  
   
   negocioId: number | null = null;
   negocioNombre: string = 'Cargando...';
@@ -68,6 +71,7 @@ export class DashboardDefault implements OnInit, OnDestroy, AfterViewChecked {
     { rol: 'VENDEDOR', descripcion: 'Enfocado solo en ventas y clientes. No tiene acceso a inventario.' },
     { rol: 'BODEGUERO', descripcion: 'Enfocado solo en mercadería e inventario. No puede facturar.' },
   ];
+  
 
   private get authHeaders(): HttpHeaders {
     const rawToken = localStorage.getItem('dilo_token') || '';
@@ -147,6 +151,7 @@ export class DashboardDefault implements OnInit, OnDestroy, AfterViewChecked {
        this.cargarContextoNegocioParaIA();
     }
   }
+  
 
   minimizarChat() {
     if (this.zoeService.isChatOpen) this.zoeService.toggleChat();
@@ -343,6 +348,8 @@ private calcularVentasPorPeriodo(
   cargarContextoNegocioParaIA() {
     if (!this.negocioId) return;
 
+    this.isContextLoading = true;
+
     const id = this.negocioId;
     const opts = { headers: this.authHeaders };
 
@@ -393,6 +400,9 @@ private calcularVentasPorPeriodo(
           this.usuarioLogueado?.primerNombre || 'Usuario', this.rolUsuario, this.negocioNombre, alertasStr,
           rutasNavegables, modulosEnConstruccion
         );
+
+       this.isContextLoading = false;
+        this.cdr.detectChanges();
     });
   } 
 

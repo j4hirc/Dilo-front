@@ -81,7 +81,7 @@
                 Clientes
             </a>
 
-             <a *ngIf="tieneRol(['PROPIETARIO', 'BODEGUERO'])" routerLink="/dashboard/inventario"
+            <a *ngIf="tieneRol(['PROPIETARIO', 'BODEGUERO'])" routerLink="/dashboard/inventario"
                 routerLinkActive="active" class="menu-item" (click)="isSidebarOpen = false">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
                     stroke="currentColor" stroke-width="2">
@@ -103,7 +103,7 @@
                 Abastecimiento
             </a>
 
-             <a *ngIf="tieneRol(['PROPIETARIO', 'BODEGUERO'])" routerLink="/dashboard/kardex" routerLinkActive="active"
+            <a *ngIf="tieneRol(['PROPIETARIO', 'BODEGUERO'])" routerLink="/dashboard/kardex" routerLinkActive="active"
                 class="menu-item" (click)="isSidebarOpen = false">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
                     stroke="currentColor" stroke-width="2">
@@ -304,146 +304,159 @@
         </button>
 
         <div class="chat-widget" *ngIf="!chatMinimizado">
-  <div class="chat-window shadow-lg" *ngIf="zoeService.isChatOpen">
-    <div class="chat-header">
-      <div class="chat-title">
-        <div class="ai-header-icon">
-          <img src="images/IA.png" alt="Zoe">
+            <div class="chat-window shadow-lg" *ngIf="zoeService.isChatOpen">
+                <div class="chat-header">
+                    <div class="chat-title">
+                        <div class="ai-header-icon">
+                            <img src="images/IA.png" alt="Zoe">
+                        </div>
+                        <span>Zoe</span>
+                    </div>
+                    <div class="chat-header-actions">
+                        <button type="button" class="minimize-chat" (click)="minimizarChat()"
+                            title="Minimizar (no estorba)" aria-label="Minimizar chat">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                        </button>
+                        <button type="button" class="close-chat" (click)="zoeService.toggleChat()"
+                            aria-label="Cerrar chat">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="chat-messages" #chatScroll>
+                    <div *ngFor="let msg of zoeService.chatMensajes"
+                        [ngClass]="msg.role === 'user' ? 'msg-wrapper user' : 'msg-wrapper assistant'">
+                        <img *ngIf="msg.role === 'assistant'" src="images/IA.png" alt="Zoe" class="chat-bubble-avatar">
+                        <div class="chat-bubble" [innerHTML]="msg.safeHtml"></div>
+                    </div>
+
+                    <!-- NUEVO: Indicador de carga de datos del negocio -->
+                    <div class="msg-wrapper assistant" *ngIf="isContextLoading">
+                        <img src="images/IA.png" alt="Zoe" class="chat-bubble-avatar">
+                        <div class="chat-bubble"
+                            style="opacity: 0.8; font-size: 0.9em; display: flex; align-items: center; gap: 8px;">
+                            <span>Sincronizando datos de tu negocio...</span>
+                            <div class="typing-indicator"
+                                style="padding: 0; min-height: auto; background: transparent;">
+                                <span></span><span></span><span></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Indicador original de cuando la IA está pensando -->
+                    <div class="msg-wrapper assistant" *ngIf="zoeService.isChatLoading && !isContextLoading">
+                        <img src="images/IA.png" alt="Zoe" class="chat-bubble-avatar">
+                        <div class="chat-bubble typing-indicator">
+                            <span></span><span></span><span></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chat-input-area">
+                    <button type="button" class="mic-btn stop-btn"
+                        *ngIf="zoeService.isSpeaking || zoeService.isListening || zoeService.isChatLoading"
+                        (click)="zoeService.detenerInteraccion()" title="Detener a Zoe"
+                        style="color: #ef4444; background: #fee2e2; border: 1px solid #fca5a5; flex-shrink: 0; min-width: 44px;">
+                        <!-- ... icono ... -->
+                    </button>
+
+                    <!-- MODIFICADO: Se bloquea y opaca si isContextLoading es true -->
+                    <button type="button" class="mic-btn"
+                        *ngIf="!zoeService.isSpeaking && !zoeService.isListening && !zoeService.isChatLoading"
+                        (click)="zoeService.toggleEscucha()" title="Hablar con Zoe" style="flex-shrink: 0;"
+                        [disabled]="isContextLoading" [style.opacity]="isContextLoading ? '0.5' : '1'"
+                        [style.cursor]="isContextLoading ? 'not-allowed' : 'pointer'">
+                        <!-- ... icono ... -->
+                    </button>
+
+                    <!-- MODIFICADO: Se añade isContextLoading al [disabled] y cambia el placeholder -->
+                    <input type="text" [(ngModel)]="nuevoMensajeTexto" (keyup.enter)="enviarMensajeDesdeInput()"
+                        [placeholder]="isContextLoading ? 'Cargando datos...' : 'Pregúntame o háblame...'"
+                        [disabled]="zoeService.isChatLoading || zoeService.isListening || isContextLoading">
+
+                    <!-- MODIFICADO: Se añade isContextLoading al [disabled] -->
+                    <button type="button" class="send-btn" (click)="enviarMensajeDesdeInput()"
+                        [disabled]="zoeService.isChatLoading || !nuevoMensajeTexto.trim() || isContextLoading"
+                        aria-label="Enviar mensaje">
+                        <!-- ... icono ... -->
+                    </button>
+                </div>
+            </div>
+
+            <div class="chat-fab-row">
+                <!-- Hint cuando está idle -->
+                <div class="chat-hint-bubble clickable"
+                    *ngIf="!zoeService.isChatOpen && !zoeService.isListening && !zoeService.isSpeaking && !zoeService.isChatLoading && !hintChatOculto"
+                    (click)="!isContextLoading && zoeService.toggleEscucha()"
+                    [style.cursor]="isContextLoading ? 'wait' : 'pointer'">
+
+                    <!-- MODIFICADO: Mensaje dinámico en la burbuja exterior -->
+                    <p style="display: flex; align-items: center; gap: 6px;"
+                        [style.color]="isContextLoading ? '#64748b' : 'inherit'">
+                        <svg *ngIf="!isContextLoading" xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                            viewBox="0 0 24 24" fill="none" stroke="var(--primary-orange)" stroke-width="2.5"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+                            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                            <line x1="12" y1="19" x2="12" y2="22"></line>
+                        </svg>
+                        {{ isContextLoading ? 'Sincronizando datos...' : '¿Necesitas ayuda? Clic aquí para hablar.' }}
+                    </p>
+
+                    <button type="button" class="hint-dismiss" (click)="ocultarHintChat($event)"
+                        title="Ocultar sugerencia" aria-label="Cerrar sugerencia">×</button>
+                    <div class="chat-hint-arrow"></div>
+                </div>
+                <!-- Burbuja activa (hablando / escuchando / pensando) + BOTÓN DETENER siempre visible -->
+                <div class="chat-hint-bubble listening-mode"
+                    *ngIf="!zoeService.isChatOpen && (zoeService.isListening || zoeService.isSpeaking || zoeService.isChatLoading)">
+                    <p style="display: flex; align-items: center; gap: 6px; color: #ef4444; font-weight: 800;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+                            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                            <line x1="12" y1="19" x2="12" y2="22"></line>
+                        </svg>
+                        {{ zoeService.isSpeaking ? 'Hablando...' : (zoeService.isChatLoading ? 'Pensando...' : 'Te
+                        escucho...') }}
+                    </p>
+                    <button type="button" class="btn-stop-mic" (click)="zoeService.detenerInteraccion()"
+                        title="Detener todo">
+                        Detener
+                    </button>
+                    <div class="chat-hint-arrow listening-arrow"></div>
+                </div>
+
+                <div class="chat-fab-wrap">
+                    <button type="button" class="chat-fab-minimize" (click)="minimizarChat()" title="Ocultar asistente"
+                        aria-label="Ocultar Zoe">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="3">
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                    </button>
+                    <button type="button" class="chat-fab" (click)="zoeService.toggleChat()"
+                        [ngClass]="{'fab-open': zoeService.isChatOpen, 'fab-listening': !zoeService.isChatOpen && zoeService.isListening}"
+                        aria-label="Abrir asistente Zoe">
+                        <img *ngIf="!zoeService.isChatOpen" src="images/IA.png" alt="Zoe" class="fab-image">
+                        <svg *ngIf="zoeService.isChatOpen" xmlns="http://www.w3.org/2000/svg" width="22" height="22"
+                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
+            </div>
         </div>
-        <span>Zoe</span>
-      </div>
-      <div class="chat-header-actions">
-        <button type="button" class="minimize-chat" (click)="minimizarChat()"
-          title="Minimizar (no estorba)" aria-label="Minimizar chat">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
-            fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-            <line x1="5" y1="12" x2="19" y2="12"></line>
-          </svg>
-        </button>
-        <button type="button" class="close-chat" (click)="zoeService.toggleChat()"
-          aria-label="Cerrar chat">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
-            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-            stroke-linejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
-      </div>
-    </div>
-
-    <div class="chat-messages" #chatScroll>
-      <div *ngFor="let msg of zoeService.chatMensajes"
-        [ngClass]="msg.role === 'user' ? 'msg-wrapper user' : 'msg-wrapper assistant'">
-        <img *ngIf="msg.role === 'assistant'" src="images/IA.png" alt="Zoe" class="chat-bubble-avatar">
-        <div class="chat-bubble" [innerHTML]="msg.safeHtml"></div>
-      </div>
-
-      <div class="msg-wrapper assistant" *ngIf="zoeService.isChatLoading">
-        <img src="images/IA.png" alt="Zoe" class="chat-bubble-avatar">
-        <div class="chat-bubble typing-indicator">
-          <span></span><span></span><span></span>
-        </div>
-      </div>
-    </div>
-
-    <div class="chat-input-area">
-      <!-- BOTÓN DETENER - Siempre prioritario y visible cuando hay actividad -->
-      <button type="button" class="mic-btn stop-btn"
-        *ngIf="zoeService.isSpeaking || zoeService.isListening || zoeService.isChatLoading"
-        (click)="zoeService.detenerInteraccion()"
-        title="Detener a Zoe"
-        style="color: #ef4444; background: #fee2e2; border: 1px solid #fca5a5; flex-shrink: 0; min-width: 44px;">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-          <rect x="6" y="6" width="12" height="12" rx="2" ry="2"></rect>
-        </svg>
-      </button>
-
-      <!-- Botón Micrófono normal (solo cuando está idle) -->
-      <button type="button" class="mic-btn"
-        *ngIf="!zoeService.isSpeaking && !zoeService.isListening && !zoeService.isChatLoading"
-        (click)="zoeService.toggleEscucha()" title="Hablar con Zoe" style="flex-shrink: 0;">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
-          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
-          <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-          <line x1="12" y1="19" x2="12" y2="22"></line>
-        </svg>
-      </button>
-
-      <input type="text" [(ngModel)]="nuevoMensajeTexto" (keyup.enter)="enviarMensajeDesdeInput()"
-        placeholder="Pregúntame o háblame..."
-        [disabled]="zoeService.isChatLoading || zoeService.isListening">
-
-      <button type="button" class="send-btn" (click)="enviarMensajeDesdeInput()"
-        [disabled]="zoeService.isChatLoading || !nuevoMensajeTexto.trim()" aria-label="Enviar mensaje">
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
-          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="22" y1="2" x2="11" y2="13"></line>
-          <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-        </svg>
-      </button>
-    </div>
-  </div>
-
-  <div class="chat-fab-row">
-    <!-- Hint cuando está idle -->
-    <div class="chat-hint-bubble clickable"
-      *ngIf="!zoeService.isChatOpen && !zoeService.isListening && !zoeService.isSpeaking && !zoeService.isChatLoading && !hintChatOculto"
-      (click)="zoeService.toggleEscucha()">
-      <p style="display: flex; align-items: center; gap: 6px;">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-          stroke="var(--primary-orange)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
-          <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-          <line x1="12" y1="19" x2="12" y2="22"></line>
-        </svg>
-        ¿Necesitas ayuda? Clic aquí para hablar.
-      </p>
-      <button type="button" class="hint-dismiss" (click)="ocultarHintChat($event)"
-        title="Ocultar sugerencia" aria-label="Cerrar sugerencia">×</button>
-      <div class="chat-hint-arrow"></div>
-    </div>
-
-    <!-- Burbuja activa (hablando / escuchando / pensando) + BOTÓN DETENER siempre visible -->
-    <div class="chat-hint-bubble listening-mode"
-      *ngIf="!zoeService.isChatOpen && (zoeService.isListening || zoeService.isSpeaking || zoeService.isChatLoading)">
-      <p style="display: flex; align-items: center; gap: 6px; color: #ef4444; font-weight: 800;">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
-          <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-          <line x1="12" y1="19" x2="12" y2="22"></line>
-        </svg>
-        {{ zoeService.isSpeaking ? 'Hablando...' : (zoeService.isChatLoading ? 'Pensando...' : 'Te escucho...') }}
-      </p>
-      <button type="button" class="btn-stop-mic" (click)="zoeService.detenerInteraccion()" title="Detener todo">
-        Detener
-      </button>
-      <div class="chat-hint-arrow listening-arrow"></div>
-    </div>
-
-    <div class="chat-fab-wrap">
-      <button type="button" class="chat-fab-minimize" (click)="minimizarChat()" title="Ocultar asistente"
-        aria-label="Ocultar Zoe">
-        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none"
-          stroke="currentColor" stroke-width="3">
-          <line x1="5" y1="12" x2="19" y2="12"></line>
-        </svg>
-      </button>
-      <button type="button" class="chat-fab" (click)="zoeService.toggleChat()"
-        [ngClass]="{'fab-open': zoeService.isChatOpen, 'fab-listening': !zoeService.isChatOpen && zoeService.isListening}"
-        aria-label="Abrir asistente Zoe">
-        <img *ngIf="!zoeService.isChatOpen" src="images/IA.png" alt="Zoe" class="fab-image">
-        <svg *ngIf="zoeService.isChatOpen" xmlns="http://www.w3.org/2000/svg" width="22" height="22"
-          viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-          stroke-linecap="round" stroke-linejoin="round">
-          <line x1="18" y1="6" x2="6" y2="18"></line>
-          <line x1="6" y1="6" x2="18" y2="18"></line>
-        </svg>
-      </button>
-    </div>
-  </div>
-</div>
     </main>
 </div>
