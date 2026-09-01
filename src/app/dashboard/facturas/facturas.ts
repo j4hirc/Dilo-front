@@ -201,20 +201,24 @@ export class Facturas implements OnInit, OnDestroy {
   }
 
   toggleMicrofono() {
-    if (this.micPausadoManualmente) {
-      // Reanudar
-      this.micPausadoManualmente = false;
-      this.escuchar();
-    } else {
-      // Pausar
-      this.micPausadoManualmente = true;
-      this.isListening = false;
-      if (this.recognition) {
-        try { this.recognition.stop(); } catch (e) { }
-      }
-      this.cdr.detectChanges();
+  if (this.micPausadoManualmente) {
+    this.micPausadoManualmente = false;
+    this.escuchar();
+  } else {
+    this.micPausadoManualmente = true;
+    this.isListening = false;
+    if (this.recognition) {
+      try { this.recognition.stop(); } catch (e) { }
     }
+    
+    if (this.userTranscript && !this.isThinking) {
+      clearTimeout(this.silenceTimer);
+      this.procesarComandoVoz(this.userTranscript);
+    }
+
+    this.cdr.detectChanges();
   }
+}
 
   private getAuthHeaders(): HttpHeaders {
     const rawToken = localStorage.getItem('dilo_token') || '';
@@ -602,17 +606,13 @@ export class Facturas implements OnInit, OnDestroy {
     this.recognition.interimResults = true;
 
     this.recognition.onresult = (event: any) => {
-      // Ignorar 100% mientras habla, piensa, elige o en cooldown anti-eco
-      if (this.bloqueoEscucha || this.seleccionEnCurso || this.isThinking || !this.isListening) {
-        this.transcriptAcumulado = '';
-        this.userTranscript = '';
-        return;
-      }
-      if (Date.now() < this.silencioPostHablaUntil) {
-        this.transcriptAcumulado = '';
-        this.userTranscript = '';
-        return;
-      }
+  if (this.bloqueoEscucha || this.seleccionEnCurso || this.isThinking || !this.isListening) {
+    return;
+  }
+  
+  if (Date.now() < this.silencioPostHablaUntil) {
+    return;
+  }
 
       let interim = '';
       let final = '';
