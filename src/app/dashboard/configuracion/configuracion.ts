@@ -152,6 +152,93 @@ export class Configuracion implements OnInit {
       });
   }
 
+
+  eliminarNegocio() {
+    if (!this.negocioId) return;
+
+    // Advertencia 1: Confirmación normal
+    Swal.fire({
+      title: '¿Estás absolutamente seguro?',
+      text: "Esta acción eliminará TODO el negocio. Se perderán productos, ventas y configuración. ¡NO se puede deshacer!",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Sí, eliminar negocio',
+      cancelButtonText: 'Cancelar'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        
+        // Advertencia 2: Doble check de seguridad
+        Swal.fire({
+          title: '¡ÚLTIMA ADVERTENCIA!',
+          text: "Estás a punto de borrar los datos de tu empresa para siempre. ¿Realmente quieres continuar?",
+          icon: 'error',
+          showCancelButton: true,
+          confirmButtonColor: '#d33',
+          cancelButtonColor: '#3085d6',
+          confirmButtonText: 'SÍ, ESTOY SEGURO',
+          cancelButtonText: 'Me arrepentí'
+        }).then((result2) => {
+          if (result2.isConfirmed) {
+
+            // Advertencia 3: Validación por texto
+            Swal.fire({
+              title: 'Confirmación manual requerida',
+              html: 'Escribe la palabra <b>ELIMINAR</b> para confirmar la destrucción total del negocio.',
+              input: 'text',
+              inputPlaceholder: 'Escribe ELIMINAR aquí...',
+              showCancelButton: true,
+              confirmButtonColor: '#d33',
+              cancelButtonText: 'Cancelar',
+              preConfirm: (texto) => {
+                if (texto !== 'ELIMINAR') {
+                  Swal.showValidationMessage('Debes escribir la palabra exacta: ELIMINAR');
+                }
+              }
+            }).then((result3) => {
+              if (result3.isConfirmed) {
+                this.ejecutarEliminacion();
+              }
+            });
+          }
+        });
+      }
+    });
+  }
+
+  private ejecutarEliminacion() {
+    const rawToken = localStorage.getItem('dilo_token') || '';
+    const cleanToken = rawToken.replace(/['"]+/g, ''); 
+    const headers = new HttpHeaders().set('Authorization', `Bearer ${cleanToken}`);
+
+    Swal.fire({ 
+      title: 'Destruyendo negocio...', 
+      text: 'Por favor espera...',
+      allowOutsideClick: false, 
+      didOpen: () => Swal.showLoading() 
+    });
+
+    this.http.delete(`${this.apiUrl}/negocios/${this.negocioId}`, { headers })
+      .subscribe({
+        next: () => {
+          Swal.fire({
+            title: '¡Negocio Eliminado!', 
+            text: 'Tu negocio ha sido eliminado para siempre. Cerrando sesión...', 
+            icon: 'success',
+            allowOutsideClick: false
+          }).then(() => {
+            this.cerrarSesion(); // Lo sacamos del sistema porque ya no tiene negocio
+          });
+        },
+        error: (err) => {
+          console.error(err);
+          Swal.fire('Acceso Denegado', 'No se pudo eliminar. Asegúrate de ser el PROPIETARIO del negocio.', 'error');
+        }
+      });
+  }
+
+
   cerrarSesion() {
     localStorage.removeItem('dilo_token');
     localStorage.removeItem('dilo_user');

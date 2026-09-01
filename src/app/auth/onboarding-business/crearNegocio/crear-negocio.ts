@@ -125,11 +125,21 @@ export class CrearNegocio implements OnInit {
           }).then(() => {
              this.router.navigate(['/login']); 
           });
-        } else {
+        } 
+        // 👇 AQUÍ ATRAPAMOS EL ERROR 409 DE RUC DUPLICADO 👇
+        else if (err.status === 409 || (err.error?.message && err.error.message.includes('ruc'))) {
+          Swal.fire({
+            icon: 'warning',
+            title: 'RUC ya registrado',
+            text: 'El número de RUC ingresado ya pertenece a un negocio en el sistema. Por favor, verifica los datos.',
+            confirmButtonColor: '#ed8936'
+          });
+        } 
+        else {
           Swal.fire({
             icon: 'error',
             title: 'Error al crear',
-            text: err.error?.message || 'Hubo un problema al registrar el negocio.',
+            text: err.error?.message || 'Hubo un problema al registrar el negocio. Intenta de nuevo.',
             confirmButtonColor: '#ed8936'
           });
         }

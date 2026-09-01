@@ -1,6 +1,60 @@
 @import '../productos/productos.css';
 
 /* =========================================
+   🔥 ENCABEZADO MODERNO DE PÁGINA (CORREGIDO)
+   ========================================= */
+.page-header {
+    display: flex;
+    align-items: center; /* Alinea verticalmente el ícono y el texto al centro */
+    justify-content: flex-start; /* Fuerza a que todo se pegue a la izquierda */
+    gap: 20px;
+    margin-bottom: 25px;
+    padding: 24px 30px;
+    background: #ffffff; /* Fondo blanco limpio en lugar del degradado */
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03); /* Sombra mucho más sutil */
+    text-align: left; /* MUY IMPORTANTE: Evita que el texto se centre */
+}
+
+.header-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 52px;
+    height: 52px;
+    background-color: #fff7ed;
+    color: var(--primary-orange, #ea580c);
+    border-radius: 14px;
+    flex-shrink: 0;
+    /* Eliminamos la sombra naranja exagerada para que se vea más limpio */
+}
+
+.header-titles {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+    flex: 1;
+    text-align: left !important; /* Forzamos la alineación a la izquierda */
+}
+
+.header-titles h2 {
+    margin: 0;
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #0f172a;
+    letter-spacing: -0.5px;
+}
+
+.header-titles p {
+    margin: 0;
+    font-size: 0.95rem;
+    color: #64748b;
+    line-height: 1.4;
+}
+
+/* =========================================
    🔥 BANNER DE INSTRUCCIONES
    ========================================= */
 .info-banner {
@@ -214,17 +268,78 @@
 }
 
 /* =========================================
+   🚨 ZONA DE PELIGRO (DANGER ZONE)
+   ========================================= */
+.danger-card {
+    border: 1px solid #fecaca;
+    background-color: #fffcfc;
+    margin-top: 2rem;
+    border-radius: 16px;
+    box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.05);
+}
+
+.danger-header {
+    color: #dc2626;
+    margin-top: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1.5rem;
+    font-weight: 800;
+}
+
+.danger-card p {
+    color: #64748b;
+    font-size: 1rem;
+    margin-bottom: 25px;
+    line-height: 1.5;
+}
+
+.btn-danger-modern {
+    background-color: #ef4444;
+    color: white;
+    border: none;
+    padding: 14px 24px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 1.05rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);
+}
+
+.btn-danger-modern:hover {
+    background-color: #dc2626;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(239, 68, 68, 0.35);
+}
+
+/* =========================================
    🔥 RESPONSIVE
    ========================================= */
 @media (max-width: 768px) {
+    .page-header {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        padding: 25px 20px;
+        gap: 15px;
+    }
+    
+    .header-titles h2 {
+        font-size: 1.5rem;
+    }
+
     .form-grid {
         grid-template-columns: 1fr;
         gap: 20px;
     }
     
-    .card-body.form-body {
+    .card-body.form-body, .card-footer {
         padding: 25px 20px;
-        gap: 25px;
     }
 
     .business-image-preview {
@@ -232,12 +347,7 @@
         height: 150px;
     }
     
-    .card-footer {
-        padding: 25px 20px;
-        justify-content: center;
-    }
-    
-    .btn-large {
+    .btn-large, .btn-danger-modern {
         width: 100%;
         justify-content: center;
     }
@@ -249,4 +359,4 @@
         min-width: 20px;
         margin-top: 2px;
     }
-}
+}   

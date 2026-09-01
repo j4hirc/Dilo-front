@@ -121,15 +121,114 @@ export class Clientes implements OnInit {
     this.showModal = false;
     this.cdr.detectChanges(); 
   }
+
+  // ==========================================
+  // LÓGICA DE VALIDACIONES
+  // ==========================================
+
+  private validarCedulaEcuatoriana(identificacion: string): boolean {
+    if (!identificacion) return false;
+    
+    // Debe tener 10 (Cédula) o 13 dígitos (RUC) y ser solo números
+    if (!/^\d{10}$|^\d{13}$/.test(identificacion)) return false;
+
+    const provincia = parseInt(identificacion.substring(0, 2), 10);
+    const tercerDigito = parseInt(identificacion.substring(2, 3), 10);
+
+    // Provincias válidas (01 a 24) y código 30 (Exterior)
+    if (provincia < 1 || (provincia > 24 && provincia !== 30)) return false;
+
+    // Validación para personas naturales (Tercer dígito menor a 6)
+    if (tercerDigito < 6) {
+      const coeficientes = [2, 1, 2, 1, 2, 1, 2, 1, 2];
+      const digitoVerificador = parseInt(identificacion.substring(9, 10), 10);
+      let suma = 0;
+
+      for (let i = 0; i < 9; i++) {
+        let valor = parseInt(identificacion.charAt(i), 10) * coeficientes[i];
+        if (valor > 9) valor -= 9;
+        suma += valor;
+      }
+
+      const decenaSuperior = Math.ceil(suma / 10) * 10;
+      let digitoCalculado = decenaSuperior - suma;
+      if (digitoCalculado === 10) digitoCalculado = 0;
+
+      if (digitoCalculado !== digitoVerificador) return false;
+
+      // Si es RUC de persona natural (13 dígitos), debe terminar en "001"
+      if (identificacion.length === 13 && !identificacion.endsWith('001')) return false;
+
+      return true;
+    }
+    
+    // Si es RUC de empresa privada (Tercer dígito 9) o empresa pública (Tercer dígito 6)
+    // omitimos el cálculo complejo por ahora, pero validamos que termine en 001 y tenga 13 dígitos.
+    if (identificacion.length === 13 && (tercerDigito === 9 || tercerDigito === 6)) {
+        return identificacion.endsWith('001');
+    }
+
+    return false;
+  }
+
+  private calcularEdad(fechaNacimiento: string): number {
+    if (!fechaNacimiento) return 0;
+    const hoy = new Date();
+    const nacimiento = new Date(fechaNacimiento);
+    let edad = hoy.getFullYear() - nacimiento.getFullYear();
+    const mes = hoy.getMonth() - nacimiento.getMonth();
+    
+    if (mes < 0 || (mes === 0 && hoy.getDate() < nacimiento.getDate())) {
+      edad--;
+    }
+    return edad;
+  }
+
+  // ==========================================
+  // EJECUCIÓN DE GUARDADO
+  // ==========================================
   
   guardarCliente() {
     if (!this.negocioId) return;
 
+    // 1. Validar campos obligatorios
     if (!this.clienteForm.dni || !this.clienteForm.primerNombre || !this.clienteForm.apellidoPaterno) {
-      Swal.fire('Error', 'El DNI, Primer Nombre y Apellido Paterno son obligatorios.', 'error');
+      Swal.fire('Campos Incompletos', 'El DNI, Primer Nombre y Apellido Paterno son obligatorios.', 'warning');
       return;
     }
 
+    // 2. Validar Cédula / RUC (Módulo 10)
+    if (!this.validarCedulaEcuatoriana(this.clienteForm.dni)) {
+      Swal.fire('Documento Inválido', 'El DNI o RUC ingresado no cumple con el formato válido.', 'warning');
+      return;
+    }
+
+    // 3. Validar Duplicados en el Frontend
+    const dniDuplicado = this.clientes.some(c => c.dni === this.clienteForm.dni && c.id !== this.currentClienteId);
+    if (dniDuplicado) {
+      Swal.fire('DNI Duplicado', 'Ya existe un cliente registrado con este documento en tu negocio.', 'warning');
+      return;
+    }
+
+    // 4. Validar Correo Electrónico (Regex)
+    if (this.clienteForm.email) {
+      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/;
+      if (!emailRegex.test(this.clienteForm.email)) {
+        Swal.fire('Correo Inválido', 'Por favor, ingresa un formato de correo electrónico correcto.', 'warning');
+        return;
+      }
+    }
+
+    // 5. Validar Edad (Mayor de 13 años)
+    if (this.clienteForm.fechaNacimiento) {
+      const edad = this.calcularEdad(this.clienteForm.fechaNacimiento);
+      if (edad < 13) {
+        Swal.fire('Edad Mínima', 'El cliente debe tener al menos 13 años de edad para ser registrado.', 'warning');
+        return;
+      }
+    }
+
+    // Preparar petición
     const rawToken = localStorage.getItem('dilo_token') || '';
     const cleanToken = rawToken.replace(/['"]+/g, ''); 
     const headers = new HttpHeaders().set('Authorization', `Bearer ${cleanToken}`);
@@ -203,7 +302,7 @@ export class Clientes implements OnInit {
     if (err.status === 401) {
       Swal.fire({ icon: 'warning', title: 'Sesión expirada', text: 'Cierra sesión y vuelve a entrar.', confirmButtonColor: '#ed8936' });
     } else {
-      Swal.fire('Oops...', 'Revisa que el DNI no esté duplicado o los datos sean correctos.', 'error');
+      Swal.fire('Error en el Servidor', 'Verifica los datos e inténtalo nuevamente.', 'error');
     }
   }
 }
