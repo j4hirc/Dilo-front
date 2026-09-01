@@ -128,7 +128,6 @@ export class DashboardDefault implements OnInit, OnDestroy, AfterViewChecked {
         this.cdr.detectChanges();
       });
 
-    // 🔥 NUEVO: Escuchar cuando un hijo (como Facturas) pide actualizar los datos de Zoe
     this.zoeService.actualizarContexto$
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => {
