@@ -244,15 +244,16 @@ REGLAS DE SEGURIDAD MÁXIMA (OBLIGATORIAS):
     }));
 
     const payload = {
-      model: 'openai/gpt-oss-120b',
-      messages: [
-        { role: 'system', content: this.promptSistemaBase },
-        ...historial
-      ],
-      temperature: 0.3,
-      max_tokens: 900,
-      top_p: 0.9
-    };
+  model: 'openai/gpt-oss-120b',
+  messages: [
+    { role: 'system', content: this.promptSistemaBase },
+    ...historial
+  ],
+  temperature: 0.3,
+  max_tokens: 1400,        // antes 900 — más margen para que el razonamiento no se coma toda la respuesta
+  top_p: 0.9,
+  reasoning_effort: 'low'  // NUEVO: menos "pensamiento" oculto, más tokens libres para la respuesta visible
+};
 
     this.ejecutarPeticionGroq(payload, headers, miPeticionId, responderConVoz, 0);
   }
@@ -268,74 +269,81 @@ REGLAS DE SEGURIDAD MÁXIMA (OBLIGATORIAS):
   ) {
     this.http.post<any>('https://api.groq.com/openai/v1/chat/completions', payload, { headers })
       .subscribe({
-        next: (res) => {
-          this.zone.run(() => {
-            if (this.peticionActivaId !== miPeticionId) return;
+       next: (res) => {
+  this.zone.run(() => {
+    if (this.peticionActivaId !== miPeticionId) return;
 
-            try {
-              let textoCompleto = res?.choices?.[0]?.message?.content || '';
-              textoCompleto = textoCompleto.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+    try {
+      let textoCompleto = res?.choices?.[0]?.message?.content || '';
+      textoCompleto = textoCompleto.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
 
-              const navMatch = textoCompleto.match(/\[\[NAVEGAR:\s*([^\]]+)\]\]/i);
-              let rutaSolicitada = null;
-              if (navMatch) {
-                rutaSolicitada = navMatch[1].trim();
-                textoCompleto = textoCompleto.replace(navMatch[0], '').trim();
-              }
+      // NUEVO: si el modelo no devolvió nada de texto útil (típico en la primera
+      // llamada, cuando el prompt de sistema es grande y se gasta el presupuesto
+      // de tokens pensando), reintentamos en silencio en vez de mostrar error.
+      if (!textoCompleto && intento < 1) {
+        setTimeout(() => {
+          if (this.peticionActivaId !== miPeticionId) return;
+          this.ejecutarPeticionGroq(payload, headers, miPeticionId, responderConVoz, intento + 1);
+        }, 400);
+        return;
+      }
 
-              let textoParaPantalla = textoCompleto;
-              let textoParaVoz = '';
+      const navMatch = textoCompleto.match(/\[\[NAVEGAR:\s*([^\]]+)\]\]/i);
+      let rutaSolicitada = null;
+      if (navMatch) {
+        rutaSolicitada = navMatch[1].trim();
+        textoCompleto = textoCompleto.replace(navMatch[0], '').trim();
+      }
 
-              const vozMatch = textoCompleto.match(/<voz>([\s\S]*?)<\/voz>/i);
-              if (vozMatch) {
-                textoParaVoz = vozMatch[1].trim();
-                textoParaPantalla = textoCompleto.replace(vozMatch[0], '').trim();
-              } else {
-                textoParaPantalla = textoCompleto.replace(/<voz>|<\/voz>/gi, '').trim();
-                textoParaVoz = this.limpiarTextoParaVoz(textoParaPantalla);
-              }
+      let textoParaPantalla = textoCompleto;
+      let textoParaVoz = '';
 
-              // NUEVO: nunca dejar una burbuja vacía. Si el modelo solo devolvió <voz>,
-              // usamos ese texto también para pantalla; si todo vino vacío, mostramos
-              // un mensaje honesto en vez de nada.
-              if (!textoParaPantalla) {
-                textoParaPantalla = textoParaVoz || 'Perdoname, no pude armar bien la respuesta. ¿Podés repetirme la pregunta?';
-              }
-              if (!textoParaVoz) {
-                textoParaVoz = this.limpiarTextoParaVoz(textoParaPantalla);
-              }
+      const vozMatch = textoCompleto.match(/<voz>([\s\S]*?)<\/voz>/i);
+      if (vozMatch) {
+        textoParaVoz = vozMatch[1].trim();
+        textoParaPantalla = textoCompleto.replace(vozMatch[0], '').trim();
+      } else {
+        textoParaPantalla = textoCompleto.replace(/<voz>|<\/voz>/gi, '').trim();
+        textoParaVoz = this.limpiarTextoParaVoz(textoParaPantalla);
+      }
 
-              this.chatMensajesSubject.next([
-                ...this.chatMensajesSubject.value,
-                { role: 'assistant', text: textoParaPantalla, safeHtml: this.formatearMensaje(textoParaPantalla) }
-              ]);
+      if (!textoParaPantalla) {
+        textoParaPantalla = textoParaVoz || 'Perdoname, no pude armar bien la respuesta. ¿Podés repetirme la pregunta?';
+      }
+      if (!textoParaVoz) {
+        textoParaVoz = this.limpiarTextoParaVoz(textoParaPantalla);
+      }
 
-              this.isChatLoadingSubject.next(false);
+      this.chatMensajesSubject.next([
+        ...this.chatMensajesSubject.value,
+        { role: 'assistant', text: textoParaPantalla, safeHtml: this.formatearMensaje(textoParaPantalla) }
+      ]);
 
-              if (rutaSolicitada && this.modulosNavegables.some(m => m.ruta === rutaSolicitada)) {
-                setTimeout(() => this.zone.run(() => this.router.navigate([rutaSolicitada])), 500);
-              }
+      this.isChatLoadingSubject.next(false);
 
-              if (responderConVoz && textoParaVoz) {
-                this.hablar(textoParaVoz, () => {
-                  if (this.keepListeningActive) this.iniciarEscucha();
-                });
-              } else {
-                if (this.keepListeningActive) this.iniciarEscucha();
-              }
-            } catch (e) {
-              // Si algo del parseo falla, NUNCA dejamos el chat colgado.
-              console.error('Error parseando respuesta de Groq:', e);
-              const msjError = 'Uy, se me cruzó un cable. ¿Me repetís eso?';
-              this.chatMensajesSubject.next([
-                ...this.chatMensajesSubject.value,
-                { role: 'assistant', text: msjError, safeHtml: this.formatearMensaje(msjError) }
-              ]);
-              this.isChatLoadingSubject.next(false);
-              if (this.keepListeningActive) this.iniciarEscucha();
-            }
-          });
-        },
+      if (rutaSolicitada && this.modulosNavegables.some(m => m.ruta === rutaSolicitada)) {
+        setTimeout(() => this.zone.run(() => this.router.navigate([rutaSolicitada])), 500);
+      }
+
+      if (responderConVoz && textoParaVoz) {
+        this.hablar(textoParaVoz, () => {
+          if (this.keepListeningActive) this.iniciarEscucha();
+        });
+      } else {
+        if (this.keepListeningActive) this.iniciarEscucha();
+      }
+    } catch (e) {
+      console.error('Error parseando respuesta de Groq:', e);
+      const msjError = 'Uy, se me cruzó un cable. ¿Me repetís eso?';
+      this.chatMensajesSubject.next([
+        ...this.chatMensajesSubject.value,
+        { role: 'assistant', text: msjError, safeHtml: this.formatearMensaje(msjError) }
+      ]);
+      this.isChatLoadingSubject.next(false);
+      if (this.keepListeningActive) this.iniciarEscucha();
+    }
+  });
+},
         error: (err) => {
           console.error('Error Groq API:', err.status, err.error);
           this.zone.run(() => {
