@@ -49,7 +49,7 @@ export class DashboardDefault implements OnInit, OnDestroy, AfterViewChecked {
   private hintAutoHideTimer: ReturnType<typeof setTimeout> | null = null;
 
   private readonly modulosSistema = [
-    { nombre: 'Dashboard', ruta: '/dashboard/propietario', roles: ['PROPIETARIO'], descripcion: 'Pantalla donde el usuario puede ver estadísticas: ventas del mes, facturas, clientes, etc.', disponible: true },
+    { nombre: 'Principal', ruta: '/dashboard/propietario', roles: ['PROPIETARIO'], descripcion: 'Pantalla donde el usuario puede ver estadísticas: ventas del mes, facturas, clientes, etc.', disponible: true },
     { nombre: 'Categorías', ruta: '/dashboard/categorias', roles: ['PROPIETARIO', 'BODEGUERO'], descripcion: 'Módulo para que el usuario cree, describa o edite las categorías.', disponible: true },
     { nombre: 'Bodegas', ruta: '/dashboard/bodegas', roles: ['PROPIETARIO', 'BODEGUERO'], descripcion: 'Módulo para que el usuario gestione las ubicaciones y nombres de sus bodegas.', disponible: true },
     { nombre: 'Productos', ruta: '/dashboard/productos', roles: ['PROPIETARIO', 'BODEGUERO'], descripcion: 'Catálogo donde el usuario registra, edita e ingresa sus productos.', disponible: true },
