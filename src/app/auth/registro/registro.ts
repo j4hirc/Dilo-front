@@ -157,8 +157,6 @@ export class Registro implements OnInit {
           <ul style="margin-top: 15px; padding-left: 20px; list-style-type: disc;">
             <li style="margin-bottom: 10px;">La información ingresada debe ser veraz y te haces responsable de su autenticidad.</li>
             <li style="margin-bottom: 10px;">Tus datos serán tratados conforme a nuestra estricta política de privacidad.</li>
-            <li style="margin-bottom: 10px;"><b>Cláusula para negocios:</b> Si utilizas esta cuenta en calidad de dueño de negocio para la emisión de comprobantes, aceptas que <b>se cobrará una tarifa de $0.45 USD por cada factura realizada</b> a través del sistema.</li>
-            <li>Dilo se reserva el derecho de suspender cuentas por actividades fraudulentas.</li>
           </ul>
         </div>
       `,
