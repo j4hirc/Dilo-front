@@ -179,7 +179,7 @@ export class Bodegas implements OnInit {
             Swal.fire('¡Eliminada!', 'La bodega fue eliminada.', 'success');
             this.cargarBodegas();
           },
-          error: (err) => Swal.fire('Error', 'Hubo un problema al eliminar.', 'error')
+          error: (err) => Swal.fire('Error', 'Hubo un problema al eliminar la bodega probablemente porque el item esta relacionado con otros datos.', 'error')
         });
       }
     });

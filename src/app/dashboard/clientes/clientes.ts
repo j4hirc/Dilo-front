@@ -302,7 +302,7 @@ export class Clientes implements OnInit {
     if (err.status === 401) {
       Swal.fire({ icon: 'warning', title: 'Sesión expirada', text: 'Cierra sesión y vuelve a entrar.', confirmButtonColor: '#ed8936' });
     } else {
-      Swal.fire('Error en el Servidor', 'Verifica los datos e inténtalo nuevamente.', 'error');
+      Swal.fire('Error en el Servidor:', 'Ocurrió un error probablemente porque el item esta relacionado con otros datos.', 'error');
     }
   }
 }

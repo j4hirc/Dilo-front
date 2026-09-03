@@ -201,7 +201,7 @@ cargarProveedores(id: number) {
     if (err.status === 400 || err.status === 500) {
         Swal.fire('Atención', typeof mensajeBackend === 'string' ? mensajeBackend : 'El DNI ingresado ya existe.', 'warning');
     } else {
-        Swal.fire('Error', 'Ocurrió un error al procesar la solicitud.', 'error');
+        Swal.fire('Error', 'Ocurrió un error al procesar la solicitud probablemente porque el item esta relacionado con otros datos.', 'error');
     }
   }
 

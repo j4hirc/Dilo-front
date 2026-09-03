@@ -168,6 +168,6 @@ export class Categorias implements OnInit {
   manejarError(err: any) {
     Swal.close();
     console.error(err);
-    Swal.fire('Error', 'Hubo un problema al procesar la solicitud.', 'error');
+    Swal.fire('Error del Servidor:', 'Hubo un problema al procesar la solicitud probablemente porque el item esta relacionado con otros datos.', 'error');
   }
 }

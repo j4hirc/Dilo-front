@@ -324,7 +324,7 @@ export class Productos implements OnInit {
     } else if (err.status === 500 && typeof mensajeBackend === 'string' && mensajeBackend.includes('Ya existe')) {
       Swal.fire('Atención', mensajeBackend, 'warning');
     } else {
-      Swal.fire('Error del Servidor', 'Ocurrió un error al guardar el producto. Revisa los logs de Java.', 'error');
+      Swal.fire('Error del Servidor', 'Ocurrió un error probablemente porque el item esta relacionado con otros datos.', 'error');
     }
   }
 
