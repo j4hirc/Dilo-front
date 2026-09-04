@@ -440,6 +440,7 @@ export class Reportes implements OnInit {
     });
     const totalPago = [...mapPago.values()].reduce((a, b) => a + b, 0) || 1;
     this.porFormaPago = [...mapPago.entries()]
+    .filter(([nombre]) => ['TARJETA_CREDITO', 'TRANSFERENCIA', 'EFECTIVO'].includes(nombre.toUpperCase()))
       .map(([nombre, total]) => ({
         nombre,
         total,
